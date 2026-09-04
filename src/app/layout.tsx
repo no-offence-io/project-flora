@@ -5,6 +5,7 @@ import Footer from "@/components/footer";
 import { NavMenuOverlay, NavMenuProvider } from "@/components/nav-menu";
 import StickyNavbar from "@/components/sticky-navbar";
 import { CartProvider } from "@/components/cart-context";
+import LoadingScreen from "@/components/loading-screen";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -52,6 +53,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <NavMenuOverlay />
           </NavMenuProvider>
         </CartProvider>
+        <LoadingScreen />
       </body>
     </html>
   );

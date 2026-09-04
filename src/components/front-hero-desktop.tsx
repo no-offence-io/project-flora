@@ -49,7 +49,7 @@ export default function FrontHeroDesktop({
     >
       {/* Background video with parallax (photo as poster) under the vertical darkening gradient */}
       <div aria-hidden className="absolute inset-0">
-        <HeroVideo src="/hero/front-hero-1080.mp4" poster="/hero/front-hero-desktop.jpg" parallax={parallax} />
+        <HeroVideo src="/hero/front-hero-1080.mp4" parallax={parallax} />
         <div
           className="absolute inset-0"
           style={{
