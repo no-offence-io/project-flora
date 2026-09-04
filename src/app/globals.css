@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  /* Figma "Main background" token. The site is light-only, so there is no dark-mode override. */
   --background: #ffffff;
   --foreground: #171717;
 }
@@ -10,17 +11,42 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-gotham: var(--font-gotham);
+  --font-americana: var(--font-americana);
+
+  /*
+   * Typography ruleset from the Figma "Health" library text styles.
+   * Use these `text-*` utilities instead of raw pixel sizes.
+   *
+   *   text-big-header-desktop  Americana Std Roman 60px  (md and up)
+   *   text-big-header-mobile   Americana Std Roman 24px  (below md; also nav links on desktop)
+   *   text-banner-title        Americana Std Roman 80px  (banner titles, desktop)
+   *   text-paragraph           Gotham Book 13.35px       (body copy, same on mobile and desktop)
+   */
+  --text-big-header-desktop: 60px;
+  --text-big-header-desktop--line-height: 1;
+  --text-big-header-mobile: 24px;
+  --text-big-header-mobile--line-height: 1;
+  --text-banner-title: 80px;
+  --text-banner-title--line-height: 1;
+  --text-paragraph: 13.35px;
+  --text-paragraph--line-height: normal;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: light;
+  /* Full-bleed sections use 100vw; clip the scrollbar-width overflow that can cause on Windows. */
+  overflow-x: clip;
+}
+
+/* Breaks a section out of the 1500px page column to span the whole window (heroes, footer). */
+.full-bleed {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-gotham), Arial, Helvetica, sans-serif;
 }
