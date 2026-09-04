@@ -44,7 +44,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <CartProvider>
           <NavMenuProvider>
             {/* The site is capped at 1500px and centred on wide desktops */}
-            <div className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col">
+            <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col">
               {children}
               <Footer />
             </div>

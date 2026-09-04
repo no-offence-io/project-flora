@@ -46,6 +46,7 @@ export default function Home() {
           title="All items"
           products={PRODUCTS.map(toSlideshowProduct)}
           seeAllHref="/shop"
+          columns={4}
         />
       </div>
 

@@ -4,6 +4,15 @@ import Link from "next/link";
 import ProductCard from "./product-card";
 import { PrevNextControls, useScroller } from "./use-scroller";
 
+export type ProductColor = {
+  /** Swatch colour, drawn as an 8px square. */
+  hex: string;
+  /** Accessible name for the swatch, e.g. "Terracotta". */
+  name: string;
+  /** Image shown in the card's thumbnail while this swatch is hovered or focused. */
+  image: { src: string; alt: string };
+};
+
 export type SlideshowProduct = {
   /** Stable unique id, used as the React key. */
   id: string;
@@ -11,26 +20,39 @@ export type SlideshowProduct = {
   price: string;
   /** Previous price, shown struck-out in light grey next to the current one. */
   compareAtPrice?: string;
-  /** Colour swatches as CSS colours, drawn as 8px squares. */
-  colors?: string[];
+  /** Colour options; hovering or focusing a swatch previews its image in the thumbnail. */
+  colors?: ProductColor[];
+  /** Default photo, shown before any hover and used when `images` has nothing else to slide through. */
   image: { src: string; alt: string };
+  /** The product's own photographed angles — what the well's slide gesture moves between, never the colour variants. */
+  images?: { src: string; alt: string }[];
   href: string;
+};
+
+/** Desktop card width per column count — both written out so Tailwind's build-time scan finds them. */
+const COLUMN_WIDTH_CLASS: Record<3 | 4, string> = {
+  3: "md:w-[calc((100%-20px)/3)]",
+  4: "md:w-[calc((100%-30px)/4)]",
 };
 
 /**
  * Figma "Products slideshow desktop" (41:855) and "Products slideshow mobile" (41:2082).
  * One horizontal scroller: cards fill the width below `md` with Previous/Next controls,
- * and sit three across from `md` up with a "See all" link.
+ * and sit `columns` across from `md` up (three, matching Figma, unless told otherwise) with a
+ * "See all" link. Each card's own image-scroll gesture is disabled here — see `ProductCard`'s
+ * `allowImageScroll` — so dragging a card doesn't compete with scrolling between products.
  */
 export default function ProductsSlideshow({
   title = "You may also like",
   products,
   seeAllHref = "/shop",
+  columns = 3,
   className = "",
 }: {
   title?: string;
   products: SlideshowProduct[];
   seeAllHref?: string;
+  columns?: 3 | 4;
   className?: string;
 }) {
   const { ref: scrollerRef, canPrev, canNext, scrollByItem } = useScroller(10);
@@ -58,7 +80,8 @@ export default function ProductsSlideshow({
           <ProductCard
             key={product.id}
             product={product}
-            className="h-full w-full shrink-0 snap-start md:w-[calc((100%-20px)/3)]"
+            allowImageScroll={false}
+            className={`h-full w-full shrink-0 snap-start ${COLUMN_WIDTH_CLASS[columns]}`}
             wellClassName="min-h-0 flex-1"
             imageSizes="(min-width: 768px) 33vw, 100vw"
           />
