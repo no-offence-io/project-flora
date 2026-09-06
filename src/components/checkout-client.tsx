@@ -135,6 +135,38 @@ export default function CheckoutClient({ formId }: { formId: string }) {
   );
 }
 
+/**
+ * Hidden diagnostic: with `?debug=wallets` in the URL, asks the browser itself whether Apple Pay and
+ * Google Pay can be used on this page and prints the answer. This is the same check the Payment
+ * Element runs before deciding to show a wallet tab, so "false" here means the device or browser
+ * is the reason a wallet is missing, not the Stripe account or the domain registration.
+ */
+function WalletsDebug() {
+  const stripe = useStripe();
+  const [result, setResult] = useState<string | null>(null);
+  const enabled = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("debug") === "wallets";
+
+  useEffect(() => {
+    if (!enabled || !stripe) return;
+    const request = stripe.paymentRequest({
+      country: "NO",
+      currency: "nok",
+      total: { label: "Wallet check", amount: 100 },
+    });
+    request
+      .canMakePayment()
+      .then((can) => setResult(JSON.stringify({ applePay: can?.applePay ?? false, googlePay: can?.googlePay ?? false, link: can?.link ?? false, userAgent: navigator.userAgent })))
+      .catch((err: unknown) => setResult(`error: ${err instanceof Error ? err.message : String(err)}`));
+  }, [enabled, stripe]);
+
+  if (!enabled) return null;
+  return (
+    <pre className="m-0 whitespace-pre-wrap break-all border border-black/25 p-[12px] text-[11px] leading-normal">
+      wallets: {result ?? "checking…"}
+    </pre>
+  );
+}
+
 function PaymentSection({
   formId,
   paymentIntentId,
@@ -190,6 +222,7 @@ function PaymentSection({
   return (
     <div className="flex flex-col gap-[12px]">
       <PaymentElement options={{ layout: "tabs" }} />
+      <WalletsDebug />
 
       {message && (
         <p className="m-0 text-[#b00020]" role="alert">
