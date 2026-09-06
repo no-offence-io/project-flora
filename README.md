@@ -85,9 +85,14 @@ Test cards: `4242 4242 4242 4242` succeeds, `4000 0000 0000 0002` is declined in
 
 **Wallets (Apple Pay, Google Pay)**
 
-Apple Pay, Google Pay and Klarna are shown as buttons by an Express Checkout Element above the card
-form, in that fixed order and with the overflow menu disabled so every eligible one stays on the
-page. The Payment Element below has its wallets turned off so they aren't offered twice. `paymentMethods.applePay: "always"` is what
+Card, Klarna, Apple Pay and Google Pay all appear as tabs in the Payment Element, so the checkout
+reads as one row of options. Link is switched off in the Stripe payment method configuration.
+
+The one case tabs can't cover is Apple Pay on a browser without native support (Chrome, Edge,
+Firefox, Opera on desktop). There, and only there, an Express Checkout Element renders a single
+Apple Pay button with `paymentMethods.applePay: "always"`, which falls back to Apple's scan-to-pay
+code. The page checks for `ApplePaySession` to decide which of the two to show, so Apple Pay is
+never offered twice. `paymentMethods.applePay: "always"` is what
 lets Apple Pay appear on browsers that can't run it natively (Chrome, Edge, Firefox, Opera on
 desktop), where it falls back to Apple's scan-to-pay code. Android Chrome shows Google Pay instead,
 as Apple doesn't support that combination at all.
@@ -123,9 +128,9 @@ redirect → HMAC-verified webhook → capture → same order pipeline), tested 
    domain by hand under Settings → Payment methods → Apple Pay. The file must be reachable without a login,
    so Vercel Deployment Protection has to be off for production.
 5. Register the production domain under payment method domains in live mode (see Wallets above).
-6. Check that Apple Pay, Google Pay and Klarna are all switched on in the **live** payment method
-   configuration (Settings → Payment methods). Test and live have separate configurations, and
-   Google Pay was off in test until it was turned on by hand.
+6. Check the **live** payment method configuration (Settings → Payment methods): Apple Pay, Google
+   Pay and Klarna on, Link off. Test and live are separate configurations, and in test Google Pay
+   was off and Link on until both were changed by hand.
 7. Confirm Vipps status (above).
 8. Make one real purchase, check the order number in the PaymentIntent metadata and the webhook
    delivery shows 200, then refund it from the dashboard.
