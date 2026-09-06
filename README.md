@@ -85,17 +85,18 @@ Test cards: `4242 4242 4242 4242` succeeds, `4000 0000 0000 0002` is declined in
 
 **Wallets (Apple Pay, Google Pay)**
 
-Apple Pay, Google Pay and Klarna sit in an Express Checkout Element above an "Or pay with card"
-divider, in that order; the Payment Element below handles the card with its own wallets turned off.
+Apple Pay and Google Pay sit side by side in an Express Checkout Element above an "Or pay with card"
+divider; Klarna and the card are tabs in the Payment Element below, whose own wallets are turned off.
 `paymentMethods.applePay: "always"` is what also gets Apple Pay onto browsers with no native support
-(Chrome, Edge, Firefox on desktop), where it falls back to Apple's scan-to-pay code. Link is
-switched off in the Stripe payment method configuration.
+(Chrome, Edge, Firefox on desktop), where it falls back to Apple's scan-to-pay code. Link is switched
+off in the Stripe payment method configuration.
 
-These buttons are drawn by Apple, Google and Klarna and can't be restyled to match the Payment
-Element's bordered tabs; that's a brand requirement, not a Stripe limitation. Wallets appear as tabs
-only when the browser supports them natively, which is why the branded row is the only way to cover
-desktop Chrome. The wallet buttons use `buttonType: "plain"` so three of them stand a chance of
-fitting on one line in the 520px column; Stripe stacks them when they don't fit.
+Wallet buttons are drawn by Apple and Google and can't be restyled to match the bordered tabs; that's
+a brand requirement, not a Stripe limitation. They're set to `buttonType: "plain"` (logo only) so
+both fit one line in the 520px column. Klarna is kept out of that row on purpose: its button carries
+a ~200px text label, and Stripe stacks the whole row vertically rather than shrink any button below
+its brand minimum, so adding it costs the side-by-side layout. `layout.maxColumns` is a ceiling
+Stripe may ignore, not a guarantee.
 
 Two traps if you change the layout: `overflow: "never"` and a `maxRows` above 0 can't be combined,
 and an invalid option makes the element fail to mount rather than degrade, which looks exactly like

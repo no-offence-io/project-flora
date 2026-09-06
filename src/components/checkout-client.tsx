@@ -38,19 +38,21 @@ const APPEARANCE: StripeElementsOptions["appearance"] = {
  * only appears where it can actually be used, so the row is shorter on some browsers than others.
  */
 const EXPRESS_OPTIONS: StripeExpressCheckoutElementOptions = {
-  paymentMethods: { applePay: "always", googlePay: "always", klarna: "auto", link: "never", paypal: "never", amazonPay: "never" },
+  // Klarna is deliberately not here. Its button carries a text label ("Betal med Klarna") roughly
+  // 200px wide, and three branded buttons of that size don't fit the 520px summary column, so
+  // Stripe stacks all of them rather than shrinking any below its brand minimum. Left out, the two
+  // logo-only wallets sit side by side, and Klarna appears as a tab below instead.
+  paymentMethods: { applePay: "always", googlePay: "always", klarna: "never", link: "never", paypal: "never", amazonPay: "never" },
   // Payment method *types*, so snake_case. Anything that wouldn't have shown is ignored rather
   // than breaking the element, and anything unlisted follows after these.
-  paymentMethodOrder: ["apple_pay", "google_pay", "klarna"],
-  // Logo-only wallet buttons: with their calls to action ("Buy with…") the three are wide enough
-  // that Stripe stacks them in this 520px column rather than shrinking them. Klarna has no button
-  // type in this version of stripe-js, so it keeps its own label.
+  paymentMethodOrder: ["apple_pay", "google_pay"],
+  // Logo only, no "Buy with…" call to action, so both fit on one line.
   buttonType: { applePay: "plain", googlePay: "plain" },
   buttonHeight: 44,
   // `overflow: "never"` keeps every eligible button on the page rather than folding the less
   // prominent ones behind a "..." menu. It must not be combined with a `maxRows` above 0: that pair
   // is rejected outright and the element then fails to mount at all, taking every button with it.
-  layout: { maxColumns: 3, overflow: "never" },
+  layout: { maxColumns: 2, overflow: "never" },
 };
 
 /** Field names in the billing form → the customer shape the API validates. */
@@ -346,7 +348,7 @@ function PaymentSection({
 
       {/* The wallets are in the row above, so they aren't offered here a second time. Link is off in
           the Stripe payment method configuration rather than here. */}
-      <PaymentElement options={{ layout: "tabs", wallets: { applePay: "never", googlePay: "never" }, paymentMethodOrder: ["card"] }} />
+      <PaymentElement options={{ layout: "tabs", wallets: { applePay: "never", googlePay: "never" }, paymentMethodOrder: ["klarna", "card"] }} />
       <WalletsDebug expressMethods={walletMethods} expressError={walletError} />
 
       {message && (
