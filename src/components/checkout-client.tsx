@@ -48,6 +48,17 @@ const APPEARANCE: StripeElementsOptions["appearance"] = {
 };
 
 /**
+ * Same as APPEARANCE, but with a corner radius. Only the express row's Stripe-drawn buttons
+ * (Apple Pay, Google Pay, Klarna) use this — a button's corner radius comes from the appearance
+ * of the Elements group it lives in, and this group must stay separate from the one behind the
+ * actual card tabs below, which keep the site's square corners.
+ */
+const EXPRESS_APPEARANCE: StripeElementsOptions["appearance"] = {
+  ...APPEARANCE,
+  variables: { ...APPEARANCE.variables, borderRadius: "8px" },
+};
+
+/**
  * The three express buttons are Stripe-drawn, so each carries its brand's own styling exactly as
  * Apple, Google and Klarna require. They sit side by side because each lives in its own Stripe
  * Elements group inside its own column of our row: a single group lays all three out itself and
@@ -235,13 +246,25 @@ export default function CheckoutClient({ formId }: { formId: string }) {
     }),
     [totalOre],
   );
+  // A second group for Apple Pay and Google Pay: same money and method as cardGroup, but rounded,
+  // since those two buttons must not share an Elements instance with the square card tabs below.
+  const expressCardGroup = useMemo<StripeElementsOptions>(
+    () => ({
+      mode: "payment",
+      amount: totalOre,
+      currency: "nok",
+      paymentMethodTypes: ["card"],
+      appearance: EXPRESS_APPEARANCE,
+    }),
+    [totalOre],
+  );
   const klarnaGroup = useMemo<StripeElementsOptions>(
     () => ({
       mode: "payment",
       amount: totalOre,
       currency: "nok",
       paymentMethodTypes: ["klarna"],
-      appearance: APPEARANCE,
+      appearance: EXPRESS_APPEARANCE,
     }),
     [totalOre],
   );
@@ -281,7 +304,7 @@ export default function CheckoutClient({ formId }: { formId: string }) {
               confirming={confirming}
               onConfirmingChange={setConfirming}
               stripePromise={stripePromise}
-              cardGroup={cardGroup}
+              expressCardGroup={expressCardGroup}
               klarnaGroup={klarnaGroup}
             />
           </Elements>
@@ -314,7 +337,7 @@ function PaymentSection({
   confirming,
   onConfirmingChange,
   stripePromise,
-  cardGroup,
+  expressCardGroup,
   klarnaGroup,
 }: {
   formId: string;
@@ -323,7 +346,7 @@ function PaymentSection({
   confirming: boolean;
   onConfirmingChange: (value: boolean) => void;
   stripePromise: StripePromise;
-  cardGroup: StripeElementsOptions;
+  expressCardGroup: StripeElementsOptions;
   klarnaGroup: StripeElementsOptions;
 }) {
   const stripe = useStripe();
@@ -396,7 +419,7 @@ function PaymentSection({
         {available.apple !== false && (
           <ExpressColumn
             {...shared}
-            group={cardGroup}
+            group={expressCardGroup}
             button={APPLE_PAY_BUTTON}
             name="Apple Pay"
             onAvailability={report("apple")}
@@ -405,7 +428,7 @@ function PaymentSection({
         {available.google !== false && (
           <ExpressColumn
             {...shared}
-            group={cardGroup}
+            group={expressCardGroup}
             button={GOOGLE_PAY_BUTTON}
             name="Google Pay"
             onAvailability={report("google")}
@@ -431,7 +454,7 @@ function PaymentSection({
           }
           disabled={confirming}
           aria-label="Vipps"
-          className={`${COLUMN} flex h-[44px] items-center justify-center bg-[#ff5b24] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50`}
+          className={`${COLUMN} flex h-[44px] items-center justify-center rounded-[8px] bg-[#ff5b24] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50`}
         >
           <Image
             src="/checkout/vipps-white.svg"
