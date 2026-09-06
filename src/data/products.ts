@@ -2,6 +2,7 @@ import type {
   ProductColor,
   SlideshowProduct,
 } from "@/components/products-slideshow";
+import { formatNok } from "@/lib/money";
 
 export type ProductSpec = {
   label: string;
@@ -21,8 +22,12 @@ export type Product = {
   slug: string;
   category: Category;
   name: string;
-  price: string;
-  compareAtPrice?: string;
+  /** Unit price in øre (1/100 NOK), VAT included. Never sent from the client — checkout reads it here. */
+  priceOre: number;
+  /** Previous price in øre for sale items. */
+  compareAtPriceOre?: number;
+  /** Units available; checkout refuses quantities above this. Static for now — see README, Payments. */
+  stock: number;
   description: string;
   /**
    * Colour options. The first entry's hex is sampled directly from the product's own photo
@@ -55,7 +60,8 @@ export const PRODUCTS: Product[] = [
     slug: "miss-flow-top",
     category: "Tops",
     name: "Miss Flow Top",
-    price: "499$",
+    priceOre: 129000,
+    stock: 12,
     description:
       "Our bestseller and the reason for our sudden success, we owe Miss Flow everything.",
     colors: [
@@ -100,7 +106,8 @@ export const PRODUCTS: Product[] = [
     slug: "wrap-skirt",
     category: "Skirts",
     name: "Wrap Skirt",
-    price: "299$",
+    priceOre: 89000,
+    stock: 8,
     description:
       "An asymmetric wrap that moves with you, cut from the same soft jersey as Miss Flow.",
     colors: [
@@ -143,7 +150,8 @@ export const PRODUCTS: Product[] = [
     slug: "tie-top",
     category: "Tops",
     name: "Tie Top",
-    price: "299$",
+    priceOre: 89000,
+    stock: 8,
     description: "A bandeau with long ties, worn knotted at the front or back.",
     colors: [
       {
@@ -177,8 +185,9 @@ export const PRODUCTS: Product[] = [
     slug: "long-skirt",
     category: "Skirts",
     name: "Long Skirt",
-    price: "299$",
-    compareAtPrice: "499$",
+    priceOre: 89000,
+    stock: 5,
+    compareAtPriceOre: 129000,
     description:
       "A floor-length skirt with a fold-over waist and a single seam.",
     colors: [
@@ -251,8 +260,8 @@ export function toSlideshowProduct(product: Product): SlideshowProduct {
   return {
     id: product.slug,
     name: product.name,
-    price: product.price,
-    compareAtPrice: product.compareAtPrice,
+    price: formatNok(product.priceOre),
+    compareAtPrice: product.compareAtPriceOre !== undefined ? formatNok(product.compareAtPriceOre) : undefined,
     colors: product.colors,
     image: product.images[0],
     images: product.images,

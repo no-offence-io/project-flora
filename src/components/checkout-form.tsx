@@ -3,11 +3,25 @@ import PhonePrefixSelect from "./phone-prefix-select";
 
 const FIELD = "w-full border border-black/20 bg-transparent p-[12px] font-gotham text-paragraph text-black outline-none placeholder:text-black focus:border-black/60";
 
-function Field({ id, label, type = "text", autoComplete, className = "" }: { id: string; label: string; type?: string; autoComplete?: string; className?: string }) {
+function Field({
+  id,
+  label,
+  type = "text",
+  autoComplete,
+  required = true,
+  className = "",
+}: {
+  id: string;
+  label: string;
+  type?: string;
+  autoComplete?: string;
+  required?: boolean;
+  className?: string;
+}) {
   return (
     <label htmlFor={id} className={`block min-w-0 ${className}`}>
       <span className="sr-only">{label}</span>
-      <input id={id} name={id} type={type} placeholder={label} autoComplete={autoComplete} className={`${FIELD} truncate`} />
+      <input id={id} name={id} type={type} placeholder={label} autoComplete={autoComplete} required={required} className={`${FIELD} truncate`} />
     </label>
   );
 }
@@ -18,7 +32,7 @@ function Field({ id, label, type = "text", autoComplete, className = "" }: { id:
  */
 export default function CheckoutForm({ id = "checkout-form", className = "" }: { id?: string; className?: string }) {
   return (
-    <form id={id} action="#" method="post" className={`flex w-full flex-col gap-[24px] ${className}`}>
+    <form id={id} noValidate={false} onSubmit={(e) => e.preventDefault()} className={`flex w-full flex-col gap-[24px] ${className}`}>
       <Field id="email" label="E-mail" type="email" autoComplete="email" />
       <div className="flex gap-[24px]">
         <Field id="first-name" label="First name" autoComplete="given-name" className="flex-1" />
@@ -27,7 +41,7 @@ export default function CheckoutForm({ id = "checkout-form", className = "" }: {
 
       <label htmlFor="country" className="relative block">
         <span className="sr-only">Country</span>
-        <select id="country" name="country" defaultValue="" autoComplete="country-name" className={`${FIELD} appearance-none pr-[36px]`}>
+        <select id="country" name="country" defaultValue="" required autoComplete="country-name" className={`${FIELD} appearance-none pr-[36px]`}>
           <option value="" disabled>
             Country
           </option>
@@ -43,7 +57,7 @@ export default function CheckoutForm({ id = "checkout-form", className = "" }: {
 
       <div className="flex gap-[24px]">
         <Field id="street" label="Street address" autoComplete="address-line1" className="flex-1" />
-        <Field id="apartment" label="Apartment, suite, unit, etc." autoComplete="address-line2" className="flex-1" />
+        <Field id="apartment" label="Apartment, suite, unit, etc." autoComplete="address-line2" required={false} className="flex-1" />
       </div>
       <Field id="postcode" label="Postcode/ ZIP" autoComplete="postal-code" />
       <Field id="city" label="Town/ city" autoComplete="address-level2" />

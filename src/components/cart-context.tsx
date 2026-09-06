@@ -10,12 +10,14 @@ type CartContextValue = {
   add: (product: Product, quantity?: number) => void;
   setQuantity: (id: string, quantity: number) => void;
   remove: (id: string) => void;
+  /** Empty the cart — used once a payment has succeeded. */
+  clear: () => void;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
 
 /* Tiny external store: the cart lives here and in local storage, and React subscribes to it. */
-const STORAGE_KEY = "flora-cart";
+const STORAGE_KEY = "flora-cart-v2"; // v2: lines carry unitPriceOre (NOK) instead of unitPrice
 const EMPTY: CartItem[] = [];
 let cache: CartItem[] | null = null;
 const listeners = new Set<() => void>();
@@ -66,10 +68,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     [],
   );
   const remove = useCallback((id: string) => write(read().filter((item) => item.id !== id)), []);
+  const clear = useCallback(() => write(EMPTY), []);
 
   const value = useMemo(
-    () => ({ items, count: items.reduce((sum, item) => sum + item.quantity, 0), add, setQuantity, remove }),
-    [items, add, setQuantity, remove],
+    () => ({ items, count: items.reduce((sum, item) => sum + item.quantity, 0), add, setQuantity, remove, clear }),
+    [items, add, setQuantity, remove, clear],
   );
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

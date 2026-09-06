@@ -1,26 +1,29 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
+import type { ReactNode } from "react";
 import { useCart } from "./cart-context";
 import CartItems from "./cart-items";
-import { SHIPPING, TAX, formatPrice } from "@/data/cart";
-
-const PAYMENT_MARKS = [
-  { src: "/checkout/apple-pay.svg", alt: "Apple Pay" },
-  { src: "/checkout/google-pay.svg", alt: "Google Pay" },
-  { src: "/checkout/vipps.svg", alt: "Vipps" },
-  { src: "/checkout/card.svg", alt: "Credit or debit card" },
-];
+import { formatNok, type Totals } from "@/lib/money";
 
 /**
- * Order summary card from the Figma checkout page: cart rows, pricing block, payment marks,
- * Confirm order and the privacy note. Desktop draws it as a 520px bordered card.
+ * Order summary card from the Figma checkout page: cart rows and the pricing block, then whatever
+ * the checkout puts beneath it (the Payment Element and the confirm button). Desktop draws it as a
+ * 520px bordered card.
+ *
+ * Every amount here is the server's quote for the current cart, passed in as `totals`. Nothing is
+ * summed from the cart on the client — the browser's copy of a price is only ever decorative.
  */
-export default function OrderSummary({ formId, className = "" }: { formId?: string; className?: string }) {
-  const { items, count } = useCart();
-  const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-  const total = subtotal + (items.length ? SHIPPING + TAX : 0);
+export default function OrderSummary({
+  totals,
+  children,
+  className = "",
+}: {
+  totals: Totals | null;
+  children?: ReactNode;
+  className?: string;
+}) {
+  const { count } = useCart();
+  const pending = "…";
 
   return (
     <aside
@@ -37,51 +40,28 @@ export default function OrderSummary({ formId, className = "" }: { formId?: stri
       <div className="flex flex-col gap-[12px]">
         <CartItems />
 
-        <dl className="m-0 flex flex-col gap-[12px] bg-[#fafbfc] p-[24px]">
+        <dl className="m-0 flex flex-col gap-[12px] bg-[#fafbfc] p-[24px]" aria-busy={!totals}>
           <div className="flex justify-between">
             <dt>Subtotal</dt>
-            <dd className="m-0">{formatPrice(subtotal)}</dd>
+            <dd className="m-0">{totals ? formatNok(totals.subtotalOre) : pending}</dd>
           </div>
           <div className="flex justify-between text-[11px] leading-normal text-black/50">
             <dt>Shipping</dt>
-            <dd className="m-0">{formatPrice(SHIPPING)}</dd>
+            <dd className="m-0">{totals ? (totals.shippingOre === 0 ? "Free" : formatNok(totals.shippingOre)) : pending}</dd>
           </div>
           <div className="flex justify-between text-[11px] leading-normal text-black/50">
-            <dt>Tax</dt>
-            <dd className="m-0">{formatPrice(TAX)}</dd>
+            <dt>VAT 25% (included)</dt>
+            <dd className="m-0">{totals ? formatNok(totals.vatIncludedOre) : pending}</dd>
           </div>
           <div className="h-px w-full bg-black/25" />
           <div className="flex justify-between">
             <dt>Total</dt>
-            <dd className="m-0">{formatPrice(total)}</dd>
+            <dd className="m-0">{totals ? formatNok(totals.totalOre) : pending}</dd>
           </div>
         </dl>
       </div>
 
-      <ul className="flex items-center justify-center gap-[12px]" aria-label="Accepted payment methods">
-        {PAYMENT_MARKS.map((mark) => (
-          <li key={mark.src} className="flex">
-            <Image src={mark.src} alt={mark.alt} width={35} height={25} style={{ width: 35, height: 25 }} />
-          </li>
-        ))}
-      </ul>
-
-      <button
-        type="submit"
-        form={formId}
-        className="flex w-full items-center justify-center bg-black p-[12px] font-gotham text-paragraph text-white hover:opacity-80 transition-opacity"
-      >
-        Confirm order
-      </button>
-
-      <p className="m-0 text-black/50">
-        Your personal data will be used to process your order, support your experience throughout this website, and for other purposes
-        described in our{" "}
-        <Link href="/privacy" className="text-black underline">
-          privacy policy
-        </Link>
-        .
-      </p>
+      {children}
     </aside>
   );
 }

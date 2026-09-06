@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import CheckoutForm from "@/components/checkout-form";
+import CheckoutClient from "@/components/checkout-client";
 import CheckoutSteps from "@/components/checkout-steps";
 import Navbar from "@/components/navbar";
-import OrderSummary from "@/components/order-summary";
 
 export const metadata: Metadata = { title: "Checkout – Flöra" };
 
@@ -23,10 +22,7 @@ export default function CheckoutPage() {
             </h1>
           </div>
 
-          <div className="flex flex-col gap-[60px] md:flex-row md:items-stretch md:gap-[42px]">
-            <CheckoutForm id={FORM_ID} className="md:min-w-0 md:flex-1" />
-            <OrderSummary formId={FORM_ID} />
-          </div>
+          <CheckoutClient formId={FORM_ID} />
         </div>
       </div>
     </div>
