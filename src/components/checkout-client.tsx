@@ -2,8 +2,13 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
-import type { StripeElementsOptions } from "@stripe/stripe-js";
+import { Elements, ExpressCheckoutElement, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import type {
+  StripeElementsOptions,
+  StripeExpressCheckoutElementClickEvent,
+  StripeExpressCheckoutElementConfirmEvent,
+  StripeExpressCheckoutElementOptions,
+} from "@stripe/stripe-js";
 import { useCart } from "./cart-context";
 import CheckoutForm from "./checkout-form";
 import OrderSummary from "./order-summary";
@@ -23,6 +28,21 @@ type IntentResult = { ok: true; quote: Quote } | { ok: false; message: string };
 const APPEARANCE: StripeElementsOptions["appearance"] = {
   theme: "stripe",
   variables: { colorPrimary: "#000000", colorText: "#000000", borderRadius: "0px", fontSizeBase: "13.35px" },
+};
+
+/**
+ * Wallet buttons shown above the card form.
+ *
+ * `applePay: "always"` is the part that matters: on a browser that can't run Apple Pay natively
+ * (Chrome, Edge, Firefox, Opera on desktop) the button still appears and falls back to Apple's
+ * scan-to-pay code, which the customer scans with their iPhone to approve. Where Apple Pay works
+ * natively the same button opens the usual sheet, so there is no branching to do here. Android
+ * Chrome is the exception Apple doesn't cover, and it gets Google Pay instead.
+ */
+const EXPRESS_OPTIONS: StripeExpressCheckoutElementOptions = {
+  paymentMethods: { applePay: "always", googlePay: "always" },
+  buttonHeight: 44,
+  layout: { maxColumns: 2, maxRows: 1 },
 };
 
 /** Field names in the billing form → the customer shape the API validates. */
@@ -216,6 +236,7 @@ function PaymentSection({
   const stripe = useStripe();
   const elements = useElements();
   const [message, setMessage] = useState<string | null>(null);
+  const [walletsAvailable, setWalletsAvailable] = useState(false);
 
   // The Payment Element caches the amount it mounted with. Refresh it whenever the server re-quotes,
   // so the wallet sheet shows the right total without any work left to do at confirmation time.
@@ -223,6 +244,38 @@ function PaymentSection({
     if (!elements) return;
     elements.fetchUpdates().catch(() => {});
   }, [elements, totalOre]);
+
+  const returnUrl = () => `${process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin}/order-complete`;
+
+  // The wallet sheet is about to open, so the billing details have to be complete by now: they are
+  // what the order gets addressed to, and the wallet doesn't collect them on our behalf. Resolving
+  // opens the sheet; rejecting cancels it. Both must happen synchronously, within a second of the tap.
+  const onExpressClick = ({ resolve, reject }: StripeExpressCheckoutElementClickEvent) => {
+    const form = document.getElementById(formId);
+    if (!(form instanceof HTMLFormElement) || !form.reportValidity()) {
+      reject();
+      return;
+    }
+    resolve();
+  };
+
+  // Reached once the customer has approved the payment in the wallet, so the sheet is already open
+  // and awaiting here is fine, unlike in the card path.
+  const onExpressConfirm = async (event: StripeExpressCheckoutElementConfirmEvent) => {
+    if (!stripe || !elements) return;
+    onConfirmingChange(true);
+    setMessage(null);
+    try {
+      const { error } = await stripe.confirmPayment({ elements, confirmParams: { return_url: returnUrl() } });
+      if (error) {
+        // Tells the wallet to show its own failure state rather than leaving the sheet hanging.
+        event.paymentFailed({ reason: "fail" });
+        setMessage(error.message ?? "Payment failed. Please try again.");
+      }
+    } finally {
+      onConfirmingChange(false);
+    }
+  };
 
   const confirm = () => {
     if (!stripe || !elements || confirming) return;
@@ -236,9 +289,8 @@ function PaymentSection({
     // that started it is still the current user gesture, and a network round trip in between
     // forfeits that, which surfaces as "cannot display Apple Pay". The amount and the customer's
     // details are already on the PaymentIntent by now, kept current as the form was filled in.
-    const origin = process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
     stripe
-      .confirmPayment({ elements, confirmParams: { return_url: `${origin}/order-complete` } })
+      .confirmPayment({ elements, confirmParams: { return_url: returnUrl() } })
       // Only reached on failure — success redirects to return_url. Declines arrive here as card_error.
       .then(({ error }) => {
         if (error) setMessage(error.message ?? "Payment failed. Please try again.");
@@ -249,7 +301,26 @@ function PaymentSection({
 
   return (
     <div className="flex flex-col gap-[12px]">
-      <PaymentElement options={{ layout: "tabs" }} />
+      {/* Kept mounted even with nothing to show, since this is what reports what's available. */}
+      <div hidden={!walletsAvailable}>
+        <ExpressCheckoutElement
+          options={EXPRESS_OPTIONS}
+          onClick={onExpressClick}
+          onConfirm={onExpressConfirm}
+          onAvailablePaymentMethodsChange={({ paymentMethods }) => setWalletsAvailable(Boolean(paymentMethods))}
+        />
+      </div>
+
+      {walletsAvailable && (
+        <div className="flex items-center gap-[12px] text-black/50">
+          <span className="h-px flex-1 bg-black/25" />
+          Or pay with card
+          <span className="h-px flex-1 bg-black/25" />
+        </div>
+      )}
+
+      {/* Wallets live in the row above, so the tabs here don't offer them a second time. */}
+      <PaymentElement options={{ layout: "tabs", wallets: { applePay: "never", googlePay: "never" } }} />
       <WalletsDebug />
 
       {message && (

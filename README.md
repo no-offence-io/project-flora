@@ -83,6 +83,23 @@ Test cards: `4242 4242 4242 4242` succeeds, `4000 0000 0000 0002` is declined in
 - No email provider is configured; `src/lib/notify.ts` logs instead. Stripe's own receipt email
   (dashboard setting, live mode) covers the basics meanwhile.
 
+**Wallets (Apple Pay, Google Pay)**
+
+Wallet buttons come from an Express Checkout Element above the card form; the Payment Element below
+has its wallets turned off so nothing is offered twice. `paymentMethods.applePay: "always"` is what
+lets Apple Pay appear on browsers that can't run it natively (Chrome, Edge, Firefox, Opera on
+desktop), where it falls back to Apple's scan-to-pay code. Android Chrome shows Google Pay instead,
+as Apple doesn't support that combination at all.
+
+Both wallets need the domain registered with Stripe, and this is easy to get wrong: the list that
+matters is **payment method domains** (`/v1/payment_method_domains`, Settings → Payment methods →
+Payment method domains), not the older Apple Pay-only list. Register the domain in test mode and
+again in live mode, and make sure the site is publicly reachable first, since registration verifies
+the file at `/.well-known/apple-developer-merchantid-domain-association`.
+
+Append `?debug=wallets` to the checkout URL to have the page report what the current browser says it
+can pay with. Useful for telling a device problem from an account or domain one.
+
 **Vipps**
 
 Vipps on Stripe is in private preview. Check Settings → Payment methods on the Stripe account. If it
@@ -104,6 +121,7 @@ redirect → HMAC-verified webhook → capture → same order pipeline), tested 
    automatically when the Payment Element first loads; if the Apple Pay tab still doesn't show, add the
    domain by hand under Settings → Payment methods → Apple Pay. The file must be reachable without a login,
    so Vercel Deployment Protection has to be off for production.
-5. Confirm Vipps status (above).
-6. Make one real purchase, check the order number in the PaymentIntent metadata and the webhook
+5. Register the production domain under payment method domains in live mode (see Wallets above).
+6. Confirm Vipps status (above).
+7. Make one real purchase, check the order number in the PaymentIntent metadata and the webhook
    delivery shows 200, then refund it from the dashboard.
