@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -294,6 +295,9 @@ export default function CheckoutClient({ formId }: { formId: string }) {
   );
 }
 
+/** One column of the express row: half the width on phones, an equal share on desktop. */
+const COLUMN = "min-w-0 basis-[calc(50%-6px)] md:flex-1 md:basis-0";
+
 const returnUrl = () =>
   `${process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin}/order-complete`;
 
@@ -388,7 +392,7 @@ function PaymentSection({
     <div className="flex flex-col gap-[12px]">
       {/* One row, equal columns, each column its own Stripe element drawing one branded button.
           A column is dropped only once Stripe reports that button can't be used in this browser. */}
-      <div className="flex gap-[12px]">
+      <div className="flex flex-wrap gap-[12px]">
         {available.apple !== false && (
           <ExpressColumn
             {...shared}
@@ -416,6 +420,27 @@ function PaymentSection({
             onAvailability={report("klarna")}
           />
         )}
+        {/* Placeholder until Vipps is set up (it isn't on the Stripe account, so it will be a direct
+            Vipps integration later). Drawn in Vipps' own orange so the row reads as it will. */}
+        <button
+          type="button"
+          onClick={() =>
+            setMessage(
+              "Vipps is coming soon. Please choose another way to pay for now.",
+            )
+          }
+          disabled={confirming}
+          aria-label="Vipps"
+          className={`${COLUMN} flex h-[44px] items-center justify-center bg-[#ff5b24] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50`}
+        >
+          <Image
+            src="/checkout/vipps-white.svg"
+            alt=""
+            width={35}
+            height={25}
+            className="h-[26px] w-auto"
+          />
+        </button>
       </div>
 
       <div className="flex items-center gap-[12px] text-black/50">
@@ -484,7 +509,7 @@ type ExpressColumnProps = {
 /** One column of the row: its own Elements group, hosting exactly one branded button. */
 function ExpressColumn({ stripePromise, group, ...rest }: ExpressColumnProps) {
   return (
-    <div className="min-w-0 flex-1">
+    <div className={COLUMN}>
       <Elements stripe={stripePromise} options={group}>
         <ExpressButton {...rest} />
       </Elements>
