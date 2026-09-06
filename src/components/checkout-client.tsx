@@ -13,6 +13,7 @@ import {
 } from "react";
 import {
   Elements,
+  ExpressCheckoutElement,
   PaymentElement,
   useElements,
   useStripe,
@@ -21,6 +22,9 @@ import type {
   PaymentRequest,
   PaymentRequestPaymentMethodEvent,
   StripeElementsOptions,
+  StripeExpressCheckoutElementClickEvent,
+  StripeExpressCheckoutElementConfirmEvent,
+  StripeExpressCheckoutElementOptions,
 } from "@stripe/stripe-js";
 import { useCart } from "./cart-context";
 import CheckoutForm from "./checkout-form";
@@ -50,6 +54,30 @@ const APPEARANCE: StripeElementsOptions["appearance"] = {
     borderRadius: "0px",
     fontSizeBase: "13.35px",
   },
+};
+
+/**
+ * The Apple Pay column. This one is Stripe's own button rather than ours, because a button of ours
+ * can only open Apple Pay where the browser supports it natively (Safari, iOS). Stripe's can also
+ * offer Apple's scan-to-pay code on desktop Chrome, Edge and Firefox, which is the only way Apple
+ * Pay reaches those browsers at all. Its white-outline, logo-only variant is what lets it sit in the
+ * row without looking like a different kind of control.
+ */
+const APPLE_PAY_OPTIONS: StripeExpressCheckoutElementOptions = {
+  paymentMethods: {
+    applePay: "always",
+    googlePay: "never",
+    klarna: "never",
+    link: "never",
+    paypal: "never",
+    amazonPay: "never",
+  },
+  buttonTheme: { applePay: "white-outline" },
+  buttonType: { applePay: "plain" },
+  buttonHeight: 44,
+  // Never pair `overflow: "never"` with a `maxRows` above 0: that is rejected and the element then
+  // fails to mount at all.
+  layout: { maxColumns: 1, overflow: "never" },
 };
 
 /** The billing form's country select carries names; Stripe wants ISO codes. */
@@ -192,7 +220,7 @@ export default function CheckoutClient({ formId }: { formId: string }) {
   // Elements runs in "deferred" mode, described by amount and currency rather than bound to the
   // intent's client secret. That is what allows `paymentMethodTypes: ["card"]`: the Stripe-hosted
   // fields then show the card and nothing else, while the wallets and Klarna get their own buttons
-  // above, drawn by us to match the rest of the page. The intent itself still accepts them all.
+  // above, drawn to match the rest of the page. The intent itself still accepts them all.
   const totalOre = quote?.totals.totalOre ?? 0;
   const options = useMemo<StripeElementsOptions>(
     () => ({
@@ -276,9 +304,11 @@ function PaymentSection({
     applePay: boolean;
     googlePay: boolean;
   } | null>(null);
+  /** Whether Stripe's Apple Pay button has anything to show here; `null` until it reports. */
+  const [applePayColumn, setApplePayColumn] = useState<boolean | null>(null);
   const paymentRequestRef = useRef<PaymentRequest | null>(null);
   // The wallet handler is registered once, when the Payment Request is created, but must always
-  // see the current intent, router and callbacks. A ref refreshed on every render does that.
+  // see the current intent, router and callbacks. A ref refreshed after every render does that.
   const walletHandlerRef = useRef<
     (event: PaymentRequestPaymentMethodEvent) => Promise<void>
   >(async () => {});
@@ -288,9 +318,9 @@ function PaymentSection({
     elements?.update({ amount: totalOre });
   }, [elements, totalOre]);
 
-  // One Payment Request per page, asked once which wallets this browser can use. Apple Pay and
-  // Google Pay both hand back an ordinary card payment method, which is why the intent needs
-  // nothing beyond "card" for them.
+  // One Payment Request per page, asked once which wallets this browser can use. It drives the
+  // Google Pay button; Google Pay hands back an ordinary card payment method, which is why the
+  // intent needs nothing beyond "card" for it.
   useEffect(() => {
     if (!stripe || paymentRequestRef.current) return;
     const request = stripe.paymentRequest({
@@ -326,8 +356,7 @@ function PaymentSection({
     walletHandlerRef.current = async (
       event: PaymentRequestPaymentMethodEvent,
     ) => {
-      const stripeInstance = stripe;
-      if (!stripeInstance) {
+      if (!stripe) {
         event.complete("fail");
         return;
       }
@@ -335,7 +364,7 @@ function PaymentSection({
       onConfirmingChange(true);
       setMessage(null);
       // First without handling next actions, so the wallet sheet can be closed before any 3DS step.
-      const first = await stripeInstance.confirmCardPayment(
+      const first = await stripe.confirmCardPayment(
         secret,
         { payment_method: event.paymentMethod.id },
         { handleActions: false },
@@ -349,7 +378,7 @@ function PaymentSection({
       event.complete("success");
       let intent = first.paymentIntent;
       if (intent.status === "requires_action") {
-        const second = await stripeInstance.confirmCardPayment(secret);
+        const second = await stripe.confirmCardPayment(secret);
         if (second.error) {
           setMessage(
             second.error.message ?? "Payment failed. Please try again.",
@@ -378,6 +407,47 @@ function PaymentSection({
     if (!stripe || confirming || !validForm()) return;
     setMessage(null);
     paymentRequestRef.current?.show();
+  };
+
+  // Stripe's Apple Pay button: the sheet opens on resolve, which has to happen synchronously
+  // within a second of the tap, so the only work here is checking the billing form.
+  const onApplePayClick = ({
+    resolve,
+    reject,
+  }: StripeExpressCheckoutElementClickEvent) => {
+    if (confirming || !validForm()) {
+      reject();
+      return;
+    }
+    setMessage(null);
+    resolve();
+  };
+
+  // Reached once the customer has approved in the sheet, so awaiting here is fine.
+  const onApplePayConfirm = async (
+    event: StripeExpressCheckoutElementConfirmEvent,
+  ) => {
+    if (!stripe || !elements) return;
+    onConfirmingChange(true);
+    try {
+      const { error: submitError } = await elements.submit();
+      if (submitError) {
+        event.paymentFailed({ reason: "fail" });
+        setMessage(submitError.message ?? "Payment failed. Please try again.");
+        return;
+      }
+      const { error } = await stripe.confirmPayment({
+        elements,
+        clientSecret,
+        confirmParams: { return_url: returnUrl() },
+      });
+      if (error) {
+        event.paymentFailed({ reason: "fail" });
+        setMessage(error.message ?? "Payment failed. Please try again.");
+      }
+    } finally {
+      onConfirmingChange(false);
+    }
   };
 
   const payWithKlarna = async () => {
@@ -434,23 +504,23 @@ function PaymentSection({
 
   return (
     <div className="flex flex-col gap-[12px]">
-      {/* Bordered buttons in the site's own style, matching the tabs Stripe draws for its fields.
-          Each wallet appears only where the browser reports it can actually be used. */}
+      {/* One row, equal columns: Apple Pay (Stripe's button, styled to match), Google Pay and
+          Klarna (ours). A wallet column is dropped only when the browser can't use that wallet. */}
       <div className="flex gap-[12px]">
-        {wallets?.applePay && (
-          <MethodButton
-            onClick={payWithWallet}
-            disabled={confirming}
-            label="Apple Pay"
-          >
-            <Image
-              src="/checkout/apple-pay.svg"
-              alt=""
-              width={28}
-              height={20}
-              className="h-[20px] w-auto"
+        {applePayColumn !== false && (
+          <div className="min-w-0 flex-1">
+            <ExpressCheckoutElement
+              options={APPLE_PAY_OPTIONS}
+              onClick={onApplePayClick}
+              onConfirm={onApplePayConfirm}
+              onAvailablePaymentMethodsChange={({ paymentMethods }) =>
+                setApplePayColumn(Boolean(paymentMethods?.applePay?.available))
+              }
+              onLoadError={({ error }) =>
+                console.error("[apple pay button] failed to load", error)
+              }
             />
-          </MethodButton>
+          </div>
         )}
         {wallets?.googlePay && (
           <MethodButton
@@ -484,12 +554,21 @@ function PaymentSection({
         <span className="h-px flex-1 bg-black/25" />
       </div>
 
-      {/* Card only, so Stripe draws the fields without a tab strip of its own. */}
-      <PaymentElement options={{ layout: "tabs" }} />
+      {/* Card only, and no wallets, so Stripe draws the fields without a tab strip of its own. */}
+      <PaymentElement
+        options={{
+          layout: "tabs",
+          wallets: { applePay: "never", googlePay: "never" },
+        }}
+      />
 
       {debug && (
         <pre className="m-0 whitespace-pre-wrap break-all border border-black/25 p-[12px] text-[11px] leading-normal">
           wallets: {wallets ? JSON.stringify(wallets) : "checking…"}
+          {"\n"}apple pay column:{" "}
+          {applePayColumn === null
+            ? "not reported yet"
+            : String(applePayColumn)}
           {"\n"}ua: {navigator.userAgent}
         </pre>
       )}
@@ -522,7 +601,7 @@ function PaymentSection({
   );
 }
 
-/** One bordered payment option: mark on top, name beneath, in the style of Stripe's own tabs. */
+/** One bordered payment option, 44px tall to sit level with Stripe's Apple Pay button beside it. */
 function MethodButton({
   label,
   onClick,
@@ -539,9 +618,9 @@ function MethodButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex min-w-0 flex-1 flex-col items-start gap-[6px] border border-black/20 bg-white p-[12px] text-left font-gotham text-paragraph text-black transition-colors hover:border-black disabled:cursor-not-allowed disabled:opacity-50"
+      className="flex h-[44px] min-w-0 flex-1 items-center justify-center gap-[8px] border border-black bg-white px-[12px] font-gotham text-paragraph text-black transition-opacity hover:opacity-70 disabled:cursor-not-allowed disabled:opacity-50"
     >
-      <span className="flex h-[20px] items-center">{children}</span>
+      <span className="flex shrink-0 items-center">{children}</span>
       <span className="truncate">{label}</span>
     </button>
   );
