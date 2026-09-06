@@ -7,6 +7,7 @@ import type { StripeElementsOptions } from "@stripe/stripe-js";
 import { useCart } from "./cart-context";
 import CheckoutForm from "./checkout-form";
 import OrderSummary from "./order-summary";
+import { getCountryCode } from "@/data/country-codes";
 import type { Customer, IntentResponse } from "@/lib/checkout-schema";
 import { getStripePromise } from "@/lib/stripe-client";
 
@@ -38,7 +39,9 @@ function readCustomer(form: HTMLFormElement): Customer {
     apartment: optional("apartment"),
     postcode: text("postcode"),
     city: text("city"),
-    phonePrefix: text("phone-prefix"),
+    // The select submits an ISO country code (its value drives the flag and label); the API wants
+    // the dial code that goes with it.
+    phonePrefix: getCountryCode(text("phone-prefix"))?.dial ?? "+47",
     phone: text("phone"),
     note: optional("note"),
   };

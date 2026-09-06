@@ -20,7 +20,7 @@ export const customerSchema = z.strictObject({
   apartment: z.string().trim().max(200).optional(),
   postcode: z.string().trim().min(1).max(20),
   city: z.string().trim().min(1).max(100),
-  phonePrefix: z.string().regex(/^\+\d{1,4}$/),
+  phonePrefix: z.string().regex(/^\+\d{1,5}$/),
   phone: z.string().trim().min(4).max(30),
   note: z.string().trim().max(1000).optional(),
 });

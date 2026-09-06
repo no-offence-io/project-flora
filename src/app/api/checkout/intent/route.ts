@@ -25,10 +25,9 @@ export async function POST(req: Request) {
 
   const parsed = intentRequestSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Invalid request", issues: parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message })) },
-      { status: 400 },
-    );
+    const issues = parsed.error.issues.map((i) => ({ path: i.path.join("."), message: i.message }));
+    console.warn("[checkout/intent] rejected:", issues);
+    return NextResponse.json({ error: "Invalid request", issues }, { status: 400 });
   }
   const { items, customer, paymentIntentId } = parsed.data;
 
