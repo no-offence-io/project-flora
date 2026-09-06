@@ -41,12 +41,12 @@ const APPEARANCE: StripeElementsOptions["appearance"] = {
  */
 const EXPRESS_OPTIONS: StripeExpressCheckoutElementOptions = {
   paymentMethods: { applePay: "always", googlePay: "always", klarna: "auto" },
-  // Fixed order rather than Stripe's per-visitor sorting, so the row reads the same for everyone.
-  paymentMethodOrder: ["applePay", "googlePay", "klarna"],
   buttonHeight: 44,
-  // `overflow: "never"` keeps every eligible button on the page instead of folding the less
-  // prominent ones into a "..." menu. Two columns wrap to a second row on narrow screens.
-  layout: { maxColumns: 2, maxRows: 2, overflow: "never" },
+  // `overflow: "never"` keeps every eligible button on the page rather than folding the less
+  // prominent ones behind a "..." menu. It cannot be combined with a `maxRows` above 0 — that
+  // combination is rejected outright and the element then fails to mount at all, taking every
+  // wallet button with it. Rows stay unlimited so the buttons simply wrap.
+  layout: { maxColumns: 2, overflow: "never" },
 };
 
 /** Field names in the billing form → the customer shape the API validates. */
@@ -200,7 +200,13 @@ export default function CheckoutClient({ formId }: { formId: string }) {
  * Element runs before deciding to show a wallet tab, so "false" here means the device or browser
  * is the reason a wallet is missing, not the Stripe account or the domain registration.
  */
-function WalletsDebug({ expressMethods }: { expressMethods?: Record<string, { available: boolean } | undefined> }) {
+function WalletsDebug({
+  expressMethods,
+  expressError,
+}: {
+  expressMethods?: Record<string, { available: boolean } | undefined>;
+  expressError?: string | null;
+}) {
   const stripe = useStripe();
   const [result, setResult] = useState<string | null>(null);
   const enabled = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("debug") === "wallets";
@@ -221,7 +227,7 @@ function WalletsDebug({ expressMethods }: { expressMethods?: Record<string, { av
   if (!enabled) return null;
   return (
     <pre className="m-0 whitespace-pre-wrap break-all border border-black/25 p-[12px] text-[11px] leading-normal">
-      express: {expressMethods ? JSON.stringify(expressMethods) : "not reported yet"}
+      express: {expressError ? `LOAD ERROR — ${expressError}` : expressMethods ? JSON.stringify(expressMethods) : "not reported yet"}
       {"\n"}
       wallets: {result ?? "checking…"}
     </pre>
@@ -246,6 +252,7 @@ function PaymentSection({
   // draw the divider, never to hide the element itself: hiding it on a stale or missing report would
   // take away the only wallet UI on the page, since the card form's own wallets are turned off.
   const [walletMethods, setWalletMethods] = useState<Record<string, { available: boolean } | undefined> | undefined>(undefined);
+  const [walletError, setWalletError] = useState<string | null>(null);
   const walletsAvailable = Boolean(walletMethods && Object.values(walletMethods).some((m) => m?.available));
 
   // The Payment Element caches the amount it mounted with. Refresh it whenever the server re-quotes,
@@ -318,6 +325,12 @@ function PaymentSection({
         onClick={onExpressClick}
         onConfirm={onExpressConfirm}
         onAvailablePaymentMethodsChange={({ paymentMethods }) => setWalletMethods(paymentMethods)}
+        // A misconfigured option makes the element fail to mount, which would otherwise look
+        // exactly like "this device has no wallets". Say so instead of disappearing.
+        onLoadError={({ error }) => {
+          console.error("[express checkout] failed to load", error);
+          setWalletError(error.message ?? "Wallet buttons could not be loaded.");
+        }}
       />
 
       {walletsAvailable && (
@@ -330,7 +343,7 @@ function PaymentSection({
 
       {/* Wallets live in the row above, so the tabs here don't offer them a second time. */}
       <PaymentElement options={{ layout: "tabs", wallets: { applePay: "never", googlePay: "never" } }} />
-      <WalletsDebug expressMethods={walletMethods} />
+      <WalletsDebug expressMethods={walletMethods} expressError={walletError} />
 
       {message && (
         <p className="m-0 text-[#b00020]" role="alert">
