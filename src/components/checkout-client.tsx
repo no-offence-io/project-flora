@@ -196,7 +196,7 @@ export default function CheckoutClient({ formId }: { formId: string }) {
  * Element runs before deciding to show a wallet tab, so "false" here means the device or browser
  * is the reason a wallet is missing, not the Stripe account or the domain registration.
  */
-function WalletsDebug() {
+function WalletsDebug({ expressMethods }: { expressMethods?: Record<string, { available: boolean } | undefined> }) {
   const stripe = useStripe();
   const [result, setResult] = useState<string | null>(null);
   const enabled = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("debug") === "wallets";
@@ -217,6 +217,8 @@ function WalletsDebug() {
   if (!enabled) return null;
   return (
     <pre className="m-0 whitespace-pre-wrap break-all border border-black/25 p-[12px] text-[11px] leading-normal">
+      express: {expressMethods ? JSON.stringify(expressMethods) : "not reported yet"}
+      {"\n"}
       wallets: {result ?? "checking…"}
     </pre>
   );
@@ -236,7 +238,11 @@ function PaymentSection({
   const stripe = useStripe();
   const elements = useElements();
   const [message, setMessage] = useState<string | null>(null);
-  const [walletsAvailable, setWalletsAvailable] = useState(false);
+  // `undefined` until the element reports in. Availability is only ever used to decide whether to
+  // draw the divider, never to hide the element itself: hiding it on a stale or missing report would
+  // take away the only wallet UI on the page, since the card form's own wallets are turned off.
+  const [walletMethods, setWalletMethods] = useState<Record<string, { available: boolean } | undefined> | undefined>(undefined);
+  const walletsAvailable = Boolean(walletMethods && Object.values(walletMethods).some((m) => m?.available));
 
   // The Payment Element caches the amount it mounted with. Refresh it whenever the server re-quotes,
   // so the wallet sheet shows the right total without any work left to do at confirmation time.
@@ -301,15 +307,14 @@ function PaymentSection({
 
   return (
     <div className="flex flex-col gap-[12px]">
-      {/* Kept mounted even with nothing to show, since this is what reports what's available. */}
-      <div hidden={!walletsAvailable}>
-        <ExpressCheckoutElement
-          options={EXPRESS_OPTIONS}
-          onClick={onExpressClick}
-          onConfirm={onExpressConfirm}
-          onAvailablePaymentMethodsChange={({ paymentMethods }) => setWalletsAvailable(Boolean(paymentMethods))}
-        />
-      </div>
+      {/* Always mounted: it renders nothing when no wallet is available, and it is what reports
+          availability in the first place. */}
+      <ExpressCheckoutElement
+        options={EXPRESS_OPTIONS}
+        onClick={onExpressClick}
+        onConfirm={onExpressConfirm}
+        onAvailablePaymentMethodsChange={({ paymentMethods }) => setWalletMethods(paymentMethods)}
+      />
 
       {walletsAvailable && (
         <div className="flex items-center gap-[12px] text-black/50">
@@ -321,7 +326,7 @@ function PaymentSection({
 
       {/* Wallets live in the row above, so the tabs here don't offer them a second time. */}
       <PaymentElement options={{ layout: "tabs", wallets: { applePay: "never", googlePay: "never" } }} />
-      <WalletsDebug />
+      <WalletsDebug expressMethods={walletMethods} />
 
       {message && (
         <p className="m-0 text-[#b00020]" role="alert">
