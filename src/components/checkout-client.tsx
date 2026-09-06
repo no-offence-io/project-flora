@@ -31,29 +31,22 @@ const APPEARANCE: StripeElementsOptions["appearance"] = {
 };
 
 /**
- * Apple Pay fallback button, shown only where the card form below can't offer Apple Pay itself.
+ * The alternatives to paying by card, as one row of buttons above the card form.
  *
- * Everything the Payment Element can present as a tab is presented as a tab, so the checkout reads
- * as one consistent row of options. The one thing tabs can't do is Apple Pay on a browser without
- * native support (Chrome, Edge, Firefox, Opera on desktop). This element can, via Apple's
- * scan-to-pay code, so it stands in for exactly that case and shows nothing else.
+ * `applePay: "always"` also gets Apple Pay onto browsers with no native support (Chrome, Edge,
+ * Firefox, Opera on desktop), where it falls back to Apple's scan-to-pay code. Each button still
+ * only appears where it can actually be used, so the row is shorter on some browsers than others.
  */
 const EXPRESS_OPTIONS: StripeExpressCheckoutElementOptions = {
-  paymentMethods: {
-    applePay: "always",
-    // The tabs below cover these wherever they can run at all, so this row stays a single button.
-    googlePay: "never",
-    klarna: "never",
-    link: "never",
-    paypal: "never",
-    amazonPay: "never",
-  },
+  paymentMethods: { applePay: "always", googlePay: "always", klarna: "auto", link: "never", paypal: "never", amazonPay: "never" },
+  // Payment method *types*, so snake_case. Anything that wouldn't have shown is ignored rather
+  // than breaking the element, and anything unlisted follows after these.
+  paymentMethodOrder: ["klarna", "google_pay", "apple_pay"],
   buttonHeight: 44,
   // `overflow: "never"` keeps every eligible button on the page rather than folding the less
-  // prominent ones behind a "..." menu. It cannot be combined with a `maxRows` above 0 — that
-  // combination is rejected outright and the element then fails to mount at all, taking every
-  // wallet button with it. Rows stay unlimited so the buttons simply wrap.
-  layout: { maxColumns: 1, overflow: "never" },
+  // prominent ones behind a "..." menu. It must not be combined with a `maxRows` above 0: that pair
+  // is rejected outright and the element then fails to mount at all, taking every button with it.
+  layout: { maxColumns: 3, overflow: "never" },
 };
 
 /** Field names in the billing form → the customer shape the API validates. */
@@ -260,11 +253,6 @@ function PaymentSection({
   // take away the only wallet UI on the page, since the card form's own wallets are turned off.
   const [walletMethods, setWalletMethods] = useState<Record<string, { available: boolean } | undefined> | undefined>(undefined);
   const [walletError, setWalletError] = useState<string | null>(null);
-  // Safari and iOS expose ApplePaySession, and there the Payment Element shows Apple Pay as a tab
-  // like any other method. Only browsers without it need the separate button and its scan-to-pay
-  // fallback. Read once, lazily: this component mounts only after a quote returns, never on the
-  // server, so there is no hydration to mismatch.
-  const [applePayIsNative] = useState(() => typeof window !== "undefined" && "ApplePaySession" in window);
   const walletsAvailable = Boolean(walletMethods && Object.values(walletMethods).some((m) => m?.available));
 
   // The Payment Element caches the amount it mounted with. Refresh it whenever the server re-quotes,
@@ -331,7 +319,6 @@ function PaymentSection({
   return (
     <div className="flex flex-col gap-[12px]">
       {/* Renders nothing when no wallet is available, and reports availability either way. */}
-      {!applePayIsNative && (
       <ExpressCheckoutElement
         options={EXPRESS_OPTIONS}
         onClick={onExpressClick}
@@ -344,9 +331,8 @@ function PaymentSection({
           setWalletError(error.message ?? "Wallet buttons could not be loaded.");
         }}
       />
-      )}
 
-      {!applePayIsNative && walletsAvailable && (
+      {walletsAvailable && (
         <div className="flex items-center gap-[12px] text-black/50">
           <span className="h-px flex-1 bg-black/25" />
           Or pay with card
@@ -354,9 +340,9 @@ function PaymentSection({
         </div>
       )}
 
-      {/* Tabs carry everything the browser can run natively: card, Klarna, and the wallets. Link is
-          switched off in the Stripe payment method configuration rather than here. */}
-      <PaymentElement options={{ layout: "tabs" }} />
+      {/* The wallets are in the row above, so they aren't offered here a second time. Link is off in
+          the Stripe payment method configuration rather than here. */}
+      <PaymentElement options={{ layout: "tabs", wallets: { applePay: "never", googlePay: "never" }, paymentMethodOrder: ["card"] }} />
       <WalletsDebug expressMethods={walletMethods} expressError={walletError} />
 
       {message && (

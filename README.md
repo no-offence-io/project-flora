@@ -85,14 +85,16 @@ Test cards: `4242 4242 4242 4242` succeeds, `4000 0000 0000 0002` is declined in
 
 **Wallets (Apple Pay, Google Pay)**
 
-Card, Klarna, Apple Pay and Google Pay all appear as tabs in the Payment Element, so the checkout
-reads as one row of options. Link is switched off in the Stripe payment method configuration.
+Klarna, Google Pay and Apple Pay sit in an Express Checkout Element above an "Or pay with card"
+divider; the Payment Element below handles the card itself with its own wallets turned off, so
+nothing is offered twice. `paymentMethods.applePay: "always"` is what also gets Apple Pay onto
+browsers with no native support (Chrome, Edge, Firefox, Opera on desktop), where it falls back to
+Apple's scan-to-pay code. Link is switched off in the Stripe payment method configuration.
 
-The one case tabs can't cover is Apple Pay on a browser without native support (Chrome, Edge,
-Firefox, Opera on desktop). There, and only there, an Express Checkout Element renders a single
-Apple Pay button with `paymentMethods.applePay: "always"`, which falls back to Apple's scan-to-pay
-code. The page checks for `ApplePaySession` to decide which of the two to show, so Apple Pay is
-never offered twice. `paymentMethods.applePay: "always"` is what
+Two constraints worth knowing before changing the layout: `overflow: "never"` and a `maxRows` above
+0 can't be combined, and an invalid option makes the whole element fail to mount rather than
+degrade, which looks exactly like a device with no wallets. There is also no way to hide one
+payment method from the Payment Element, so Klarna stays a tab there as well as a button above. `paymentMethods.applePay: "always"` is what
 lets Apple Pay appear on browsers that can't run it natively (Chrome, Edge, Firefox, Opera on
 desktop), where it falls back to Apple's scan-to-pay code. Android Chrome shows Google Pay instead,
 as Apple doesn't support that combination at all.
