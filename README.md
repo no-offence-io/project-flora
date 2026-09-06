@@ -98,7 +98,12 @@ redirect → HMAC-verified webhook → capture → same order pipeline), tested 
    `https://<domain>/api/webhooks/stripe` for `payment_intent.succeeded` and
    `payment_intent.payment_failed`; put its signing secret in `STRIPE_WEBHOOK_SECRET`.
 3. Set `NEXT_PUBLIC_SITE_URL` to the production origin.
-4. Apple Pay: Settings → Payment methods → Apple Pay → add and verify the production domain.
+4. Apple Pay: the site serves Stripe's domain-association file from
+   `public/.well-known/apple-developer-merchantid-domain-association` (downloaded from
+   https://stripe.com/files/apple-pay/apple-developer-merchantid-domain-association). Stripe registers the domain
+   automatically when the Payment Element first loads; if the Apple Pay tab still doesn't show, add the
+   domain by hand under Settings → Payment methods → Apple Pay. The file must be reachable without a login,
+   so Vercel Deployment Protection has to be off for production.
 5. Confirm Vipps status (above).
 6. Make one real purchase, check the order number in the PaymentIntent metadata and the webhook
    delivery shows 200, then refund it from the dashboard.
