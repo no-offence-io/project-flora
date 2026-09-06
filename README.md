@@ -83,38 +83,33 @@ Test cards: `4242 4242 4242 4242` succeeds, `4000 0000 0000 0002` is declined in
 - No email provider is configured; `src/lib/notify.ts` logs instead. Stripe's own receipt email
   (dashboard setting, live mode) covers the basics meanwhile.
 
-**Wallets (Apple Pay, Google Pay)**
+**Wallets and Klarna**
 
-Apple Pay and Google Pay sit side by side in an Express Checkout Element above an "Or pay with card"
-divider; Klarna and the card are tabs in the Payment Element below, whose own wallets are turned off.
-`paymentMethods.applePay: "always"` is what also gets Apple Pay onto browsers with no native support
-(Chrome, Edge, Firefox on desktop), where it falls back to Apple's scan-to-pay code. Link is switched
-off in the Stripe payment method configuration.
+Apple Pay, Google Pay and Klarna are three bordered buttons of our own, side by side above an
+"Or pay with card" divider, styled to match the rest of the checkout. The card fields below are still
+Stripe's Payment Element, so card data never touches this code. Each wallet button appears only when
+the browser reports it can be used (`stripe.paymentRequest().canMakePayment()`); Klarna is always
+offered.
 
-Wallet buttons are drawn by Apple and Google and can't be restyled to match the bordered tabs; that's
-a brand requirement, not a Stripe limitation. They're set to `buttonType: "plain"` (logo only) so
-both fit one line in the 520px column. Klarna is kept out of that row on purpose: its button carries
-a ~200px text label, and Stripe stacks the whole row vertically rather than shrink any button below
-its brand minimum, so adding it costs the side-by-side layout. `layout.maxColumns` is a ceiling
-Stripe may ignore, not a guarantee.
+How each one pays, all against the same server-priced PaymentIntent:
 
-Two traps if you change the layout: `overflow: "never"` and a `maxRows` above 0 can't be combined,
-and an invalid option makes the element fail to mount rather than degrade, which looks exactly like
-a device with no wallets. `?debug=wallets` on the checkout reports what the element found, including
-load errors. There is also no way to hide a single method from the Payment Element, so Klarna stays
-a tab there as well as a button above. `paymentMethods.applePay: "always"` is what
-lets Apple Pay appear on browsers that can't run it natively (Chrome, Edge, Firefox, Opera on
-desktop), where it falls back to Apple's scan-to-pay code. Android Chrome shows Google Pay instead,
-as Apple doesn't support that combination at all.
+- Card: the Payment Element runs in deferred mode with `paymentMethodTypes: ["card"]`, which is what
+  keeps Stripe from drawing its own tab strip. Confirm is `elements.submit()` then `confirmPayment`.
+- Apple Pay / Google Pay: `paymentRequest.show()` from the button's own click (it must be
+  synchronous — the sheet only opens inside the tap), then `confirmCardPayment` with the wallet's
+  payment method. Both wallets hand back an ordinary card payment method.
+- Klarna: `confirmKlarnaPayment`, which redirects to Klarna and back to `/order-complete`.
 
-Both wallets need the domain registered with Stripe, and this is easy to get wrong: the list that
-matters is **payment method domains** (`/v1/payment_method_domains`, Settings → Payment methods →
-Payment method domains), not the older Apple Pay-only list. Register the domain in test mode and
-again in live mode, and make sure the site is publicly reachable first, since registration verifies
-the file at `/.well-known/apple-developer-merchantid-domain-association`.
+Consequence to know: Apple Pay's scan-to-pay fallback for desktop Chrome is only offered through
+Apple's own branded button (the Express Checkout Element), which can't be restyled. With our own
+buttons, Apple Pay shows only where the browser supports it natively, i.e. Safari and iOS. Both
+wallets need the domain registered under **payment method domains** (Settings → Payment methods →
+Payment method domains, or `/v1/payment_method_domains`), in test mode and again in live mode; the
+older Apple Pay-only list is not enough. Registration verifies the file at
+`/.well-known/apple-developer-merchantid-domain-association`, so the site must be publicly reachable.
 
-Append `?debug=wallets` to the checkout URL to have the page report what the current browser says it
-can pay with. Useful for telling a device problem from an account or domain one.
+`?debug=wallets` on the checkout prints what the browser reported. Link is switched off in the Stripe
+payment method configuration.
 
 **Vipps**
 

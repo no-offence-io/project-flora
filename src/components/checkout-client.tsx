@@ -1,59 +1,60 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Elements, ExpressCheckoutElement, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import { useRouter } from "next/navigation";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  Elements,
+  PaymentElement,
+  useElements,
+  useStripe,
+} from "@stripe/react-stripe-js";
 import type {
+  PaymentRequest,
+  PaymentRequestPaymentMethodEvent,
   StripeElementsOptions,
-  StripeExpressCheckoutElementClickEvent,
-  StripeExpressCheckoutElementConfirmEvent,
-  StripeExpressCheckoutElementOptions,
 } from "@stripe/stripe-js";
 import { useCart } from "./cart-context";
 import CheckoutForm from "./checkout-form";
 import OrderSummary from "./order-summary";
-import { getCountryCode } from "@/data/country-codes";
+import { COUNTRY_CODES, getCountryCode } from "@/data/country-codes";
 import type { Customer, IntentResponse } from "@/lib/checkout-schema";
 import { getStripePromise } from "@/lib/stripe-client";
 
-type Quote = Pick<IntentResponse, "clientSecret" | "paymentIntentId" | "totals"> & {
+type Quote = Pick<
+  IntentResponse,
+  "clientSecret" | "paymentIntentId" | "totals"
+> & {
   /** The cart this quote priced; totals for any other cart are stale and shown as pending. */
   cartKey: string;
 };
 
-const cartKeyOf = (items: { id: string; quantity: number }[]) => JSON.stringify(items.map((i) => [i.id, i.quantity]));
+const cartKeyOf = (items: { id: string; quantity: number }[]) =>
+  JSON.stringify(items.map((i) => [i.id, i.quantity]));
 type IntentResult = { ok: true; quote: Quote } | { ok: false; message: string };
 
 /** Square corners and the site's black, so the Stripe-hosted fields sit with the rest of the form. */
 const APPEARANCE: StripeElementsOptions["appearance"] = {
   theme: "stripe",
-  variables: { colorPrimary: "#000000", colorText: "#000000", borderRadius: "0px", fontSizeBase: "13.35px" },
+  variables: {
+    colorPrimary: "#000000",
+    colorText: "#000000",
+    borderRadius: "0px",
+    fontSizeBase: "13.35px",
+  },
 };
 
-/**
- * The alternatives to paying by card, as one row of buttons above the card form.
- *
- * `applePay: "always"` also gets Apple Pay onto browsers with no native support (Chrome, Edge,
- * Firefox, Opera on desktop), where it falls back to Apple's scan-to-pay code. Each button still
- * only appears where it can actually be used, so the row is shorter on some browsers than others.
- */
-const EXPRESS_OPTIONS: StripeExpressCheckoutElementOptions = {
-  // Klarna is deliberately not here. Its button carries a text label ("Betal med Klarna") roughly
-  // 200px wide, and three branded buttons of that size don't fit the 520px summary column, so
-  // Stripe stacks all of them rather than shrinking any below its brand minimum. Left out, the two
-  // logo-only wallets sit side by side, and Klarna appears as a tab below instead.
-  paymentMethods: { applePay: "always", googlePay: "always", klarna: "never", link: "never", paypal: "never", amazonPay: "never" },
-  // Payment method *types*, so snake_case. Anything that wouldn't have shown is ignored rather
-  // than breaking the element, and anything unlisted follows after these.
-  paymentMethodOrder: ["apple_pay", "google_pay"],
-  // Logo only, no "Buy with…" call to action, so both fit on one line.
-  buttonType: { applePay: "plain", googlePay: "plain" },
-  buttonHeight: 44,
-  // `overflow: "never"` keeps every eligible button on the page rather than folding the less
-  // prominent ones behind a "..." menu. It must not be combined with a `maxRows` above 0: that pair
-  // is rejected outright and the element then fails to mount at all, taking every button with it.
-  layout: { maxColumns: 2, overflow: "never" },
-};
+/** The billing form's country select carries names; Stripe wants ISO codes. */
+const countryIso = (name: string) =>
+  COUNTRY_CODES.find((c) => c.name === name)?.iso ?? "NO";
 
 /** Field names in the billing form → the customer shape the API validates. */
 function readCustomer(form: HTMLFormElement): Customer {
@@ -79,8 +80,8 @@ function readCustomer(form: HTMLFormElement): Customer {
 
 /**
  * The checkout's interactive half. It asks the server to quote the cart (and create or update the
- * PaymentIntent), shows the server's totals, and mounts Stripe's Payment Element against that
- * intent. Every amount on screen and every amount charged comes from the same server quote.
+ * PaymentIntent), shows the server's totals, and mounts Stripe's card fields against that intent.
+ * Every amount on screen and every amount charged comes from the same server quote.
  */
 export default function CheckoutClient({ formId }: { formId: string }) {
   const { items } = useCart();
@@ -97,17 +98,43 @@ export default function CheckoutClient({ formId }: { formId: string }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: items.map((item) => ({ id: item.id, quantity: item.quantity })),
+          items: items.map((item) => ({
+            id: item.id,
+            quantity: item.quantity,
+          })),
           ...(withCustomer ? { customer: withCustomer } : {}),
-          ...(intentIdRef.current ? { paymentIntentId: intentIdRef.current } : {}),
+          ...(intentIdRef.current
+            ? { paymentIntentId: intentIdRef.current }
+            : {}),
         }),
       });
-      const body = (await res.json().catch(() => ({}))) as Partial<IntentResponse> & { error?: string; issues?: { message: string }[] };
-      if (!res.ok || !body.clientSecret || !body.paymentIntentId || !body.totals) {
-        return { ok: false, message: body.issues?.[0]?.message ?? body.error ?? "Could not start payment." };
+      const body = (await res
+        .json()
+        .catch(() => ({}))) as Partial<IntentResponse> & {
+        error?: string;
+        issues?: { message: string }[];
+      };
+      if (
+        !res.ok ||
+        !body.clientSecret ||
+        !body.paymentIntentId ||
+        !body.totals
+      ) {
+        return {
+          ok: false,
+          message:
+            body.issues?.[0]?.message ??
+            body.error ??
+            "Could not start payment.",
+        };
       }
       intentIdRef.current = body.paymentIntentId;
-      const next: Quote = { clientSecret: body.clientSecret, paymentIntentId: body.paymentIntentId, totals: body.totals, cartKey: cartKeyOf(items) };
+      const next: Quote = {
+        clientSecret: body.clientSecret,
+        paymentIntentId: body.paymentIntentId,
+        totals: body.totals,
+        cartKey: cartKeyOf(items),
+      };
       setQuote(next);
       setQuoteError(null);
       return { ok: true, quote: next };
@@ -125,7 +152,8 @@ export default function CheckoutClient({ formId }: { formId: string }) {
     if (!hasItems || !(form instanceof HTMLFormElement)) return;
 
     let timer = 0;
-    const snapshot = () => setCustomer(form.checkValidity() ? readCustomer(form) : null);
+    const snapshot = () =>
+      setCustomer(form.checkValidity() ? readCustomer(form) : null);
     const onInput = () => {
       window.clearTimeout(timer);
       timer = window.setTimeout(snapshot, 300);
@@ -150,7 +178,7 @@ export default function CheckoutClient({ formId }: { formId: string }) {
   // spinner doesn't fire per click. Paused during confirmation: Stripe rejects updates to a
   // PaymentIntent that is already being confirmed.
   // An emptied cart keeps its PaymentIntent id: if items come back, the same intent is updated
-  // rather than a new one minted, and the Payment Element the customer may have started filling stays.
+  // rather than a new one minted, and the card fields the customer may have started filling stay.
   useEffect(() => {
     if (!hasItems || confirming) return;
     const timer = window.setTimeout(() => {
@@ -160,6 +188,22 @@ export default function CheckoutClient({ formId }: { formId: string }) {
     }, 400);
     return () => window.clearTimeout(timer);
   }, [hasItems, confirming, customer, requestIntent]);
+
+  // Elements runs in "deferred" mode, described by amount and currency rather than bound to the
+  // intent's client secret. That is what allows `paymentMethodTypes: ["card"]`: the Stripe-hosted
+  // fields then show the card and nothing else, while the wallets and Klarna get their own buttons
+  // above, drawn by us to match the rest of the page. The intent itself still accepts them all.
+  const totalOre = quote?.totals.totalOre ?? 0;
+  const options = useMemo<StripeElementsOptions>(
+    () => ({
+      mode: "payment",
+      amount: totalOre,
+      currency: "nok",
+      paymentMethodTypes: ["card"],
+      appearance: APPEARANCE,
+    }),
+    [totalOre],
+  );
 
   if (items.length === 0) {
     return (
@@ -173,22 +217,29 @@ export default function CheckoutClient({ formId }: { formId: string }) {
     );
   }
 
-  const options: StripeElementsOptions | null = quote ? { clientSecret: quote.clientSecret, appearance: APPEARANCE } : null;
   // Only show totals that were priced for exactly this cart; while a re-quote is in flight the
   // numbers read as pending instead of quietly showing the previous cart's amounts.
-  const totals = quote && quote.cartKey === cartKeyOf(items) ? quote.totals : null;
+  const totals =
+    quote && quote.cartKey === cartKeyOf(items) ? quote.totals : null;
 
   return (
     <div className="flex flex-col gap-[60px] md:flex-row md:items-stretch md:gap-[42px]">
       <CheckoutForm id={formId} className="md:min-w-0 md:flex-1" />
       <OrderSummary totals={totals}>
         {!stripePromise ? (
-          <p className="m-0 text-black/50">Payments are not configured: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is missing.</p>
-        ) : quote && options ? (
-          // Keyed on the client secret: a brand-new PaymentIntent gets a fresh Elements instance,
-          // while updates to the same intent keep the one the customer is already typing into.
-          <Elements key={quote.clientSecret} stripe={stripePromise} options={options}>
-            <PaymentSection formId={formId} totalOre={quote.totals.totalOre} confirming={confirming} onConfirmingChange={setConfirming} />
+          <p className="m-0 text-black/50">
+            Payments are not configured: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is
+            missing.
+          </p>
+        ) : quote ? (
+          <Elements stripe={stripePromise} options={options}>
+            <PaymentSection
+              formId={formId}
+              clientSecret={quote.clientSecret}
+              totalOre={quote.totals.totalOre}
+              confirming={confirming}
+              onConfirmingChange={setConfirming}
+            />
           </Elements>
         ) : (
           <p className="m-0 text-black/50" role="status">
@@ -200,156 +251,248 @@ export default function CheckoutClient({ formId }: { formId: string }) {
   );
 }
 
-/**
- * Hidden diagnostic: with `?debug=wallets` in the URL, asks the browser itself whether Apple Pay and
- * Google Pay can be used on this page and prints the answer. This is the same check the Payment
- * Element runs before deciding to show a wallet tab, so "false" here means the device or browser
- * is the reason a wallet is missing, not the Stripe account or the domain registration.
- */
-function WalletsDebug({
-  expressMethods,
-  expressError,
-}: {
-  expressMethods?: Record<string, { available: boolean } | undefined>;
-  expressError?: string | null;
-}) {
-  const stripe = useStripe();
-  const [result, setResult] = useState<string | null>(null);
-  const enabled = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("debug") === "wallets";
-
-  useEffect(() => {
-    if (!enabled || !stripe) return;
-    const request = stripe.paymentRequest({
-      country: "NO",
-      currency: "nok",
-      total: { label: "Wallet check", amount: 100 },
-    });
-    request
-      .canMakePayment()
-      .then((can) => setResult(JSON.stringify({ applePay: can?.applePay ?? false, googlePay: can?.googlePay ?? false, link: can?.link ?? false, userAgent: navigator.userAgent })))
-      .catch((err: unknown) => setResult(`error: ${err instanceof Error ? err.message : String(err)}`));
-  }, [enabled, stripe]);
-
-  if (!enabled) return null;
-  return (
-    <pre className="m-0 whitespace-pre-wrap break-all border border-black/25 p-[12px] text-[11px] leading-normal">
-      express: {expressError ? `LOAD ERROR — ${expressError}` : expressMethods ? JSON.stringify(expressMethods) : "not reported yet"}
-      {"\n"}
-      wallets: {result ?? "checking…"}
-    </pre>
-  );
-}
+const returnUrl = () =>
+  `${process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin}/order-complete`;
 
 function PaymentSection({
   formId,
+  clientSecret,
   totalOre,
   confirming,
   onConfirmingChange,
 }: {
   formId: string;
+  clientSecret: string;
   totalOre: number;
   confirming: boolean;
   onConfirmingChange: (value: boolean) => void;
 }) {
   const stripe = useStripe();
   const elements = useElements();
+  const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
-  // `undefined` until the element reports in. Availability is only ever used to decide whether to
-  // draw the divider, never to hide the element itself: hiding it on a stale or missing report would
-  // take away the only wallet UI on the page, since the card form's own wallets are turned off.
-  const [walletMethods, setWalletMethods] = useState<Record<string, { available: boolean } | undefined> | undefined>(undefined);
-  const [walletError, setWalletError] = useState<string | null>(null);
-  const walletsAvailable = Boolean(walletMethods && Object.values(walletMethods).some((m) => m?.available));
+  /** What the browser says it can pay with; `null` until asked. Only true entries get a button. */
+  const [wallets, setWallets] = useState<{
+    applePay: boolean;
+    googlePay: boolean;
+  } | null>(null);
+  const paymentRequestRef = useRef<PaymentRequest | null>(null);
+  // The wallet handler is registered once, when the Payment Request is created, but must always
+  // see the current intent, router and callbacks. A ref refreshed on every render does that.
+  const walletHandlerRef = useRef<
+    (event: PaymentRequestPaymentMethodEvent) => Promise<void>
+  >(async () => {});
 
-  // The Payment Element caches the amount it mounted with. Refresh it whenever the server re-quotes,
-  // so the wallet sheet shows the right total without any work left to do at confirmation time.
+  // Keep the Stripe-hosted fields' idea of the amount in step with the server's latest quote.
   useEffect(() => {
-    if (!elements) return;
-    elements.fetchUpdates().catch(() => {});
+    elements?.update({ amount: totalOre });
   }, [elements, totalOre]);
 
-  const returnUrl = () => `${process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin}/order-complete`;
+  // One Payment Request per page, asked once which wallets this browser can use. Apple Pay and
+  // Google Pay both hand back an ordinary card payment method, which is why the intent needs
+  // nothing beyond "card" for them.
+  useEffect(() => {
+    if (!stripe || paymentRequestRef.current) return;
+    const request = stripe.paymentRequest({
+      country: "NO",
+      currency: "nok",
+      total: { label: "Flöra", amount: totalOre },
+    });
+    paymentRequestRef.current = request;
+    request
+      .canMakePayment()
+      .then((result) =>
+        setWallets({
+          applePay: Boolean(result?.applePay),
+          googlePay: Boolean(result?.googlePay),
+        }),
+      );
+    request.on(
+      "paymentmethod",
+      (event) => void walletHandlerRef.current(event),
+    );
+    // Deliberately not torn down: the request is bound to this Stripe instance for the page's life.
+    // Later amount changes go through `update` below, so re-running on `totalOre` is a no-op here.
+  }, [stripe, totalOre]);
 
-  // The wallet sheet is about to open, so the billing details have to be complete by now: they are
-  // what the order gets addressed to, and the wallet doesn't collect them on our behalf. Resolving
-  // opens the sheet; rejecting cancels it. Both must happen synchronously, within a second of the tap.
-  const onExpressClick = ({ resolve, reject }: StripeExpressCheckoutElementClickEvent) => {
+  useEffect(() => {
+    paymentRequestRef.current?.update({
+      total: { label: "Flöra", amount: totalOre },
+    });
+  }, [totalOre]);
+
+  // Refreshed after every render so the handler always closes over the current intent and router.
+  useEffect(() => {
+    walletHandlerRef.current = async (
+      event: PaymentRequestPaymentMethodEvent,
+    ) => {
+      const stripeInstance = stripe;
+      if (!stripeInstance) {
+        event.complete("fail");
+        return;
+      }
+      const secret = clientSecret;
+      onConfirmingChange(true);
+      setMessage(null);
+      // First without handling next actions, so the wallet sheet can be closed before any 3DS step.
+      const first = await stripeInstance.confirmCardPayment(
+        secret,
+        { payment_method: event.paymentMethod.id },
+        { handleActions: false },
+      );
+      if (first.error) {
+        event.complete("fail");
+        setMessage(first.error.message ?? "Payment failed. Please try again.");
+        onConfirmingChange(false);
+        return;
+      }
+      event.complete("success");
+      let intent = first.paymentIntent;
+      if (intent.status === "requires_action") {
+        const second = await stripeInstance.confirmCardPayment(secret);
+        if (second.error) {
+          setMessage(
+            second.error.message ?? "Payment failed. Please try again.",
+          );
+          onConfirmingChange(false);
+          return;
+        }
+        intent = second.paymentIntent;
+      }
+      // Same landing and query as Stripe's own redirects, so the success page needs no special case.
+      router.push(
+        `/order-complete?payment_intent=${encodeURIComponent(intent.id)}&payment_intent_client_secret=${encodeURIComponent(secret)}&redirect_status=${encodeURIComponent(intent.status)}`,
+      );
+    };
+  });
+
+  const validForm = () => {
     const form = document.getElementById(formId);
-    if (!(form instanceof HTMLFormElement) || !form.reportValidity()) {
-      reject();
-      return;
-    }
-    resolve();
+    return form instanceof HTMLFormElement && form.reportValidity()
+      ? form
+      : null;
   };
 
-  // Reached once the customer has approved the payment in the wallet, so the sheet is already open
-  // and awaiting here is fine, unlike in the card path.
-  const onExpressConfirm = async (event: StripeExpressCheckoutElementConfirmEvent) => {
-    if (!stripe || !elements) return;
+  // Must stay synchronous up to `show()`: the wallet sheet only opens from within the tap itself.
+  const payWithWallet = () => {
+    if (!stripe || confirming || !validForm()) return;
+    setMessage(null);
+    paymentRequestRef.current?.show();
+  };
+
+  const payWithKlarna = async () => {
+    const form = validForm();
+    if (!stripe || confirming || !form) return;
+    const customer = readCustomer(form);
     onConfirmingChange(true);
     setMessage(null);
     try {
-      const { error } = await stripe.confirmPayment({ elements, confirmParams: { return_url: returnUrl() } });
-      if (error) {
-        // Tells the wallet to show its own failure state rather than leaving the sheet hanging.
-        event.paymentFailed({ reason: "fail" });
+      // Klarna is a redirect: the customer approves on Klarna's page and comes back to return_url.
+      const { error } = await stripe.confirmKlarnaPayment(clientSecret, {
+        payment_method: {
+          billing_details: {
+            name: `${customer.firstName} ${customer.lastName}`,
+            email: customer.email,
+            address: { country: countryIso(customer.country) },
+          },
+        },
+        return_url: returnUrl(),
+      });
+      if (error)
         setMessage(error.message ?? "Payment failed. Please try again.");
-      }
     } finally {
       onConfirmingChange(false);
     }
   };
 
-  const confirm = () => {
-    if (!stripe || !elements || confirming) return;
-    const form = document.getElementById(formId);
-    if (!(form instanceof HTMLFormElement) || !form.reportValidity()) return;
-
+  const payWithCard = async () => {
+    if (!stripe || !elements || confirming || !validForm()) return;
     onConfirmingChange(true);
     setMessage(null);
-
-    // Nothing may be awaited before this call. Safari opens the Apple Pay sheet only while the tap
-    // that started it is still the current user gesture, and a network round trip in between
-    // forfeits that, which surfaces as "cannot display Apple Pay". The amount and the customer's
-    // details are already on the PaymentIntent by now, kept current as the form was filled in.
-    stripe
-      .confirmPayment({ elements, confirmParams: { return_url: returnUrl() } })
+    try {
+      const { error: submitError } = await elements.submit();
+      if (submitError) {
+        setMessage(submitError.message ?? "Please check your card details.");
+        return;
+      }
+      const { error } = await stripe.confirmPayment({
+        elements,
+        clientSecret,
+        confirmParams: { return_url: returnUrl() },
+      });
       // Only reached on failure — success redirects to return_url. Declines arrive here as card_error.
-      .then(({ error }) => {
-        if (error) setMessage(error.message ?? "Payment failed. Please try again.");
-      })
-      .catch((err: unknown) => setMessage(err instanceof Error ? err.message : "Payment failed. Please try again."))
-      .finally(() => onConfirmingChange(false));
+      if (error)
+        setMessage(error.message ?? "Payment failed. Please try again.");
+    } finally {
+      onConfirmingChange(false);
+    }
   };
+
+  const debug =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("debug") === "wallets";
 
   return (
     <div className="flex flex-col gap-[12px]">
-      {/* Renders nothing when no wallet is available, and reports availability either way. */}
-      <ExpressCheckoutElement
-        options={EXPRESS_OPTIONS}
-        onClick={onExpressClick}
-        onConfirm={onExpressConfirm}
-        onAvailablePaymentMethodsChange={({ paymentMethods }) => setWalletMethods(paymentMethods)}
-        // A misconfigured option makes the element fail to mount, which would otherwise look
-        // exactly like "this device has no wallets". Say so instead of disappearing.
-        onLoadError={({ error }) => {
-          console.error("[express checkout] failed to load", error);
-          setWalletError(error.message ?? "Wallet buttons could not be loaded.");
-        }}
-      />
+      {/* Bordered buttons in the site's own style, matching the tabs Stripe draws for its fields.
+          Each wallet appears only where the browser reports it can actually be used. */}
+      <div className="flex gap-[12px]">
+        {wallets?.applePay && (
+          <MethodButton
+            onClick={payWithWallet}
+            disabled={confirming}
+            label="Apple Pay"
+          >
+            <Image
+              src="/checkout/apple-pay.svg"
+              alt=""
+              width={28}
+              height={20}
+              className="h-[20px] w-auto"
+            />
+          </MethodButton>
+        )}
+        {wallets?.googlePay && (
+          <MethodButton
+            onClick={payWithWallet}
+            disabled={confirming}
+            label="Google Pay"
+          >
+            <Image
+              src="/checkout/google-pay.svg"
+              alt=""
+              width={28}
+              height={20}
+              className="h-[20px] w-auto"
+            />
+          </MethodButton>
+        )}
+        <MethodButton
+          onClick={payWithKlarna}
+          disabled={confirming}
+          label="Klarna"
+        >
+          <span className="inline-block rounded-[3px] bg-[#ffb3c7] px-[5px] py-[2px] text-[10px] font-bold leading-none text-black">
+            Klarna.
+          </span>
+        </MethodButton>
+      </div>
 
-      {walletsAvailable && (
-        <div className="flex items-center gap-[12px] text-black/50">
-          <span className="h-px flex-1 bg-black/25" />
-          Or pay with card
-          <span className="h-px flex-1 bg-black/25" />
-        </div>
+      <div className="flex items-center gap-[12px] text-black/50">
+        <span className="h-px flex-1 bg-black/25" />
+        Or pay with card
+        <span className="h-px flex-1 bg-black/25" />
+      </div>
+
+      {/* Card only, so Stripe draws the fields without a tab strip of its own. */}
+      <PaymentElement options={{ layout: "tabs" }} />
+
+      {debug && (
+        <pre className="m-0 whitespace-pre-wrap break-all border border-black/25 p-[12px] text-[11px] leading-normal">
+          wallets: {wallets ? JSON.stringify(wallets) : "checking…"}
+          {"\n"}ua: {navigator.userAgent}
+        </pre>
       )}
-
-      {/* The wallets are in the row above, so they aren't offered here a second time. Link is off in
-          the Stripe payment method configuration rather than here. */}
-      <PaymentElement options={{ layout: "tabs", wallets: { applePay: "never", googlePay: "never" }, paymentMethodOrder: ["klarna", "card"] }} />
-      <WalletsDebug expressMethods={walletMethods} expressError={walletError} />
 
       {message && (
         <p className="m-0 text-[#b00020]" role="alert">
@@ -359,7 +502,7 @@ function PaymentSection({
 
       <button
         type="button"
-        onClick={confirm}
+        onClick={payWithCard}
         disabled={!stripe || !elements || confirming}
         className="flex w-full items-center justify-center bg-black p-[12px] font-gotham text-paragraph text-white hover:opacity-80 transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
       >
@@ -367,13 +510,39 @@ function PaymentSection({
       </button>
 
       <p className="m-0 text-black/50">
-        Your personal data will be used to process your order, support your experience throughout this website, and for other purposes
-        described in our{" "}
+        Your personal data will be used to process your order, support your
+        experience throughout this website, and for other purposes described in
+        our{" "}
         <Link href="/privacy" className="text-black underline">
           privacy policy
         </Link>
         .
       </p>
     </div>
+  );
+}
+
+/** One bordered payment option: mark on top, name beneath, in the style of Stripe's own tabs. */
+function MethodButton({
+  label,
+  onClick,
+  disabled,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex min-w-0 flex-1 flex-col items-start gap-[6px] border border-black/20 bg-white p-[12px] text-left font-gotham text-paragraph text-black transition-colors hover:border-black disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      <span className="flex h-[20px] items-center">{children}</span>
+      <span className="truncate">{label}</span>
+    </button>
   );
 }
