@@ -2,8 +2,13 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
-import type { StripeElementsOptions, StripePaymentElementOptions } from "@stripe/stripe-js";
+import { Elements, ExpressCheckoutElement, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import type {
+  StripeElementsOptions,
+  StripeExpressCheckoutElementClickEvent,
+  StripeExpressCheckoutElementConfirmEvent,
+  StripeExpressCheckoutElementOptions,
+} from "@stripe/stripe-js";
 import { useCart } from "./cart-context";
 import CheckoutForm from "./checkout-form";
 import OrderSummary from "./order-summary";
@@ -26,20 +31,26 @@ const APPEARANCE: StripeElementsOptions["appearance"] = {
 };
 
 /**
- * One row of bordered tabs for every method: Klarna, Google Pay, Apple Pay, then the card itself.
+ * The alternatives to paying by card, as one row of buttons above the card form.
  *
- * Wallets are deliberately left on here rather than pulled into a separate Express Checkout row.
- * That row can only draw Apple's and Google's own branded buttons, which can't be restyled to match
- * these tabs, and it stacks them vertically once there are three in a 520px column.
- *
- * The cost of this choice: tabs can only offer Apple Pay where the browser supports it natively, so
- * desktop Chrome, Edge and Firefox don't get it. Apple's scan-to-pay code for those browsers is
- * only available through the branded button.
+ * `applePay: "always"` also gets Apple Pay onto browsers with no native support (Chrome, Edge,
+ * Firefox, Opera on desktop), where it falls back to Apple's scan-to-pay code. Each button still
+ * only appears where it can actually be used, so the row is shorter on some browsers than others.
  */
-const PAYMENT_ELEMENT_OPTIONS: StripePaymentElementOptions = {
-  layout: "tabs",
-  // Payment method types, so snake_case. Unknown or unavailable entries are ignored.
-  paymentMethodOrder: ["klarna", "google_pay", "apple_pay", "card"],
+const EXPRESS_OPTIONS: StripeExpressCheckoutElementOptions = {
+  paymentMethods: { applePay: "always", googlePay: "always", klarna: "auto", link: "never", paypal: "never", amazonPay: "never" },
+  // Payment method *types*, so snake_case. Anything that wouldn't have shown is ignored rather
+  // than breaking the element, and anything unlisted follows after these.
+  paymentMethodOrder: ["apple_pay", "google_pay", "klarna"],
+  // Logo-only wallet buttons: with their calls to action ("Buy with…") the three are wide enough
+  // that Stripe stacks them in this 520px column rather than shrinking them. Klarna has no button
+  // type in this version of stripe-js, so it keeps its own label.
+  buttonType: { applePay: "plain", googlePay: "plain" },
+  buttonHeight: 44,
+  // `overflow: "never"` keeps every eligible button on the page rather than folding the less
+  // prominent ones behind a "..." menu. It must not be combined with a `maxRows` above 0: that pair
+  // is rejected outright and the element then fails to mount at all, taking every button with it.
+  layout: { maxColumns: 3, overflow: "never" },
 };
 
 /** Field names in the billing form → the customer shape the API validates. */
@@ -193,7 +204,13 @@ export default function CheckoutClient({ formId }: { formId: string }) {
  * Element runs before deciding to show a wallet tab, so "false" here means the device or browser
  * is the reason a wallet is missing, not the Stripe account or the domain registration.
  */
-function WalletsDebug() {
+function WalletsDebug({
+  expressMethods,
+  expressError,
+}: {
+  expressMethods?: Record<string, { available: boolean } | undefined>;
+  expressError?: string | null;
+}) {
   const stripe = useStripe();
   const [result, setResult] = useState<string | null>(null);
   const enabled = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("debug") === "wallets";
@@ -214,6 +231,8 @@ function WalletsDebug() {
   if (!enabled) return null;
   return (
     <pre className="m-0 whitespace-pre-wrap break-all border border-black/25 p-[12px] text-[11px] leading-normal">
+      express: {expressError ? `LOAD ERROR — ${expressError}` : expressMethods ? JSON.stringify(expressMethods) : "not reported yet"}
+      {"\n"}
       wallets: {result ?? "checking…"}
     </pre>
   );
@@ -233,6 +252,12 @@ function PaymentSection({
   const stripe = useStripe();
   const elements = useElements();
   const [message, setMessage] = useState<string | null>(null);
+  // `undefined` until the element reports in. Availability is only ever used to decide whether to
+  // draw the divider, never to hide the element itself: hiding it on a stale or missing report would
+  // take away the only wallet UI on the page, since the card form's own wallets are turned off.
+  const [walletMethods, setWalletMethods] = useState<Record<string, { available: boolean } | undefined> | undefined>(undefined);
+  const [walletError, setWalletError] = useState<string | null>(null);
+  const walletsAvailable = Boolean(walletMethods && Object.values(walletMethods).some((m) => m?.available));
 
   // The Payment Element caches the amount it mounted with. Refresh it whenever the server re-quotes,
   // so the wallet sheet shows the right total without any work left to do at confirmation time.
@@ -242,6 +267,36 @@ function PaymentSection({
   }, [elements, totalOre]);
 
   const returnUrl = () => `${process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin}/order-complete`;
+
+  // The wallet sheet is about to open, so the billing details have to be complete by now: they are
+  // what the order gets addressed to, and the wallet doesn't collect them on our behalf. Resolving
+  // opens the sheet; rejecting cancels it. Both must happen synchronously, within a second of the tap.
+  const onExpressClick = ({ resolve, reject }: StripeExpressCheckoutElementClickEvent) => {
+    const form = document.getElementById(formId);
+    if (!(form instanceof HTMLFormElement) || !form.reportValidity()) {
+      reject();
+      return;
+    }
+    resolve();
+  };
+
+  // Reached once the customer has approved the payment in the wallet, so the sheet is already open
+  // and awaiting here is fine, unlike in the card path.
+  const onExpressConfirm = async (event: StripeExpressCheckoutElementConfirmEvent) => {
+    if (!stripe || !elements) return;
+    onConfirmingChange(true);
+    setMessage(null);
+    try {
+      const { error } = await stripe.confirmPayment({ elements, confirmParams: { return_url: returnUrl() } });
+      if (error) {
+        // Tells the wallet to show its own failure state rather than leaving the sheet hanging.
+        event.paymentFailed({ reason: "fail" });
+        setMessage(error.message ?? "Payment failed. Please try again.");
+      }
+    } finally {
+      onConfirmingChange(false);
+    }
+  };
 
   const confirm = () => {
     if (!stripe || !elements || confirming) return;
@@ -267,8 +322,32 @@ function PaymentSection({
 
   return (
     <div className="flex flex-col gap-[12px]">
-      <PaymentElement options={PAYMENT_ELEMENT_OPTIONS} />
-      <WalletsDebug />
+      {/* Renders nothing when no wallet is available, and reports availability either way. */}
+      <ExpressCheckoutElement
+        options={EXPRESS_OPTIONS}
+        onClick={onExpressClick}
+        onConfirm={onExpressConfirm}
+        onAvailablePaymentMethodsChange={({ paymentMethods }) => setWalletMethods(paymentMethods)}
+        // A misconfigured option makes the element fail to mount, which would otherwise look
+        // exactly like "this device has no wallets". Say so instead of disappearing.
+        onLoadError={({ error }) => {
+          console.error("[express checkout] failed to load", error);
+          setWalletError(error.message ?? "Wallet buttons could not be loaded.");
+        }}
+      />
+
+      {walletsAvailable && (
+        <div className="flex items-center gap-[12px] text-black/50">
+          <span className="h-px flex-1 bg-black/25" />
+          Or pay with card
+          <span className="h-px flex-1 bg-black/25" />
+        </div>
+      )}
+
+      {/* The wallets are in the row above, so they aren't offered here a second time. Link is off in
+          the Stripe payment method configuration rather than here. */}
+      <PaymentElement options={{ layout: "tabs", wallets: { applePay: "never", googlePay: "never" }, paymentMethodOrder: ["card"] }} />
+      <WalletsDebug expressMethods={walletMethods} expressError={walletError} />
 
       {message && (
         <p className="m-0 text-[#b00020]" role="alert">
