@@ -85,31 +85,29 @@ Test cards: `4242 4242 4242 4242` succeeds, `4000 0000 0000 0002` is declined in
 
 **Wallets and Klarna**
 
-Apple Pay, Google Pay and Klarna are three bordered buttons of our own, side by side above an
-"Or pay with card" divider, styled to match the rest of the checkout. The card fields below are still
-Stripe's Payment Element, so card data never touches this code. Each wallet button appears only when
-the browser reports it can be used (`stripe.paymentRequest().canMakePayment()`); Klarna is always
-offered.
+Apple Pay, Google Pay and Klarna are Stripe-drawn buttons in their brands' official styling, side
+by side above an "Or pay with card" divider, with Stripe's card fields below. Card data never touches
+this code.
 
-How each one pays, all against the same server-priced PaymentIntent:
+The side-by-side part is the non-obvious bit. Stripe's Express Checkout Element lays its buttons out
+itself and stacks them once they don't fit the 520px column, so each button gets its **own Elements
+group** in its own column of our flex row, each restricted to one method (`paymentMethods`). All
+groups run in deferred mode (`mode`, `amount`, `currency`, `paymentMethodTypes`) and confirm the
+same server-priced PaymentIntent by client secret. Klarna needs its own group because it is its own
+payment method type; the wallets ride on `card`. The card fields are a fourth group with
+`paymentMethodTypes: ["card"]` and wallets off, which is what stops Stripe drawing a tab strip.
 
-- Card: the Payment Element runs in deferred mode with `paymentMethodTypes: ["card"]`, which is what
-  keeps Stripe from drawing its own tab strip. Confirm is `elements.submit()` then `confirmPayment`.
-- Apple Pay / Google Pay: `paymentRequest.show()` from the button's own click (it must be
-  synchronous — the sheet only opens inside the tap), then `confirmCardPayment` with the wallet's
-  payment method. Both wallets hand back an ordinary card payment method.
-- Klarna: `confirmKlarnaPayment`, which redirects to Klarna and back to `/order-complete`.
-
-Consequence to know: Apple Pay's scan-to-pay fallback for desktop Chrome is only offered through
-Apple's own branded button (the Express Checkout Element), which can't be restyled. With our own
-buttons, Apple Pay shows only where the browser supports it natively, i.e. Safari and iOS. Both
-wallets need the domain registered under **payment method domains** (Settings → Payment methods →
-Payment method domains, or `/v1/payment_method_domains`), in test mode and again in live mode; the
-older Apple Pay-only list is not enough. Registration verifies the file at
+`applePay: "always"` is what also gets Apple Pay onto desktop Chrome, Edge and Firefox via Apple's
+scan-to-pay code. A column is dropped only once Stripe reports that button unusable in the browser.
+Both wallets need the domain registered under **payment method domains** (Settings → Payment
+methods → Payment method domains, or `/v1/payment_method_domains`), in test mode and again in live
+mode; the older Apple Pay-only list is not enough. Registration verifies
 `/.well-known/apple-developer-merchantid-domain-association`, so the site must be publicly reachable.
 
-`?debug=wallets` on the checkout prints what the browser reported. Link is switched off in the Stripe
-payment method configuration.
+Traps: `overflow: "never"` and a `maxRows` above 0 can't be combined, and an invalid option makes an
+element fail to mount rather than degrade, which looks exactly like a device with no wallets.
+`?debug=wallets` on the checkout prints each column's reported availability. Link is switched off in
+the Stripe payment method configuration.
 
 **Vipps**
 
