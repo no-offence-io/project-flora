@@ -438,7 +438,7 @@ function PaymentSection({
             alt=""
             width={35}
             height={25}
-            className="h-[26px] w-auto"
+            className="h-[36px] w-auto"
           />
         </button>
       </div>
