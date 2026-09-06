@@ -531,9 +531,9 @@ function PaymentSection({
             <Image
               src="/checkout/google-pay.svg"
               alt=""
-              width={28}
-              height={20}
-              className="h-[20px] w-auto"
+              width={20}
+              height={14}
+              className="h-[14px] w-auto"
             />
           </MethodButton>
         )}
@@ -542,8 +542,8 @@ function PaymentSection({
           disabled={confirming}
           label="Klarna"
         >
-          <span className="inline-block rounded-[3px] bg-[#ffb3c7] px-[5px] py-[2px] text-[10px] font-bold leading-none text-black">
-            Klarna.
+          <span className="flex h-[16px] w-[16px] items-center justify-center rounded-[3px] bg-[#ffb3c7] text-[11px] font-bold leading-none text-black">
+            K
           </span>
         </MethodButton>
       </div>
