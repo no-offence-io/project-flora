@@ -40,9 +40,13 @@ const APPEARANCE: StripeElementsOptions["appearance"] = {
  * Chrome is the exception Apple doesn't cover, and it gets Google Pay instead.
  */
 const EXPRESS_OPTIONS: StripeExpressCheckoutElementOptions = {
-  paymentMethods: { applePay: "always", googlePay: "always" },
+  paymentMethods: { applePay: "always", googlePay: "always", klarna: "auto" },
+  // Fixed order rather than Stripe's per-visitor sorting, so the row reads the same for everyone.
+  paymentMethodOrder: ["applePay", "googlePay", "klarna"],
   buttonHeight: 44,
-  layout: { maxColumns: 2, maxRows: 1 },
+  // `overflow: "never"` keeps every eligible button on the page instead of folding the less
+  // prominent ones into a "..." menu. Two columns wrap to a second row on narrow screens.
+  layout: { maxColumns: 2, maxRows: 2, overflow: "never" },
 };
 
 /** Field names in the billing form → the customer shape the API validates. */
