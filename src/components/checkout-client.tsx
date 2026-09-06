@@ -57,16 +57,18 @@ export default function CheckoutClient({ formId }: { formId: string }) {
   const stripePromise = useMemo(() => getStripePromise(), []);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const intentIdRef = useRef<string | null>(null);
 
   const requestIntent = useCallback(
-    async (customer?: Customer): Promise<IntentResult> => {
+    async (withCustomer?: Customer | null): Promise<IntentResult> => {
       const res = await fetch("/api/checkout/intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           items: items.map((item) => ({ id: item.id, quantity: item.quantity })),
-          ...(customer ? { customer } : {}),
+          ...(withCustomer ? { customer: withCustomer } : {}),
           ...(intentIdRef.current ? { paymentIntentId: intentIdRef.current } : {}),
         }),
       });
@@ -83,18 +85,51 @@ export default function CheckoutClient({ formId }: { formId: string }) {
     [items],
   );
 
-  // Re-quote whenever the cart changes, lightly debounced so a quantity spinner doesn't fire per click.
+  // Keep the billing details on the PaymentIntent up to date as the form is filled in, rather than
+  // sending them when the customer confirms. Apple Pay only opens while the tap that triggered it is
+  // still the active user gesture, so there must be nothing left to send at that moment. Leaving a
+  // field syncs immediately; typing is debounced.
+  const hasItems = items.length > 0;
+  useEffect(() => {
+    const form = document.getElementById(formId);
+    if (!hasItems || !(form instanceof HTMLFormElement)) return;
+
+    let timer = 0;
+    const snapshot = () => setCustomer(form.checkValidity() ? readCustomer(form) : null);
+    const onInput = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(snapshot, 300);
+    };
+    const onCommit = () => {
+      window.clearTimeout(timer);
+      snapshot();
+    };
+
+    form.addEventListener("input", onInput);
+    form.addEventListener("change", onCommit);
+    form.addEventListener("focusout", onCommit);
+    return () => {
+      window.clearTimeout(timer);
+      form.removeEventListener("input", onInput);
+      form.removeEventListener("change", onCommit);
+      form.removeEventListener("focusout", onCommit);
+    };
+  }, [formId, hasItems]);
+
+  // Re-quote whenever the cart or the billing details change, lightly debounced so a quantity
+  // spinner doesn't fire per click. Paused during confirmation: Stripe rejects updates to a
+  // PaymentIntent that is already being confirmed.
   // An emptied cart keeps its PaymentIntent id: if items come back, the same intent is updated
   // rather than a new one minted, and the Payment Element the customer may have started filling stays.
   useEffect(() => {
-    if (items.length === 0) return;
+    if (!hasItems || confirming) return;
     const timer = window.setTimeout(() => {
-      requestIntent().then((result) => {
+      requestIntent(customer).then((result) => {
         if (!result.ok) setQuoteError(result.message);
       });
     }, 400);
     return () => window.clearTimeout(timer);
-  }, [items, requestIntent]);
+  }, [hasItems, confirming, customer, requestIntent]);
 
   if (items.length === 0) {
     return (
@@ -123,7 +158,7 @@ export default function CheckoutClient({ formId }: { formId: string }) {
           // Keyed on the client secret: a brand-new PaymentIntent gets a fresh Elements instance,
           // while updates to the same intent keep the one the customer is already typing into.
           <Elements key={quote.clientSecret} stripe={stripePromise} options={options}>
-            <PaymentSection formId={formId} paymentIntentId={quote.paymentIntentId} requestIntent={requestIntent} />
+            <PaymentSection formId={formId} totalOre={quote.totals.totalOre} confirming={confirming} onConfirmingChange={setConfirming} />
           </Elements>
         ) : (
           <p className="m-0 text-black/50" role="status">
@@ -169,54 +204,47 @@ function WalletsDebug() {
 
 function PaymentSection({
   formId,
-  paymentIntentId,
-  requestIntent,
+  totalOre,
+  confirming,
+  onConfirmingChange,
 }: {
   formId: string;
-  paymentIntentId: string;
-  requestIntent: (customer: Customer) => Promise<IntentResult>;
+  totalOre: number;
+  confirming: boolean;
+  onConfirmingChange: (value: boolean) => void;
 }) {
   const stripe = useStripe();
   const elements = useElements();
-  const [confirming, setConfirming] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const confirm = async () => {
-    if (!stripe || !elements) return;
+  // The Payment Element caches the amount it mounted with. Refresh it whenever the server re-quotes,
+  // so the wallet sheet shows the right total without any work left to do at confirmation time.
+  useEffect(() => {
+    if (!elements) return;
+    elements.fetchUpdates().catch(() => {});
+  }, [elements, totalOre]);
+
+  const confirm = () => {
+    if (!stripe || !elements || confirming) return;
     const form = document.getElementById(formId);
     if (!(form instanceof HTMLFormElement) || !form.reportValidity()) return;
 
-    setConfirming(true);
+    onConfirmingChange(true);
     setMessage(null);
-    try {
-      // Re-quote with the billing details right before charging: the server re-derives the amount
-      // one last time and stamps the customer onto the intent for the order record.
-      const result = await requestIntent(readCustomer(form));
-      if (!result.ok) {
-        setMessage(result.message);
-        return;
-      }
-      if (result.quote.paymentIntentId !== paymentIntentId) {
-        setMessage("Your cart was updated. Please review the total and confirm again.");
-        return;
-      }
-      // The Payment Element caches the intent it mounted with; pull the updated amount before confirming.
-      const { error: updateError } = await elements.fetchUpdates();
-      if (updateError) {
-        setMessage(updateError.message ?? "Could not refresh the payment. Please try again.");
-        return;
-      }
 
-      const origin = process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
-      const { error } = await stripe.confirmPayment({
-        elements,
-        confirmParams: { return_url: `${origin}/order-complete` },
-      });
+    // Nothing may be awaited before this call. Safari opens the Apple Pay sheet only while the tap
+    // that started it is still the current user gesture, and a network round trip in between
+    // forfeits that, which surfaces as "cannot display Apple Pay". The amount and the customer's
+    // details are already on the PaymentIntent by now, kept current as the form was filled in.
+    const origin = process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
+    stripe
+      .confirmPayment({ elements, confirmParams: { return_url: `${origin}/order-complete` } })
       // Only reached on failure — success redirects to return_url. Declines arrive here as card_error.
-      if (error) setMessage(error.message ?? "Payment failed. Please try again.");
-    } finally {
-      setConfirming(false);
-    }
+      .then(({ error }) => {
+        if (error) setMessage(error.message ?? "Payment failed. Please try again.");
+      })
+      .catch((err: unknown) => setMessage(err instanceof Error ? err.message : "Payment failed. Please try again."))
+      .finally(() => onConfirmingChange(false));
   };
 
   return (
