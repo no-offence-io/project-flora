@@ -61,7 +61,6 @@ Stripe account (see below).
 | `STRIPE_SECRET_KEY` | server only (`src/lib/stripe.ts`, guarded by `server-only`) |
 | `STRIPE_WEBHOOK_SECRET` | webhook route only |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | browser, loads Stripe.js |
-| `NEXT_PUBLIC_SITE_URL` | return URL after payment |
 
 **Local development**
 
@@ -116,24 +115,36 @@ is enabled, nothing here changes — it shows up as a redirect method inside the
 it is not, a separate Vipps MobilePay ePayment path is the follow-up (server creates payment →
 redirect → HMAC-verified webhook → capture → same order pipeline), tested against apitest.vipps.no.
 
+**Hosting and the domain**
+
+The app needs a Node server for `/api/checkout/intent` and `/api/webhooks/stripe`, so it runs on
+Vercel. `prosjectflora.com` is registered at one.com, and one.com's own web hosting (SSH/SFTP into
+`/webroots/…`) is **static and PHP only** — no `node`, `npm` or `pm2` on that box — so the site is
+not deployed there. one.com is the registrar and DNS host; the records point at Vercel.
+
+| Record | Host | Value |
+| --- | --- | --- |
+| A | `@` | `76.76.21.21` |
+| CNAME | `www` | `cname.vercel-dns.com` |
+
+Take the authoritative values from Vercel (Project → Settings → Domains) when adding the domain —
+Vercel sometimes issues a project-specific CNAME. Deploying is unchanged: push to `main`.
+
 **Go-live checklist**
 
 1. Switch `STRIPE_SECRET_KEY` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` to live keys in Vercel's
    environment variables (Production scope). Never in the repo.
 2. Register the webhook again in live mode: Developers → Webhooks → add
-   `https://<domain>/api/webhooks/stripe` for `payment_intent.succeeded` and
+   `https://prosjectflora.com/api/webhooks/stripe` for `payment_intent.succeeded` and
    `payment_intent.payment_failed`; put its signing secret in `STRIPE_WEBHOOK_SECRET`.
-3. Set `NEXT_PUBLIC_SITE_URL` to the production origin.
-4. Apple Pay: the site serves Stripe's domain-association file from
-   `public/.well-known/apple-developer-merchantid-domain-association` (downloaded from
-   https://stripe.com/files/apple-pay/apple-developer-merchantid-domain-association). Stripe registers the domain
-   automatically when the Payment Element first loads; if the Apple Pay tab still doesn't show, add the
-   domain by hand under Settings → Payment methods → Apple Pay. The file must be reachable without a login,
-   so Vercel Deployment Protection has to be off for production.
-5. Register the production domain under payment method domains in live mode (see Wallets above).
-6. Check the **live** payment method configuration (Settings → Payment methods): Apple Pay, Google
+3. Register `prosjectflora.com` and `www.prosjectflora.com` under payment method domains in live
+   mode (see Wallets above). Apple Pay verification fetches
+   `/.well-known/apple-developer-merchantid-domain-association`, which the app serves from `public/`,
+   so the domain must resolve to Vercel and be reachable without a login first — Vercel Deployment
+   Protection has to stay off for production.
+4. Check the **live** payment method configuration (Settings → Payment methods): Apple Pay, Google
    Pay and Klarna on, Link off. Test and live are separate configurations, and in test Google Pay
    was off and Link on until both were changed by hand.
-7. Confirm Vipps status (above).
-8. Make one real purchase, check the order number in the PaymentIntent metadata and the webhook
+5. Confirm Vipps status (above) — it is a placeholder button until the direct integration is built.
+6. Make one real purchase, check the order number in the PaymentIntent metadata and the webhook
    delivery shows 200, then refund it from the dashboard.

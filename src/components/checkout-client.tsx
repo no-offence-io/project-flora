@@ -321,8 +321,13 @@ export default function CheckoutClient({ formId }: { formId: string }) {
 /** One column of the express row: half the width on phones, an equal share on desktop. */
 const COLUMN = "min-w-0 basis-[calc(50%-6px)] md:flex-1 md:basis-0";
 
-const returnUrl = () =>
-  `${process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin}/order-complete`;
+/**
+ * Where Stripe sends the customer after payment. Deliberately the origin they are actually on,
+ * rather than a configured one: the site answers on several hostnames (the production domain, its
+ * www form, and Vercel's preview URLs), and a fixed value would bounce a customer paying on one to
+ * another — losing their cart, which lives in that origin's storage.
+ */
+const returnUrl = () => `${window.location.origin}/order-complete`;
 
 type Availability = {
   apple: boolean | null;
