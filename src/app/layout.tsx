@@ -6,6 +6,7 @@ import { NavMenuOverlay, NavMenuProvider } from "@/components/nav-menu";
 import StickyNavbar from "@/components/sticky-navbar";
 import { CartProvider } from "@/components/cart-context";
 import LoadingScreen from "@/components/loading-screen";
+import { SanityLive } from "@/sanity/lib/live";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -54,6 +55,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           </NavMenuProvider>
         </CartProvider>
         <LoadingScreen />
+        {/* Subscribes the page to Sanity content changes; required for sanityFetch to stay live. */}
+        <SanityLive />
       </body>
     </html>
   );
