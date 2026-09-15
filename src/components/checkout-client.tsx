@@ -232,38 +232,44 @@ export default function CheckoutClient({ formId }: { formId: string }) {
   }, [hasItems, confirming, customer, requestIntent]);
 
   // Elements groups run in "deferred" mode, described by amount and currency rather than bound to
-  // the intent's client secret. That is what allows `paymentMethodTypes`: the card group draws the
-  // card fields and nothing else, and the Klarna group exists because Klarna is its own payment
-  // method type. The intent itself still accepts them all, and is what every group confirms.
+  // the intent's client secret.
+  //
+  // They must NOT declare `paymentMethodTypes`. Doing so puts Elements in manual mode, and Stripe
+  // then refuses to confirm against a PaymentIntent created with `automatic_payment_methods` —
+  // which is how this server creates every intent. The error only appears at the moment a customer
+  // pays: "Payment details were collected through Stripe Elements using payment_method_types and
+  // cannot be confirmed…". `excludedPaymentMethodTypes` keeps the groups on automatic methods while
+  // still shaping what each one renders.
   const totalOre = quote?.totals.totalOre ?? 0;
   const cardGroup = useMemo<StripeElementsOptions>(
     () => ({
       mode: "payment",
       amount: totalOre,
       currency: "nok",
-      paymentMethodTypes: ["card"],
+      // Klarna has its own button in the row above; without this it also returns as a tab here.
+      excludedPaymentMethodTypes: ["klarna"],
       appearance: APPEARANCE,
     }),
     [totalOre],
   );
-  // A second group for Apple Pay and Google Pay: same money and method as cardGroup, but rounded,
+  // A second group for Apple Pay and Google Pay: same money and methods as cardGroup, but rounded,
   // since those two buttons must not share an Elements instance with the square card tabs below.
   const expressCardGroup = useMemo<StripeElementsOptions>(
     () => ({
       mode: "payment",
       amount: totalOre,
       currency: "nok",
-      paymentMethodTypes: ["card"],
+      excludedPaymentMethodTypes: ["klarna"],
       appearance: EXPRESS_APPEARANCE,
     }),
     [totalOre],
   );
+  // Klarna's own group excludes nothing; its button is already restricted to Klarna by KLARNA_BUTTON.
   const klarnaGroup = useMemo<StripeElementsOptions>(
     () => ({
       mode: "payment",
       amount: totalOre,
       currency: "nok",
-      paymentMethodTypes: ["klarna"],
       appearance: EXPRESS_APPEARANCE,
     }),
     [totalOre],
