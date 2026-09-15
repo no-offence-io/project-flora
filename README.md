@@ -150,6 +150,20 @@ not deployed there. one.com is the registrar and DNS host; the records point at 
 Take the authoritative values from Vercel (Project → Settings → Domains) when adding the domain —
 Vercel sometimes issues a project-specific CNAME. Deploying is unchanged: push to `main`.
 
+**Configuration guard**
+
+`assertStripeEnvironment()` in `src/lib/stripe.ts` runs before any PaymentIntent is created and
+refuses two states outright, with the reason returned in the response:
+
+- **Mode mismatch** — a live secret key with a test publishable key (or the reverse). The browser
+  couldn't confirm an intent this server created, so the customer would fail at the moment of paying.
+- **Live keys with no `STRIPE_WEBHOOK_SECRET`** — the webhook is the only thing that records an
+  order and it rejects unsigned deliveries, so this state charges real customers and records nothing.
+
+Note that `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` is inlined at build time, so the guard compares the
+server's key against the publishable key actually shipped to browsers. Changing it needs a redeploy,
+not just an environment edit.
+
 **Go-live checklist**
 
 1. Switch `STRIPE_SECRET_KEY` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` to live keys in Vercel's

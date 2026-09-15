@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { intentRequestSchema, type IntentResponse } from "@/lib/checkout-schema";
 import { METADATA_SITE, quoteCart } from "@/lib/orders";
-import { getStripe } from "@/lib/stripe";
+import { assertStripeEnvironment, getStripe, StripeConfigError } from "@/lib/stripe";
 
 /** A PaymentIntent can only have its amount changed before the customer has confirmed it. */
 const UPDATABLE: Stripe.PaymentIntent.Status[] = ["requires_payment_method", "requires_confirmation"];
@@ -51,6 +51,9 @@ export async function POST(req: Request) {
   }
 
   try {
+    // Before anything is created: refuse outright if this deployment's Stripe environment is one
+    // that can't complete a payment, or could take one without recording an order.
+    assertStripeEnvironment();
     const stripe = getStripe();
     const receipt = customer ? { receipt_email: customer.email } : {};
 
@@ -76,10 +79,11 @@ export async function POST(req: Request) {
     return NextResponse.json(response);
   } catch (err) {
     console.error("[checkout/intent]", err);
-    const notConfigured = err instanceof Error && err.message.startsWith("STRIPE_SECRET_KEY");
-    return NextResponse.json(
-      { error: notConfigured ? "Payments are not configured on this server." : "Could not start payment. Please try again." },
-      { status: 500 },
-    );
+    // A misconfiguration is worth saying plainly in the response: only an operator can act on it,
+    // and the alternative is a customer staring at a generic failure that never resolves.
+    if (err instanceof StripeConfigError) {
+      return NextResponse.json({ error: `Payments are misconfigured on this server. ${err.message}` }, { status: 500 });
+    }
+    return NextResponse.json({ error: "Could not start payment. Please try again." }, { status: 500 });
   }
 }
