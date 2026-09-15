@@ -35,6 +35,26 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
+## Coming-soon gate
+
+`src/proxy.ts` holds the whole site behind `/coming-soon` while `COMING_SOON=true`. Set it to
+anything else (or remove it) to open the site — no code change needed.
+
+To see the real site while it's closed, visit any URL with `?preview=<PREVIEW_TOKEN>`. The token is
+swapped for a 30-day cookie and dropped from the address bar, so a preview link can be handed to the
+client without the token ending up in their history or a screenshot.
+
+Every URL keeps its own address and simply renders the placeholder (a rewrite, not a redirect), so
+the site's structure isn't advertised. Two paths are deliberately never gated:
+
+- `/api/webhooks/stripe` — Stripe calls it, and it's the only thing that records an order.
+- `/.well-known/…` — Apple fetches it to verify the domain for Apple Pay.
+
+Static assets are also excluded, or the placeholder itself couldn't render. See the `matcher` in
+`src/proxy.ts`.
+
+Note for future Next.js work: `middleware.ts` is deprecated in Next 16 and renamed to `proxy.ts`.
+
 ## Payments
 
 Checkout is Stripe Payment Element only. Card data goes from the customer's browser to Stripe inside

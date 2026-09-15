@@ -50,3 +50,8 @@ body {
   color: var(--foreground);
   font-family: var(--font-gotham), Arial, Helvetica, sans-serif;
 }
+
+/* The coming-soon gate covers the viewport; stop the page behind it from scrolling into view. */
+body:has(.coming-soon-gate) {
+  overflow: hidden;
+}
