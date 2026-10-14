@@ -9,10 +9,17 @@ import { getStripe } from "@/lib/stripe";
  * it never writes it, so closing the tab mid-payment cannot leave a half-made order and a forged
  * success URL cannot make one either.
  *
- * Idempotent by construction. The order number is derived from the PaymentIntent id, so a retry,
- * a replay from the dashboard, or two deliveries racing each other all write the identical value
- * — there is no second order to make. A PaymentIntent that already carries an order number is
- * acknowledged and skipped.
+ * Idempotent in two layers. The order number is derived from the PaymentIntent id, so a retry, a
+ * replay from the dashboard, or two deliveries racing each other all write the identical value —
+ * there is no second order to make. And before doing anything, the handler re-reads the live
+ * PaymentIntent and skips if it already carries an order number: that is what stops the side
+ * effects (email, later stock) from running twice. The live object, not the event's copy — a retry
+ * carries the same snapshot Stripe took before the first delivery stamped the order, so trusting
+ * it would record the order again on every retry.
+ *
+ * Two deliveries arriving in the same instant could still both pass that read. Stripe retries are
+ * sequential so this doesn't happen in practice; a datastore with a unique key on the intent id is
+ * the real fix once orders live somewhere other than Stripe's metadata.
  *
  * The signature check needs the raw request body; parsing it as JSON first would break it.
  */
@@ -32,7 +39,8 @@ export async function POST(req: Request) {
 
   switch (event.type) {
     case "payment_intent.succeeded": {
-      const intent = event.data.object;
+      // Re-read, don't trust event.data.object: see the note on idempotency above.
+      const intent = await getStripe().paymentIntents.retrieve(event.data.object.id);
       if (intent.metadata.orderNumber) break; // already recorded — a retry or replay
 
       const orderNumber = orderReference(intent.id);

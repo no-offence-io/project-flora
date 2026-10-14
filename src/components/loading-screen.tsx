@@ -116,8 +116,18 @@ export default function LoadingScreen() {
       );
     };
 
+    // Hard ceiling. The whole intro runs about 3.2s; if it hasn't finished well past that, something
+    // has killed the timeline mid-way (seen once in dev: the eye frozen shut, site unreachable
+    // behind it). An intro must never be able to trap the store, so hide it regardless and say so.
+    const failSafe = window.setTimeout(() => {
+      console.warn("[loading-screen] intro did not complete within 6s; hiding it");
+      sloshTween.kill();
+      setVisible(false);
+    }, 6000);
+
     const tl = gsap.timeline({
       onComplete: () => {
+        window.clearTimeout(failSafe);
         sloshTween.kill();
         setVisible(false);
       },
@@ -135,6 +145,7 @@ export default function LoadingScreen() {
       .to(overlayRef.current, { opacity: 0, duration: 0.5, ease: "power1.out" }, "+=0.25");
 
     return () => {
+      window.clearTimeout(failSafe);
       tl.kill();
       sloshTween.kill();
     };
