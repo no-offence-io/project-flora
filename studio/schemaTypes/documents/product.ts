@@ -1,0 +1,160 @@
+import {TagIcon} from '../../icons'
+import {defineArrayMember, defineField, defineType} from 'sanity'
+
+/** Reads the English value out of an internationalized array, for slugs and previews. */
+const english = (value: unknown) =>
+  (Array.isArray(value) ? value.find((v) => v?._key === 'en')?.value : undefined) as string | undefined
+
+export const product = defineType({
+  name: 'product',
+  title: 'Product',
+  type: 'document',
+  icon: TagIcon,
+  groups: [
+    {name: 'content', title: 'Content', default: true},
+    {name: 'pricing', title: 'Price & stock'},
+    {name: 'media', title: 'Photos & colours'},
+    {name: 'details', title: 'Details'},
+  ],
+  fields: [
+    defineField({
+      name: 'name',
+      title: 'Name',
+      type: 'internationalizedArrayString',
+      group: 'content',
+      validation: (rule) => rule.required(),
+    }),
+    defineField({
+      name: 'slug',
+      title: 'Web address',
+      description: 'The last part of the product\'s URL, e.g. "wrap-skirt". Generated from the English name.',
+      type: 'slug',
+      group: 'content',
+      options: {source: (doc) => english(doc.name) ?? '', maxLength: 96},
+      validation: (rule) => rule.required(),
+    }),
+    defineField({
+      name: 'category',
+      title: 'Category',
+      type: 'string',
+      group: 'content',
+      options: {list: ['Tops', 'Skirts', 'Sets', 'Accessories'], layout: 'radio'},
+      validation: (rule) => rule.required(),
+    }),
+    defineField({
+      name: 'description',
+      title: 'Description',
+      type: 'internationalizedArrayText',
+      group: 'content',
+    }),
+    defineField({
+      name: 'visible',
+      title: 'Show in the shop',
+      description: 'Turn off to hide the product without deleting it.',
+      type: 'boolean',
+      group: 'content',
+      initialValue: true,
+    }),
+
+    defineField({
+      name: 'priceOre',
+      title: 'Price (øre, VAT included)',
+      description: 'In øre, so 1 290 kr is 129000. VAT is included in this number; it is never added on top.',
+      type: 'number',
+      group: 'pricing',
+      validation: (rule) => rule.required().integer().min(0),
+    }),
+    defineField({
+      name: 'compareAtPriceOre',
+      title: 'Previous price (øre), for sale items',
+      description: 'Leave empty unless the product is on sale. Shown struck through, and turns on the sale badge.',
+      type: 'number',
+      group: 'pricing',
+      validation: (rule) =>
+        rule.integer().min(0).custom((value, ctx) => {
+          const price = (ctx.document as {priceOre?: number} | undefined)?.priceOre
+          return value !== undefined && price !== undefined && value <= price
+            ? 'The previous price should be higher than the current price'
+            : true
+        }),
+    }),
+    defineField({
+      name: 'stock',
+      title: 'In stock',
+      description: 'Units available. Checkout refuses orders above this, and each paid order counts it down.',
+      type: 'number',
+      group: 'pricing',
+      validation: (rule) => rule.required().integer().min(0),
+      initialValue: 0,
+    }),
+
+    defineField({
+      name: 'images',
+      title: 'Product photos',
+      type: 'array',
+      group: 'media',
+      of: [defineArrayMember({type: 'localizedImage'})],
+      validation: (rule) => rule.min(1),
+    }),
+    defineField({
+      name: 'colors',
+      title: 'Colours',
+      type: 'array',
+      group: 'media',
+      of: [
+        defineArrayMember({
+          type: 'object',
+          name: 'color',
+          fields: [
+            defineField({name: 'name', title: 'Name', type: 'internationalizedArrayString', validation: (rule) => rule.required()}),
+            defineField({
+              name: 'hex',
+              title: 'Swatch colour',
+              description: 'Hex code, e.g. #6b7280',
+              type: 'string',
+              validation: (rule) => rule.required().regex(/^#([0-9a-f]{3}){1,2}$/i, {name: 'hex colour'}),
+            }),
+            defineField({name: 'image', title: 'Photo in this colour', type: 'localizedImage'}),
+          ],
+          preview: {
+            select: {name: 'name', hex: 'hex', media: 'image'},
+            prepare: ({name, hex, media}) => ({title: english(name) ?? 'Colour', subtitle: hex, media}),
+          },
+        }),
+      ],
+    }),
+
+    defineField({
+      name: 'specs',
+      title: 'Details list',
+      description: 'The rows under the price on the product page (material, fit, care…).',
+      type: 'array',
+      group: 'details',
+      of: [
+        defineArrayMember({
+          type: 'object',
+          name: 'spec',
+          fields: [
+            defineField({name: 'label', title: 'Label', type: 'internationalizedArrayString', validation: (rule) => rule.required()}),
+            defineField({name: 'value', title: 'Value', type: 'internationalizedArrayString'}),
+            defineField({name: 'emphasis', title: 'Highlight this row', type: 'boolean', initialValue: false}),
+            defineField({name: 'expandable', title: 'Collapsible on mobile', type: 'boolean', initialValue: false}),
+            defineField({name: 'hideOnMobile', title: 'Hide on mobile', type: 'boolean', initialValue: false}),
+          ],
+          preview: {
+            select: {label: 'label', value: 'value'},
+            prepare: ({label, value}) => ({title: english(label) ?? 'Row', subtitle: english(value)}),
+          },
+        }),
+      ],
+    }),
+  ],
+  preview: {
+    select: {name: 'name', priceOre: 'priceOre', stock: 'stock', media: 'images.0', visible: 'visible'},
+    prepare: ({name, priceOre, stock, media, visible}) => ({
+      title: english(name) ?? 'Untitled product',
+      subtitle: `${priceOre !== undefined ? `${priceOre / 100} kr` : 'no price'} · ${stock ?? 0} in stock${visible === false ? ' · hidden' : ''}`,
+      media,
+    }),
+  },
+})
