@@ -20,6 +20,8 @@ export default defineCliConfig({
   },
 
   deployment: {
+    /** Sanity-hosted Studio: https://prosjectflora-admin.sanity.studio (deploy with `npx sanity deploy`). */
+    appId: 'ohermo3dlte6uycuhrtkt6br',
     /**
      * Enable auto-updates for studios.
      * Learn more at https://www.sanity.io/docs/studio/latest-version-of-sanity#k47faf43faf56
