@@ -73,7 +73,7 @@ function Dashboard() {
 
   return (
     <Container width={3} padding={4}>
-      <Stack space={5}>
+      <Stack gap={5}>
         <Box>
           <Heading as="h1" size={3}>
             Flöra
@@ -98,7 +98,7 @@ function Dashboard() {
 
         <Grid columns={[1, 1, 2]} gap={4}>
           <Card padding={4} radius={3} shadow={1}>
-            <Stack space={3}>
+            <Stack gap={3}>
               <Flex align="center" justify="space-between">
                 <Heading size={1}>Latest orders</Heading>
                 <Button text="All orders" mode="ghost" fontSize={1} onClick={open('/structure/order')} />
@@ -111,7 +111,7 @@ function Dashboard() {
                 stats.latest.map((o) => (
                   <Card key={o._id} padding={3} radius={2} tone="transparent" border style={{cursor: 'pointer'}} onClick={edit(o._id, 'order')}>
                     <Flex align="center" justify="space-between" gap={3}>
-                      <Stack space={2}>
+                      <Stack gap={2}>
                         <Text weight="semibold" size={1}>
                           {o.orderNumber ?? 'Order'} · {o.name ?? ''}
                         </Text>
@@ -130,9 +130,9 @@ function Dashboard() {
             </Stack>
           </Card>
 
-          <Stack space={4}>
+          <Stack gap={4}>
             <Card padding={4} radius={3} shadow={1}>
-              <Stack space={3}>
+              <Stack gap={3}>
                 <Heading size={1}>Edit the site</Heading>
                 <Grid columns={2} gap={2}>
                   <Button text="Products" icon={<Icon symbol="tag" />} mode="ghost" onClick={open('/structure/product')} />
@@ -149,7 +149,7 @@ function Dashboard() {
             </Card>
 
             <Card padding={4} radius={3} shadow={1} tone={stats && stats.lowStock.length > 0 ? 'caution' : 'default'}>
-              <Stack space={3}>
+              <Stack gap={3}>
                 <Heading size={1}>Low stock</Heading>
                 {!stats ? (
                   <Spinner />
@@ -175,7 +175,7 @@ function Dashboard() {
 function Stat({label, value, sub, tone}: {label: string; value: string | null; sub?: string; tone?: 'caution'}) {
   return (
     <Card padding={4} radius={3} shadow={1} tone={tone}>
-      <Stack space={3}>
+      <Stack gap={3}>
         <Text muted size={1}>{label}</Text>
         {value === null ? <Spinner /> : <Heading size={3}>{value}</Heading>}
         {sub && <Text muted size={1}>{sub}</Text>}
