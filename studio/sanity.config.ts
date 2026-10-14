@@ -4,6 +4,7 @@ import {structureTool} from 'sanity/structure'
 import {internationalizedArray} from 'sanity-plugin-internationalized-array'
 import {schemaTypes} from './schemaTypes'
 import {NOT_CREATABLE, structure} from './structure'
+import {dashboardTool} from './tools/dashboard'
 
 export default defineConfig({
   name: 'default',
@@ -27,6 +28,9 @@ export default defineConfig({
       fieldTypes: ['string', 'text', 'simpleBlockContent'],
     }),
   ],
+
+  // The Dashboard tab comes first so it is what opens on login.
+  tools: (prev) => [dashboardTool, ...prev],
 
   schema: {
     types: schemaTypes,

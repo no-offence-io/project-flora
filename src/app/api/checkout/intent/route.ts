@@ -37,7 +37,8 @@ export async function POST(req: Request) {
 
   const metadata: Record<string, string> = {
     site: METADATA_SITE,
-    items: JSON.stringify(lines.map((l) => ({ id: l.id, qty: l.quantity }))),
+    // Price as charged travels with the line, so the order record never has to re-derive it later.
+    items: JSON.stringify(lines.map((l) => ({ id: l.id, qty: l.quantity, p: l.unitPriceOre }))),
   };
   if (customer) {
     metadata.customer_email = customer.email;

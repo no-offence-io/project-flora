@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { orderReference } from "@/lib/money";
 import { sendOrderConfirmation } from "@/lib/notify";
 import { getStripe } from "@/lib/stripe";
+import { recordOrder } from "@/lib/record-order";
 
 /**
  * Stripe → us. This is the only place an order is ever created: the success page displays state,
@@ -41,20 +41,18 @@ export async function POST(req: Request) {
     case "payment_intent.succeeded": {
       // Re-read, don't trust event.data.object: see the note on idempotency above.
       const intent = await getStripe().paymentIntents.retrieve(event.data.object.id);
-      if (intent.metadata.orderNumber) break; // already recorded — a retry or replay
 
-      const orderNumber = orderReference(intent.id);
-      // The PaymentIntent is the order record for now (no database in this project — see README).
-      // Stamping it with the order number is what makes the order "exist"; everything else about
-      // the order (items, customer, amounts) is already on it from the intent route.
+      // The order document in Sanity is the record; it is written first and is the unique key.
+      // If this throws (say SANITY_TOKEN is missing on the server), the 500 below makes Stripe
+      // retry for days, and the retry succeeds once the server is fixed — nothing is lost.
+      const { orderNumber, created } = await recordOrder(intent);
+      if (!created) break; // a retry or replay: the order, and its stock, are already recorded
+
+      // Stamp the PaymentIntent too, so the order number is visible in the Stripe dashboard.
       await getStripe().paymentIntents.update(intent.id, {
         metadata: { ...intent.metadata, orderNumber, orderedAt: new Date().toISOString() },
       });
       console.info(`[order ${orderNumber}] created from ${intent.id}: ${intent.amount} ${intent.currency}`);
-
-      // Stock: products live in a static file, so there is nothing durable to decrement here.
-      // When a datastore is added, decrement it in this block, in one transaction, keyed on the
-      // order number so a replay stays a no-op.
 
       await sendOrderConfirmation({
         orderNumber,

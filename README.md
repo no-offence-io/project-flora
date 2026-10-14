@@ -35,6 +35,33 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
+## Content (Sanity) and Ida's dashboard
+
+Sanity project **`559r73zo`**, dataset `production`. The Studio lives in `studio/` (standalone, its
+own `package.json`) and is Ida's dashboard: Sanity's own login, roles and 2FA, no custom auth code.
+
+- Hosted at **https://prosjectflora-admin.sanity.studio** (`cd studio && npx sanity deploy`).
+  Moving it to `admin.prosjectflora.com` means deploying `studio/` as its own Vercel project (root
+  directory `studio`, framework preset Sanity) and a CNAME at the registrar.
+- **Dashboard tab** (`studio/tools/dashboard.tsx`): revenue today / 7 / 30 days, orders to pack,
+  latest orders, low stock, one-click links to every editable part of the site.
+- **Every text field is bilingual.** `sanity-plugin-internationalized-array` turns each string,
+  text and rich-text field into `[{_key: "en"}, {_key: "no"}]`; editors see English with a
+  "+ Norsk" button. Query with `coalesce(field[_key == $lang][0].value, field[_key == "en"][0].value)`.
+- **Orders are documents, written only by the Stripe webhook** (`src/lib/record-order.ts`). The
+  document id is `order-<paymentIntentId>` and it is created with `create` inside a transaction with
+  the stock decrements, so a duplicate delivery fails atomically — one order, one decrement, even
+  for two deliveries in the same instant. The Studio offers no "new order" button and the order's
+  money fields are read-only; fulfilment status, tracking and notes are editable.
+- `SANITY_TOKEN` (Developer/Editor role) is **server-only**: `src/sanity/lib/write.ts` is guarded by
+  `server-only`, and the live-preview tokens are explicitly `false` so nothing with write access can
+  reach the browser. If it's missing in production the webhook returns 500 on purpose, so Stripe
+  keeps retrying until it's set and no order is lost.
+- Types: `cd studio && npm run typegen` regenerates `src/sanity/sanity.types.ts` from the schema.
+
+Not done yet: the storefront still reads products and page copy from `src/data/*`. Moving those
+reads to Sanity (with a language switch) and migrating the current content in are the next steps.
+
 ## Coming-soon gate
 
 `src/proxy.ts` holds the whole site behind `/coming-soon` while `COMING_SOON=true`. Set it to
