@@ -89,14 +89,14 @@ function Dashboard() {
           </Card>
         )}
 
-        <Grid columns={[1, 2, 4]} gap={3}>
+        <Grid gridTemplateColumns={[1, 2, 4]} gap={3}>
           <Stat label="Today" value={stats ? kr(sum(stats.today)) : null} sub={stats ? `${stats.today.length} orders` : undefined} />
           <Stat label="Last 7 days" value={stats ? kr(sum(stats.week)) : null} sub={stats ? `${stats.week.length} orders` : undefined} />
           <Stat label="Last 30 days" value={stats ? kr(sum(stats.month)) : null} sub={stats ? `${stats.month.length} orders` : undefined} />
           <Stat label="To be packed" value={stats ? String(stats.toPack) : null} tone={stats && stats.toPack > 0 ? 'caution' : undefined} />
         </Grid>
 
-        <Grid columns={[1, 1, 2]} gap={4}>
+        <Grid gridTemplateColumns={[1, 1, 2]} gap={4}>
           <Card padding={4} radius={3} shadow={1}>
             <Stack gap={3}>
               <Flex align="center" justify="space-between">
@@ -134,7 +134,7 @@ function Dashboard() {
             <Card padding={4} radius={3} shadow={1}>
               <Stack gap={3}>
                 <Heading size={1}>Edit the site</Heading>
-                <Grid columns={2} gap={2}>
+                <Grid gridTemplateColumns={2} gap={2}>
                   <Button text="Products" icon={<Icon symbol="tag" />} mode="ghost" onClick={open('/structure/product')} />
                   <Button text="Front page" icon={<Icon symbol="home" />} mode="ghost" onClick={edit('homePage', 'homePage')} />
                   <Button text="FAQ" icon={<Icon symbol="help-circle" />} mode="ghost" onClick={open('/structure/faqItem')} />
