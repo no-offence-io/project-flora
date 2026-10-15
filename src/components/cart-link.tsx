@@ -5,6 +5,7 @@ import { useCart } from "./cart-context";
 import CartIcon from "./cart-icon";
 import CartItems from "./cart-items";
 import { useT } from "@/components/i18n-provider";
+import RolloverText from "./rollover-text";
 
 /**
  * Cart entry point. `variant="text"` shows "Cart (N)" and reveals the cart rows in a corner popup on
@@ -25,8 +26,8 @@ export default function CartLink({ variant = "text", className = "" }: { variant
 
   return (
     <div className="group relative">
-      <Link href="/checkout" aria-label={label} className={`hover:opacity-70 transition-opacity ${className}`}>
-        {t("cart.link")} ({count})
+      <Link href="/checkout" aria-label={label} className={className}>
+        <RolloverText text={`${t("cart.link")} (${count})`} capitalize={className.includes("capitalize")} />
       </Link>
 
       {/* Popup: padding-top keeps the hover alive across the gap under the link */}

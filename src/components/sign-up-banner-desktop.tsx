@@ -8,6 +8,7 @@ import {
   type SignUpBannerVariant,
 } from "./sign-up-banner-shared";
 import { getT } from "@/lib/i18n-server";
+import RolloverText from "./rollover-text";
 
 /**
  * Figma "Sign up banner desktop" (181:769).
@@ -22,8 +23,11 @@ export default async function SignUpBannerDesktop({
   title = SIGN_UP_TITLE,
   description = SIGN_UP_DESCRIPTION,
   buttonLabel,
+  image,
 }: {
   variant?: SignUpBannerVariant;
+  /** A photo uploaded in the admin; the built-in one otherwise. */
+  image?: string;
   /** Let the photo drift as you scroll. */
   parallax?: boolean;
   className?: string;
@@ -48,13 +52,17 @@ export default async function SignUpBannerDesktop({
           enabled={parallax}
           className="-top-[20%] h-[140%]"
         >
-          <Image
-            src="/signup/signup-bg.jpg"
-            alt=""
-            fill
-            sizes="100vw"
-            className="-scale-x-100 object-cover object-[50%_28%]"
-          />
+          {image ? (
+            <Image src={image} alt="" fill sizes="100vw" className="object-cover" />
+          ) : (
+            <Image
+              src="/signup/signup-bg.jpg"
+              alt=""
+              fill
+              sizes="100vw"
+              className="-scale-x-100 object-cover object-[50%_28%]"
+            />
+          )}
         </ParallaxLayer>
         <div
           className="absolute inset-0"
@@ -97,9 +105,9 @@ export default async function SignUpBannerDesktop({
             />
             <button
               type="submit"
-              className="shrink-0 rounded-full bg-black px-[12px] py-[6px] font-gotham text-paragraph whitespace-nowrap hover:opacity-80 transition-opacity"
+              className="shrink-0 rounded-full bg-black px-[12px] py-[6px] font-gotham text-paragraph whitespace-nowrap"
             >
-              {buttonLabel ?? t("signup.button")}
+              <RolloverText text={buttonLabel ?? t("signup.button")} />
             </button>
           </div>
         </form>

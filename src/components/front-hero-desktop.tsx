@@ -3,6 +3,7 @@ import Link from "next/link";
 import CartLink from "./cart-link";
 import HeroVideo from "./hero-video";
 import { getT } from "@/lib/i18n-server";
+import RolloverText from "./rollover-text";
 
 const NAV_LINKS = [
   { key: "nav.shop", href: "/shop" },
@@ -37,9 +38,11 @@ export default async function FrontHeroDesktop({
   parallax = true,
   logoPosition = "left",
   className = "",
+  videoSrc = "/hero/front-hero-1080.mp4",
 }: {
   /** Let the background video drift as you scroll. */
   parallax?: boolean;
+  videoSrc?: string;
   /** "left" is the Figma layout with all links right; "center" puts the wordmark between two links each side. */
   logoPosition?: HeroLogoPosition;
   className?: string;
@@ -51,7 +54,7 @@ export default async function FrontHeroDesktop({
     >
       {/* Background video with parallax (photo as poster) under the vertical darkening gradient */}
       <div aria-hidden className="absolute inset-0">
-        <HeroVideo src="/hero/front-hero-1080.mp4" parallax={parallax} />
+        <HeroVideo src={videoSrc} parallax={parallax} />
         <div
           className="absolute inset-0"
           style={{
@@ -67,16 +70,16 @@ export default async function FrontHeroDesktop({
           <header className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-[42px]">
             <nav aria-label="Primary" className={`${NAV_TEXT} justify-end`}>
               {NAV_LINKS.slice(0, 2).map((link) => (
-                <Link key={t(link.key)} href={link.href} className="hover:opacity-70 transition-opacity">
-                  {t(link.key)}
+                <Link key={t(link.key)} href={link.href}>
+                  <RolloverText text={t(link.key)} capitalize />
                 </Link>
               ))}
             </nav>
             <Logo />
             <div className={`${NAV_TEXT} justify-start`}>
               {NAV_LINKS.slice(2).map((link) => (
-                <Link key={t(link.key)} href={link.href} className="hover:opacity-70 transition-opacity">
-                  {t(link.key)}
+                <Link key={t(link.key)} href={link.href}>
+                  <RolloverText text={t(link.key)} capitalize />
                 </Link>
               ))}
               <CartLink />
@@ -89,8 +92,8 @@ export default async function FrontHeroDesktop({
             <div className="flex items-start gap-[120px]">
               <nav aria-label="Primary" className={NAV_TEXT}>
                 {NAV_LINKS.map((link) => (
-                  <Link key={t(link.key)} href={link.href} className="hover:opacity-70 transition-opacity">
-                    {t(link.key)}
+                  <Link key={t(link.key)} href={link.href}>
+                    <RolloverText text={t(link.key)} capitalize />
                   </Link>
                 ))}
               </nav>

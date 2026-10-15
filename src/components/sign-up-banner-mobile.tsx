@@ -7,6 +7,7 @@ import {
   type SignUpBannerVariant,
 } from "./sign-up-banner-shared";
 import { getT } from "@/lib/i18n-server";
+import RolloverText from "./rollover-text";
 
 /**
  * Figma "Sign up banner mobile" (194:1023): a 607px rounded card inset by the 24px page margin.
@@ -19,8 +20,11 @@ export default async function SignUpBannerMobile({
   title = SIGN_UP_TITLE,
   description = SIGN_UP_DESCRIPTION,
   buttonLabel,
+  image,
 }: {
   variant?: SignUpBannerVariant;
+  /** A photo uploaded in the admin; the built-in one otherwise. It gets a plain cover crop, not the Figma zoom tuned to the built-in photo. */
+  image?: string;
   /** Let the photo drift as you scroll. */
   parallax?: boolean;
   className?: string;
@@ -42,6 +46,9 @@ export default async function SignUpBannerMobile({
           enabled={parallax}
           className="inset-0 h-full"
         >
+          {image ? (
+            <Image src={image} alt="" fill sizes="100vw" className="object-cover" />
+          ) : (
           <div className="absolute top-0 left-[-69.3%] aspect-[2432/3626] w-[224.3%] -translate-y-[19.6%]">
             <Image
               src="/signup/signup-bg.jpg"
@@ -51,6 +58,7 @@ export default async function SignUpBannerMobile({
               className="-scale-x-100 object-cover"
             />
           </div>
+          )}
         </ParallaxLayer>
         <div className="absolute inset-0 bg-black/41" />
       </div>
@@ -87,9 +95,9 @@ export default async function SignUpBannerMobile({
         />
         <button
           type="submit"
-          className="flex h-[39px] w-full items-center justify-center rounded-full bg-black px-[12px] font-gotham text-paragraph text-white hover:opacity-80 transition-opacity"
+          className="flex h-[39px] w-full items-center justify-center rounded-full bg-black px-[12px] font-gotham text-paragraph text-white"
         >
-          {buttonLabel ?? t("signup.button")}
+          <RolloverText text={buttonLabel ?? t("signup.button")} />
         </button>
       </form>
     </section>

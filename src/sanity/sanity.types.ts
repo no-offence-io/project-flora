@@ -112,6 +112,13 @@ export type SiteSettings = {
   freeShippingFromOre?: number;
 };
 
+export type SanityFileAssetReference = {
+  _ref: string;
+  _type: "reference";
+  _weak?: boolean;
+  [internalGroqTypeReferenceTo]?: "sanity.fileAsset";
+};
+
 export type HomePage = {
   _id: string;
   _type: "homePage";
@@ -119,6 +126,11 @@ export type HomePage = {
   _updatedAt: string;
   _rev: string;
   hero?: {
+    video?: {
+      asset?: SanityFileAssetReference;
+      media?: unknown;
+      _type: "file";
+    };
     videoUrl?: string;
     logoPosition?: "left" | "center";
   };
@@ -362,6 +374,7 @@ export type AllSanitySchemaTypes =
   | InternationalizedArrayString
   | FaqItem
   | SiteSettings
+  | SanityFileAssetReference
   | HomePage
   | ProductReference
   | Order
@@ -380,3 +393,54 @@ export type AllSanitySchemaTypes =
   | SanityAssetSourceData
   | SanityImageAsset
   | Geopoint;
+
+// Source: ../src/lib/catalog.ts
+// Variable: POLICY_QUERY
+// Query: *[_type == "policyPage" && page == $page][0]{ "title": coalesce(title[_key == $lang][0].value, title[_key == "en"][0].value), "intro": coalesce(intro[_key == $lang][0].value, intro[_key == "en"][0].value), "body": coalesce(body[_key == $lang][0].value, body[_key == "en"][0].value) }
+export type POLICY_QUERY_RESULT = {
+  title: string | null;
+  intro: string | null;
+  body: SimpleBlockContent | null;
+} | null;
+
+// Source: ../src/lib/catalog.ts
+// Variable: SETTINGS_QUERY
+// Query: *[_id == "siteSettings"][0]{ siteName, "announcement": coalesce(announcement[_key == $lang][0].value, announcement[_key == "en"][0].value), "signUpTitle": coalesce(signUpTitle[_key == $lang][0].value, signUpTitle[_key == "en"][0].value), "signUpText": coalesce(signUpText[_key == $lang][0].value, signUpText[_key == "en"][0].value), "signUpButton": coalesce(signUpButton[_key == $lang][0].value, signUpButton[_key == "en"][0].value), "footerText": coalesce(footerText[_key == $lang][0].value, footerText[_key == "en"][0].value), instagram, contactEmail, "signUpImage": signUpImage.asset->url, "footerImage": footerImage.asset->url }
+export type SETTINGS_QUERY_RESULT =
+  | {
+      siteName: null;
+      announcement: null;
+      signUpTitle: null;
+      signUpText: null;
+      signUpButton: null;
+      footerText: null;
+      instagram: null;
+      contactEmail: null;
+      signUpImage: null;
+      footerImage: null;
+    }
+  | {
+      siteName: string | null;
+      announcement: string | null;
+      signUpTitle: string | null;
+      signUpText: string | null;
+      signUpButton: string | null;
+      footerText: string | null;
+      instagram: string | null;
+      contactEmail: string | null;
+      signUpImage: string | null;
+      footerImage: string | null;
+    }
+  | null;
+
+// Query TypeMap
+declare global {
+  interface SanityQueries {
+    '*[_type == "policyPage" && page == $page][0]{ "title": coalesce(title[_key == $lang][0].value, title[_key == "en"][0].value), "intro": coalesce(intro[_key == $lang][0].value, intro[_key == "en"][0].value), "body": coalesce(body[_key == $lang][0].value, body[_key == "en"][0].value) }': POLICY_QUERY_RESULT;
+    '*[_id == "siteSettings"][0]{ siteName, "announcement": coalesce(announcement[_key == $lang][0].value, announcement[_key == "en"][0].value), "signUpTitle": coalesce(signUpTitle[_key == $lang][0].value, signUpTitle[_key == "en"][0].value), "signUpText": coalesce(signUpText[_key == $lang][0].value, signUpText[_key == "en"][0].value), "signUpButton": coalesce(signUpButton[_key == $lang][0].value, signUpButton[_key == "en"][0].value), "footerText": coalesce(footerText[_key == $lang][0].value, footerText[_key == "en"][0].value), instagram, contactEmail, "signUpImage": signUpImage.asset->url, "footerImage": footerImage.asset->url }': SETTINGS_QUERY_RESULT;
+  }
+}
+// Lets @sanity/client releases that predate the global registry read it too
+declare module "@sanity/client" {
+  interface SanityQueries extends globalThis.SanityQueries {}
+}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CATEGORIES, type Category } from "@/lib/catalog-types";
 import { useT } from "@/components/i18n-provider";
+import RolloverText from "./rollover-text";
 
 export type CategorySelection = Category | "All";
 
@@ -44,7 +45,7 @@ export default function CategoryFilter({
               }}
               className={`flex h-[26px] w-full items-center text-left transition-opacity ${active ? "text-black" : "text-black/50 hover:text-black"}`}
             >
-              {labelOf(row)}
+              <RolloverText text={labelOf(row)} />
             </button>
           </li>
         );

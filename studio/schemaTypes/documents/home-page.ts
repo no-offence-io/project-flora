@@ -14,8 +14,16 @@ export const homePage = defineType({
       type: 'object',
       fields: [
         defineField({
+          name: 'video',
+          title: 'Video file',
+          description:
+            'Upload an MP4 (H.264, muted, ideally under 10 MB — it loops on every visit). Served from Sanity, which counts against bandwidth; a hosted URL below is the alternative.',
+          type: 'file',
+          options: {accept: 'video/mp4,video/webm'},
+        }),
+        defineField({
           name: 'videoUrl',
-          title: 'Video URL',
+          title: 'Video URL (used if no file is uploaded)',
           description: 'A hosted MP4. Keep it short and muted; it loops in the background.',
           type: 'url',
         }),

@@ -15,6 +15,7 @@ import {
 } from "react";
 import { SOCIAL_LINKS } from "./footer-shared";
 import { useT } from "@/components/i18n-provider";
+import RolloverText from "./rollover-text";
 
 const MENU_LINKS = [
   { key: "nav.shop", href: "/shop" },
@@ -141,8 +142,8 @@ export function NavMenuOverlay({ lang = "en" }: { lang?: Lang }) {
         className="absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-[24px] font-americana text-big-header-mobile capitalize whitespace-nowrap md:flex-row md:gap-[60px] md:text-big-header-desktop"
       >
         {MENU_LINKS.map((link) => (
-          <Link key={link.key} href={link.href} onClick={close} className="hover:opacity-70 transition-opacity">
-            {t(link.key)}
+          <Link key={link.key} href={link.href} onClick={close}>
+            <RolloverText text={t(link.key)} capitalize />
           </Link>
         ))}
       </nav>

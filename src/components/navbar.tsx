@@ -5,6 +5,7 @@ import { BurgerButton } from "./nav-menu";
 import LanguageSwitch from "./language-switch";
 import { getLanguage } from "@/lib/language";
 import { getT } from "@/lib/i18n-server";
+import RolloverText from "./rollover-text";
 
 export const NAV_LINKS = [
   { key: "nav.shop", href: "/shop" },
@@ -56,8 +57,8 @@ export default async function Navbar({ tone = "dark", className = "" }: { tone?:
         <div className="flex items-center gap-[120px]">
           <nav aria-label="Primary" className="flex items-center gap-[42px] font-gotham text-paragraph whitespace-nowrap">
             {NAV_LINKS.map((link) => (
-              <Link key={link.key} href={link.href} className="hover:opacity-70 transition-opacity">
-                {t(link.key)}
+              <Link key={link.key} href={link.href}>
+                <RolloverText text={t(link.key)} />
               </Link>
             ))}
           </nav>

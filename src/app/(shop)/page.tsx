@@ -9,7 +9,7 @@ export default async function Home() {
   const [products, home] = await Promise.all([getProducts(), getHomePage()]);
   return (
     <div className="flex flex-col gap-[60px] pb-[60px] md:gap-[120px] md:pb-[120px]">
-      <FrontHero logoPosition="left" />
+      <FrontHero logoPosition={home.hero.logoPosition} videoSrc={home.hero.videoSrc} />
 
       <div id="all-items">
         <ProductsSlideshow title={home.productsTitle} products={products.map(toSlideshowProduct)} seeAllHref="/shop" columns={4} />

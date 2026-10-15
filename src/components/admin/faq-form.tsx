@@ -1,8 +1,9 @@
 import { deleteFaq, saveFaq } from "@/app/admin/(app)/actions";
+import { ImageField } from "@/components/admin/media-field";
 import { Bilingual, Button, Card, Input, Labelled } from "@/components/admin/ui";
 import { getBlocksText, getText, type LocalizedBlocks, type LocalizedString } from "@/lib/admin/localized";
 
-export type FaqDoc = { _id: string; question?: LocalizedString; answer?: LocalizedBlocks; order?: number };
+export type FaqDoc = { _id: string; question?: LocalizedString; answer?: LocalizedBlocks; order?: number; image?: { _ref: string; url: string } | null };
 
 export default function FaqForm({ item }: { item: FaqDoc | null }) {
   return (
@@ -12,6 +13,7 @@ export default function FaqForm({ item }: { item: FaqDoc | null }) {
         <div className="flex flex-col gap-[24px]">
           <Bilingual name="question" label="Question" en={getText(item?.question, "en")} no={getText(item?.question, "no")} required />
           <Bilingual name="answer" label="Answer" en={getBlocksText(item?.answer, "en")} no={getBlocksText(item?.answer, "no")} multiline rows={6} />
+          <ImageField name="image" label="Photo (optional)" hint="Shown next to the answer when it's open." current={item?.image} />
           <Labelled label="Position" hint="Lower numbers show first.">
             <Input name="order" type="number" defaultValue={item?.order ?? 100} className="md:max-w-[160px]" />
           </Labelled>

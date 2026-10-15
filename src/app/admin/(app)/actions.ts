@@ -6,6 +6,7 @@ import { z } from "zod";
 import { readLocalizedBlocks, readLocalizedString } from "@/lib/admin/localized";
 import { adminClient, kronerToOre } from "@/lib/admin/sanity";
 import { requireAdmin } from "@/lib/admin/session";
+import { readImageField, readVideoField, uploadImage, uploadVideo } from "@/lib/admin/media";
 
 /*
  * Every action starts with requireAdmin(). Server actions are reachable by anyone who can POST to
@@ -80,17 +81,47 @@ export async function saveProduct(formData: FormData) {
     .map((img) => ({ _key: img._key, _type: "localizedImage", asset: { _type: "reference", _ref: img.asset._ref } }));
   for (const file of formData.getAll("newImages")) {
     if (!(file instanceof File) || file.size === 0) continue;
-    if (!file.type.startsWith("image/")) throw new Error(`${file.name} is not an image`);
-    if (file.size > 15 * 1024 * 1024) throw new Error(`${file.name} is larger than 15 MB`);
-    const asset = await client.assets.upload("image", Buffer.from(await file.arrayBuffer()), { filename: file.name, contentType: file.type });
-    images.push({ _key: asset._id.slice(-8), _type: "localizedImage", asset: { _type: "reference", _ref: asset._id } });
+    const assetId = await uploadImage(file);
+    images.push({ _key: assetId.slice(-8), _type: "localizedImage", asset: { _type: "reference", _ref: assetId } });
+  }
+
+  // Colours and detail rows come as numbered slots (see ProductForm); empty or ticked-off slots are dropped.
+  const colors = [];
+  for (let i = 0; i < (Number(formData.get("colorCount")) || 0); i++) {
+    if (formData.get(`colorRemove_${i}`) === "on") continue;
+    const name = readLocalizedString(formData, `colorName_${i}`);
+    const hex = String(formData.get(`colorHex_${i}`) ?? "").trim().toLowerCase();
+    if (!name.some((v) => v._key === "en" && v.value)) continue;
+    if (!/^#([0-9a-f]{3}){1,2}$/.test(hex)) throw new Error(`Colour ${i + 1} needs a hex code like #6b7280`);
+    colors.push({
+      _key: String(formData.get(`colorKey_${i}`) ?? "") || `c${Date.now().toString(36)}${i}`,
+      _type: "color",
+      name,
+      hex,
+      image: await readImageField(formData, `colorImage_${i}`),
+    });
+  }
+  const specs = [];
+  for (let i = 0; i < (Number(formData.get("specCount")) || 0); i++) {
+    if (formData.get(`specRemove_${i}`) === "on") continue;
+    const label = readLocalizedString(formData, `specLabel_${i}`);
+    if (!label.some((v) => v._key === "en" && v.value)) continue;
+    specs.push({
+      _key: String(formData.get(`specKey_${i}`) ?? "") || `s${Date.now().toString(36)}${i}`,
+      _type: "spec",
+      label,
+      value: readLocalizedString(formData, `specValue_${i}`),
+      emphasis: formData.get(`specEmphasis_${i}`) === "on",
+      expandable: formData.get(`specExpandable_${i}`) === "on",
+      hideOnMobile: formData.get(`specHideOnMobile_${i}`) === "on",
+    });
   }
 
   let docId = id;
   if (id) {
-    await client.patch(id).set({ ...fields, images }).commit();
+    await client.patch(id).set({ ...fields, images, colors, specs }).commit();
   } else {
-    const created = await client.create({ _type: "product", ...fields, images });
+    const created = await client.create({ _type: "product", ...fields, images, colors, specs });
     docId = created._id;
   }
   revalidatePath("/admin");
@@ -111,6 +142,7 @@ export async function saveSettings(formData: FormData) {
   await requireAdmin();
   const shippingOre = kronerToOre(formData.get("shipping"));
   const freeFrom = kronerToOre(formData.get("freeShippingFrom"));
+  const [signUpImage, footerImage] = await Promise.all([readImageField(formData, "signUpImage"), readImageField(formData, "footerImage")]);
   await adminClient()
     .createIfNotExists({ _id: "siteSettings", _type: "siteSettings" })
     .then(() =>
@@ -127,6 +159,8 @@ export async function saveSettings(formData: FormData) {
           contactEmail: String(formData.get("contactEmail") ?? "").trim() || null,
           shippingOre: shippingOre ?? 0,
           freeShippingFromOre: freeFrom ?? null,
+          signUpImage,
+          footerImage,
         })
         .commit(),
     );
@@ -136,15 +170,35 @@ export async function saveSettings(formData: FormData) {
 
 export async function saveFrontPage(formData: FormData) {
   await requireAdmin();
+  const video = await readVideoField(formData, "heroVideo");
+
+  // The values: one slot per existing item plus an empty one; a slot with no English title is dropped.
+  const count = Number(formData.get("valueCount") ?? 0) || 0;
+  const items = [];
+  for (let i = 0; i < count; i++) {
+    if (formData.get(`valueRemove_${i}`) === "on") continue;
+    const title = readLocalizedString(formData, `valueTitle_${i}`);
+    if (!title.some((v) => v._key === "en" && v.value)) continue;
+    items.push({
+      _key: String(formData.get(`valueKey_${i}`) ?? "") || `v${Date.now().toString(36)}${i}`,
+      _type: "value",
+      title,
+      description: readLocalizedString(formData, `valueText_${i}`, "text"),
+      image: await readImageField(formData, `valueImage_${i}`),
+    });
+  }
+
   await adminClient().createIfNotExists({ _id: "homePage", _type: "homePage" });
   await adminClient()
     .patch("homePage")
     .set({
+      "hero.video": video,
       "hero.videoUrl": String(formData.get("videoUrl") ?? "").trim() || null,
       "hero.logoPosition": formData.get("logoPosition") === "center" ? "center" : "left",
       productsTitle: readLocalizedString(formData, "productsTitle"),
       "values.title": readLocalizedString(formData, "valuesTitle"),
       "values.intro": readLocalizedString(formData, "valuesIntro", "text"),
+      "values.items": items,
     })
     .commit();
   revalidatePath("/admin/pages/front-page");
@@ -158,6 +212,7 @@ export async function saveFaq(formData: FormData) {
     question: readLocalizedString(formData, "question"),
     answer: readLocalizedBlocks(formData, "answer"),
     order: Number(formData.get("order") ?? 100) || 100,
+    image: await readImageField(formData, "image"),
   };
   if (!fields.question.length) throw new Error("A question is required");
   let docId = id;
@@ -194,4 +249,31 @@ export async function savePolicy(formData: FormData) {
     .commit();
   revalidatePath(`/admin/pages/policies/${page}`);
   redirect(`/admin/pages/policies/${page}?saved=1`);
+}
+
+export async function uploadMedia(formData: FormData) {
+  await requireAdmin();
+  try {
+    for (const file of formData.getAll("files")) {
+      if (!(file instanceof File) || file.size === 0) continue;
+      if (file.type.startsWith("video/")) await uploadVideo(file);
+      else await uploadImage(file);
+    }
+  } catch (err) {
+    redirect(`/admin/media?error=${encodeURIComponent(err instanceof Error ? err.message : "Upload failed")}`);
+  }
+  revalidatePath("/admin/media");
+  redirect("/admin/media?saved=1");
+}
+
+export async function deleteMedia(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!/^(image|file)-/.test(id)) return;
+  // Refuse if anything still points at it: Sanity would refuse too, but with a less readable error.
+  const used = await adminClient().fetch<number>(`count(*[references($id)])`, { id });
+  if (used > 0) redirect(`/admin/media?error=${encodeURIComponent("That file is still in use. Remove it from its page first.")}`);
+  await adminClient().delete(id);
+  revalidatePath("/admin/media");
+  redirect("/admin/media");
 }

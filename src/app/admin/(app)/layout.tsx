@@ -18,6 +18,6 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 }
 
 function sectionOf(path: string): string {
-  for (const s of ["/admin/orders", "/admin/products", "/admin/pages", "/admin/settings"]) if (path.startsWith(s)) return s;
+  for (const s of ["/admin/orders", "/admin/products", "/admin/pages", "/admin/media", "/admin/settings"]) if (path.startsWith(s)) return s;
   return "/admin";
 }

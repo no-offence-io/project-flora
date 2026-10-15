@@ -2,10 +2,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { FooterOverlay, NAV_LINKS, SocialLinks } from "./footer-shared";
 import { ParallaxLayer } from "./parallax";
+import { getSiteCopy } from "@/lib/catalog";
 import { getT } from "@/lib/i18n-server";
+import RolloverText from "./rollover-text";
 
 export default async function FooterDesktop({ parallax = true, className = "" }: { parallax?: boolean; className?: string }) {
-  const t = await getT();
+  const [t, copy] = await Promise.all([getT(), getSiteCopy()]);
   return (
     <footer
       className={`full-bleed relative flex h-screen flex-col items-center justify-end gap-[10px] overflow-hidden px-[42px] py-[24px] text-white ${className}`}
@@ -13,13 +15,17 @@ export default async function FooterDesktop({ parallax = true, className = "" }:
       {/* Background image, drifting with parallax, under the dark overlays */}
       <div aria-hidden className="absolute inset-0">
         <ParallaxLayer speed={0.15} enabled={parallax} className="-top-[20%] h-[140%]">
-          <Image
-            src="/footer/footer-bg.jpg"
-            alt=""
-            fill
-            sizes="100vw"
-            className="object-cover object-[50%_65%]"
-          />
+          {copy.footerImage ? (
+            <Image src={copy.footerImage} alt="" fill sizes="100vw" className="object-cover" />
+          ) : (
+            <Image
+              src="/footer/footer-bg.jpg"
+              alt=""
+              fill
+              sizes="100vw"
+              className="object-cover object-[50%_65%]"
+            />
+          )}
         </ParallaxLayer>
         <FooterOverlay />
       </div>
@@ -39,8 +45,8 @@ export default async function FooterDesktop({ parallax = true, className = "" }:
           className="flex items-start gap-[24px] font-gotham text-paragraph whitespace-nowrap"
         >
           {NAV_LINKS.map((link) => (
-            <Link key={t(link.key)} href={link.href} className="hover:opacity-70 transition-opacity">
-              {t(link.key)}
+            <Link key={t(link.key)} href={link.href}>
+              <RolloverText text={t(link.key)} />
             </Link>
           ))}
         </nav>

@@ -55,3 +55,37 @@ body {
 body:has(.coming-soon-gate) {
   overflow: hidden;
 }
+
+/* Letter rollover for text links (see components/rollover-text.tsx). Each letter is a 1.2em-tall
+   window over a two-line column of the same letter; hovering the link slides the column up one
+   line, letter after letter. The non-hover rule carries the same delay, so the roll back down is
+   staggered in the same order rather than all at once. */
+.rollover {
+  display: inline-block;
+  vertical-align: top;
+}
+.rollover__l {
+  display: inline-block;
+  overflow: hidden;
+  height: 1.2em;
+  line-height: 1.2em;
+  vertical-align: top;
+}
+.rollover__c {
+  display: block;
+  transition: transform 0.5s cubic-bezier(0.76, 0, 0.24, 1);
+  transition-delay: calc(var(--i) * 20ms);
+}
+.rollover__c > span {
+  display: block;
+  height: 1.2em;
+  white-space: pre;
+}
+:is(a, button):hover .rollover__c {
+  transform: translateY(-1.2em);
+}
+@media (prefers-reduced-motion: reduce) {
+  .rollover__c {
+    transition: none;
+  }
+}

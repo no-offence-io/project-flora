@@ -23,6 +23,7 @@ import { getCountryCode } from "@/data/country-codes";
 import type { Customer, IntentResponse } from "@/lib/checkout-schema";
 import { getStripePromise } from "@/lib/stripe-client";
 import { useT } from "@/components/i18n-provider";
+import RolloverText from "./rollover-text";
 
 type Quote = Pick<
   IntentResponse,
@@ -511,9 +512,9 @@ function PaymentSection({
         type="button"
         onClick={payWithCard}
         disabled={!stripe || !elements || confirming}
-        className="flex w-full items-center justify-center bg-black p-[12px] font-gotham text-paragraph text-white hover:opacity-80 transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex w-full items-center justify-center bg-black p-[12px] font-gotham text-paragraph text-white disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {confirming ? t("pay.confirming") : t("pay.confirm")}
+        <RolloverText text={confirming ? t("pay.confirming") : t("pay.confirm")} />
       </button>
 
       <p className="m-0 text-black/50">

@@ -95,16 +95,20 @@ export async function getShippingRules(): Promise<ShippingRules> {
 // ---- pages ------------------------------------------------------------------------------------
 
 const HOME_QUERY = defineQuery(`*[_id == "homePage"][0]{
+  "hero": { "videoSrc": coalesce(hero.video.asset->url, hero.videoUrl), "logoPosition": hero.logoPosition },
   "productsTitle": ${L("productsTitle")},
   "values": { "title": ${L("values.title")}, "intro": ${L("values.intro")},
     "items": values.items[]{ "title": ${L("title")}, "description": ${L("description")}, "image": ${IMG("image")} } }
 }`);
 
-export async function getHomePage(): Promise<{ productsTitle: string; values: { title: string; intro: string; items: ScrollyValue[] } }> {
+export type HomeHero = { /** An uploaded or linked video; `undefined` means the site's built-in one. */ videoSrc?: string; logoPosition: "left" | "center" };
+
+export async function getHomePage(): Promise<{ hero: HomeHero; productsTitle: string; values: { title: string; intro: string; items: ScrollyValue[] } }> {
   const lang = await getLanguage();
   const { data } = await sanityFetch({ query: HOME_QUERY, params: { lang }, stega: false, tags: [CONTENT_TAG] });
-  const d = (data ?? {}) as { productsTitle?: string | null; values?: { title?: string | null; intro?: string | null; items?: { title?: string | null; description?: string | null; image?: RawImage | null }[] | null } | null };
+  const d = (data ?? {}) as { hero?: { videoSrc?: string | null; logoPosition?: string | null } | null; productsTitle?: string | null; values?: { title?: string | null; intro?: string | null; items?: { title?: string | null; description?: string | null; image?: RawImage | null }[] | null } | null };
   return {
+    hero: { videoSrc: d.hero?.videoSrc ?? undefined, logoPosition: d.hero?.logoPosition === "center" ? "center" : "left" },
     productsTitle: d.productsTitle ?? "All items",
     values: {
       title: d.values?.title ?? "Values",
@@ -149,9 +153,13 @@ export async function getPolicy(page: string): Promise<PolicyContent | null> {
   return { title: d.title ?? "", intro: d.intro ?? "", items };
 }
 
-const SETTINGS_QUERY = defineQuery(`*[_id == "siteSettings"][0]{ siteName, "announcement": ${L("announcement")}, "signUpTitle": ${L("signUpTitle")}, "signUpText": ${L("signUpText")}, "signUpButton": ${L("signUpButton")}, "footerText": ${L("footerText")}, instagram, contactEmail }`);
+const SETTINGS_QUERY = defineQuery(`*[_id == "siteSettings"][0]{ siteName, "announcement": ${L("announcement")}, "signUpTitle": ${L("signUpTitle")}, "signUpText": ${L("signUpText")}, "signUpButton": ${L("signUpButton")}, "footerText": ${L("footerText")}, instagram, contactEmail, "signUpImage": signUpImage.asset->url, "footerImage": footerImage.asset->url }`);
 
-export type SiteCopy = { siteName: string; announcement: string; signUpTitle: string; signUpText: string; signUpButton: string; footerText: string; instagram: string; contactEmail: string };
+export type SiteCopy = {
+  siteName: string; announcement: string; signUpTitle: string; signUpText: string; signUpButton: string; footerText: string; instagram: string; contactEmail: string;
+  /** Uploaded background photos; `undefined` means the built-in one. */
+  signUpImage?: string; footerImage?: string;
+};
 
 export async function getSiteCopy(): Promise<SiteCopy> {
   const lang: Lang = await getLanguage();
@@ -166,5 +174,7 @@ export async function getSiteCopy(): Promise<SiteCopy> {
     footerText: d.footerText ?? "",
     instagram: d.instagram ?? "",
     contactEmail: d.contactEmail ?? "",
+    signUpImage: d.signUpImage ?? undefined,
+    footerImage: d.footerImage ?? undefined,
   };
 }

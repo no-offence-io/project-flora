@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useCart } from "./cart-context";
 import type { Product } from "@/lib/catalog-types";
 import { useT } from "@/components/i18n-provider";
+import RolloverText from "./rollover-text";
 
 /** Black full-width Add To Cart button from the Figma product page; adds the product and confirms briefly. */
 export default function AddToCartButton({ product, className = "" }: { product: Product; className?: string }) {
@@ -25,9 +26,9 @@ export default function AddToCartButton({ product, className = "" }: { product: 
         setAdded(true);
       }}
       aria-live="polite"
-      className={`flex w-full items-center justify-center bg-black px-[12px] py-[8px] font-gotham text-paragraph text-white hover:opacity-80 transition-opacity ${className}`}
+      className={`flex w-full items-center justify-center bg-black px-[12px] py-[8px] font-gotham text-paragraph text-white ${className}`}
     >
-      {added ? t("product.added") : t("product.add")}
+      <RolloverText text={added ? t("product.added") : t("product.add")} />
     </button>
   );
 }

@@ -10,9 +10,11 @@ const INTRO =
 export default function FrontHeroMobile({
   parallax = true,
   className = "",
+  videoSrc = "/hero/front-hero-720.mp4",
 }: {
   /** Let the background video drift as you scroll. */
   parallax?: boolean;
+  videoSrc?: string;
   className?: string;
 }) {
   return (
@@ -21,7 +23,7 @@ export default function FrontHeroMobile({
     >
       {/* Background video with parallax (photo as poster) under the vertical darkening gradient */}
       <div aria-hidden className="absolute inset-0">
-        <HeroVideo src="/hero/front-hero-720.mp4" parallax={parallax} />
+        <HeroVideo src={videoSrc} parallax={parallax} />
         <div
           className="absolute inset-0"
           style={{

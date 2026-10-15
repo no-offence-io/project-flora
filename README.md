@@ -64,6 +64,17 @@ own `package.json`) and is Ida's dashboard: Sanity's own login, roles and 2FA, n
 - `node scripts/translate-no.mjs` writes the Norwegian translation of all of it next to the English,
   replacing only the `no` entries. Editors can change any of it afterwards.
 
+**Ida's admin at `/admin`** (Google sign-in via Auth.js, `ADMIN_EMAILS` allowlist) edits the same
+documents in the site's own design: orders, products (photos, colours with their photos, the
+details list), front page, FAQ, policies and settings. **Media** (`/admin/media`) lists every
+photo and video ever uploaded with a preview, size and where it is used; files can be uploaded
+there or straight from the field that needs them, and deleted only once nothing references them.
+Image and video fields (`src/components/admin/media-field.tsx`) always show what is there now, and
+`src/lib/admin/media.ts` turns their form fields into Sanity asset references. The front-page video
+can be an uploaded MP4/WebM (served from Sanity's CDN — bandwidth counts, keep it small), a URL, or
+neither, in which case the built-in `/hero/*.mp4` plays; the sign-up banner and footer photos work
+the same way with their built-in images.
+
 **The storefront reads Sanity.** `src/lib/catalog.ts` holds every query, projected straight into
 the shapes the components take (`src/lib/catalog-types.ts`). Pages use `sanityFetch` (Live Content
 API); checkout pricing (`src/lib/orders.ts`) reads products and the shipping rules from the API

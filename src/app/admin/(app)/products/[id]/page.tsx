@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import ProductForm, { type ProductDoc } from "@/components/admin/product-form";
+import ProductForm, { PRODUCT_ADMIN_PROJECTION, type ProductDoc } from "@/components/admin/product-form";
 import { Heading, Muted, TextLink } from "@/components/admin/ui";
 import { getText } from "@/lib/admin/localized";
 import { adminClient } from "@/lib/admin/sanity";
@@ -8,7 +8,7 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
   const { id } = await params;
   const { saved } = await searchParams;
   const product = await adminClient().fetch<ProductDoc | null>(
-    `*[_type == "product" && _id == $id][0]{..., "images": images[]{_key, asset, "url": asset->url}}`,
+    `*[_type == "product" && _id == $id][0]${PRODUCT_ADMIN_PROJECTION}`,
     { id },
   );
   if (!product) notFound();

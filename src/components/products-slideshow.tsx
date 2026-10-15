@@ -4,6 +4,7 @@ import Link from "next/link";
 import ProductCard from "./product-card";
 import { PrevNextControls, useScroller } from "./use-scroller";
 import { useT } from "@/components/i18n-provider";
+import RolloverText from "./rollover-text";
 
 export type ProductColor = {
   /** Swatch colour, drawn as an 8px square. */
@@ -68,8 +69,8 @@ export default function ProductsSlideshow({
         <PrevNextControls canPrev={canPrev} canNext={canNext} onPrev={() => scrollByItem(-1)} onNext={() => scrollByItem(1)} className="md:hidden" />
 
         {/* Desktop: See all → */}
-        <Link href={seeAllHref} className="hidden items-center gap-[10px] hover:opacity-70 transition-opacity md:flex">
-          {t("slideshow.seeAll")}
+        <Link href={seeAllHref} className="hidden items-center gap-[10px] md:flex">
+          <RolloverText text={t("slideshow.seeAll")} />
           <ArrowRight />
         </Link>
       </div>

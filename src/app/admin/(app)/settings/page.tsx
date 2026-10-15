@@ -1,16 +1,20 @@
 import { saveSettings } from "../actions";
 import { Bilingual, Button, Card, Heading, Input, Labelled, Muted, Subheading } from "@/components/admin/ui";
+import { ImageField } from "@/components/admin/media-field";
 import { getText, type LocalizedString } from "@/lib/admin/localized";
 import { adminClient, oreToKroner } from "@/lib/admin/sanity";
 
 type Settings = {
   siteName?: string; announcement?: LocalizedString; signUpTitle?: LocalizedString; signUpText?: LocalizedString; signUpButton?: LocalizedString;
   footerText?: LocalizedString; instagram?: string; contactEmail?: string; shippingOre?: number; freeShippingFromOre?: number;
+  signUpImage?: Pic; footerImage?: Pic;
 };
+type Pic = { _ref: string; url: string } | null;
+const PIC = (f: string) => `"${f}": select(defined(${f}.asset) => { "_ref": ${f}.asset._ref, "url": ${f}.asset->url })`;
 
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
   const { saved } = await searchParams;
-  const s = (await adminClient().fetch<Settings | null>(`*[_id == "siteSettings"][0]`)) ?? {};
+  const s = (await adminClient().fetch<Settings | null>(`*[_id == "siteSettings"][0]{ ..., ${PIC("signUpImage")}, ${PIC("footerImage")} }`)) ?? {};
   return (
     <>
       <div className="flex flex-col gap-[12px]">
@@ -33,6 +37,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <Bilingual name="signUpTitle" label="Title" en={getText(s.signUpTitle, "en")} no={getText(s.signUpTitle, "no")} />
             <Bilingual name="signUpText" label="Text" en={getText(s.signUpText, "en")} no={getText(s.signUpText, "no")} multiline rows={3} />
             <Bilingual name="signUpButton" label="Button label" en={getText(s.signUpButton, "en")} no={getText(s.signUpButton, "no")} />
+            <ImageField name="signUpImage" label="Background photo" hint="Leave empty to keep the built-in photo." current={s.signUpImage} />
           </div>
         </Card>
         <Card>
@@ -40,6 +45,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <div className="h-px w-full bg-black/25" />
           <div className="flex flex-col gap-[24px]">
             <Bilingual name="footerText" label="Footer text" en={getText(s.footerText, "en")} no={getText(s.footerText, "no")} multiline rows={3} />
+            <ImageField name="footerImage" label="Background photo" hint="Leave empty to keep the built-in photo." current={s.footerImage} />
             <div className="flex flex-col gap-[24px] md:flex-row">
               <Labelled label="Instagram URL" className="flex-1"><Input name="instagram" type="url" defaultValue={s.instagram ?? ""} /></Labelled>
               <Labelled label="Contact email" className="flex-1"><Input name="contactEmail" type="email" defaultValue={s.contactEmail ?? ""} /></Labelled>

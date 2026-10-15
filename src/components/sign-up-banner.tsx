@@ -21,10 +21,10 @@ export default async function SignUpBanner({
   return (
     <>
       <div className={`md:hidden ${className}`}>
-        <SignUpBannerMobile variant={mobileVariant} parallax={parallax} title={copy.signUpTitle} description={copy.signUpText} buttonLabel={copy.signUpButton} />
+        <SignUpBannerMobile variant={mobileVariant} parallax={parallax} title={copy.signUpTitle} description={copy.signUpText} buttonLabel={copy.signUpButton} image={copy.signUpImage} />
       </div>
       <div className={`hidden md:block ${className}`}>
-        <SignUpBannerDesktop variant={variant} parallax={parallax} title={copy.signUpTitle} description={copy.signUpText} buttonLabel={copy.signUpButton} />
+        <SignUpBannerDesktop variant={variant} parallax={parallax} title={copy.signUpTitle} description={copy.signUpText} buttonLabel={copy.signUpButton} image={copy.signUpImage} />
       </div>
     </>
   );
