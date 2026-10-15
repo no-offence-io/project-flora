@@ -17,9 +17,17 @@ const PREVIEW_COOKIE = "flora-preview";
  *     order. Blocking it would lose orders taken during a preview.
  *   - `/.well-known/…`, which Apple fetches to verify the domain for Apple Pay. Blocking it breaks
  *     the wallet buttons on this domain.
+ *   - `/admin` and `/api/auth`, so the dashboard works while the shop is closed. It has its own login.
  * See the matcher below, which also lets static assets through so this page can render at all.
  */
 export function proxy(request: NextRequest) {
+  // The admin is never gated; the proxy only tells its layout which section is open, since a
+  // layout can't read the pathname itself.
+  if (request.nextUrl.pathname.startsWith("/admin")) {
+    const headers = new Headers(request.headers);
+    headers.set("x-admin-path", request.nextUrl.pathname);
+    return NextResponse.next({ request: { headers } });
+  }
   if (process.env.COMING_SOON !== "true") return NextResponse.next();
 
   const token = process.env.PREVIEW_TOKEN;
@@ -49,6 +57,7 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|\\.well-known|api/webhooks|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|mp4|ico|woff|woff2|otf|ttf)$).*)",
+    // `api/auth` stays reachable while the shop is hidden; `/admin` is handled at the top of proxy().
+    "/((?!_next/static|_next/image|favicon.ico|\\.well-known|api/webhooks|api/auth|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|mp4|ico|woff|woff2|otf|ttf)$).*)",
   ],
 };

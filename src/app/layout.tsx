@@ -1,12 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
-import Footer from "@/components/footer";
-import { NavMenuOverlay, NavMenuProvider } from "@/components/nav-menu";
-import StickyNavbar from "@/components/sticky-navbar";
-import { CartProvider } from "@/components/cart-context";
-import LoadingScreen from "@/components/loading-screen";
-import { SanityLive } from "@/sanity/lib/live";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -42,22 +36,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${gotham.variable} ${americana.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <CartProvider>
-          <NavMenuProvider>
-            {/* The site is capped at 1500px and centred on wide desktops */}
-            <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col">
-              {children}
-              <Footer />
-            </div>
-            <StickyNavbar />
-            <NavMenuOverlay />
-          </NavMenuProvider>
-        </CartProvider>
-        <LoadingScreen />
-        {/* Subscribes the page to Sanity content changes; required for sanityFetch to stay live. */}
-        <SanityLive />
-      </body>
+      {/* Only fonts and global styles live here; each area (shop, admin, account) brings its own chrome in its own layout. */}
+      <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
 }

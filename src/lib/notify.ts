@@ -1,17 +1,18 @@
 import "server-only";
 
 /**
- * Order confirmation hook, called from the Stripe webhook once an order exists.
- *
- * No email provider is configured in this project yet, so this only logs. Stripe itself emails a
- * receipt to `receipt_email` in live mode (a dashboard setting), which covers the basics until a
- * provider is chosen. Plug one in here; keep it out of the request path.
+ * Email hooks. No provider is wired yet (Ida has asked for EmailJS; it needs her service, template
+ * and private key, and must be called from here on the server — never from the browser, or anyone
+ * could send mail as Flöra). Until then these log what they would have sent.
  */
-export async function sendOrderConfirmation(order: {
-  orderNumber: string;
-  email: string | null;
-  totalOre: number;
-  currency: string;
-}) {
-  console.info(`[order ${order.orderNumber}] confirmation email not configured; would send to ${order.email ?? "(no email)"}`);
+export async function sendOrderConfirmation(order: { orderNumber: string; email: string | null; totalOre: number; currency: string }) {
+  console.info(`[email] order confirmation for ${order.orderNumber} -> ${order.email ?? "(no email)"}: not configured`);
+}
+
+export async function sendShippingNotification(order: { orderId: string; trackingNumber: string }) {
+  console.info(`[email] shipping notification for ${order.orderId} (tracking ${order.trackingNumber || "none"}): not configured`);
+}
+
+export async function sendNewsletterWelcome(email: string) {
+  console.info(`[email] newsletter welcome -> ${email}: not configured`);
 }
