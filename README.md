@@ -61,6 +61,8 @@ own `package.json`) and is Ida's dashboard: Sanity's own login, roles and 2FA, n
 - `node scripts/migrate-content.mjs` copies the static content in `src/data/*` and the front page into
   Sanity (products with photos, colours and spec rows; front page; FAQ; policy pages; site settings).
   Re-runnable: it upserts by slug or fixed id and uploads each image once. English only.
+- `node scripts/translate-no.mjs` writes the Norwegian translation of all of it next to the English,
+  replacing only the `no` entries. Editors can change any of it afterwards.
 
 **The storefront reads Sanity.** `src/lib/catalog.ts` holds every query, projected straight into
 the shapes the components take (`src/lib/catalog-types.ts`). Pages use `sanityFetch` (Live Content
