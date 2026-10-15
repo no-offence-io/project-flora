@@ -58,6 +58,9 @@ own `package.json`) and is Ida's dashboard: Sanity's own login, roles and 2FA, n
   reach the browser. If it's missing in production the webhook returns 500 on purpose, so Stripe
   keeps retrying until it's set and no order is lost.
 - Types: `cd studio && npm run typegen` regenerates `src/sanity/sanity.types.ts` from the schema.
+- `node scripts/migrate-content.mjs` copies the static content in `src/data/*` and the front page into
+  Sanity (products with photos, colours and spec rows; front page; FAQ; policy pages; site settings).
+  Re-runnable: it upserts by slug or fixed id and uploads each image once. English only.
 
 Not done yet: the storefront still reads products and page copy from `src/data/*`. Moving those
 reads to Sanity (with a language switch) and migrating the current content in are the next steps.
