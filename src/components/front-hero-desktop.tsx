@@ -2,12 +2,13 @@ import Image from "next/image";
 import Link from "next/link";
 import CartLink from "./cart-link";
 import HeroVideo from "./hero-video";
+import { getT } from "@/lib/i18n-server";
 
 const NAV_LINKS = [
-  { label: "Shop", href: "/shop" },
-  { label: "Values", href: "/values" },
-  { label: "About", href: "/about" },
-];
+  { key: "nav.shop", href: "/shop" },
+  { key: "nav.values", href: "/#values" },
+  { key: "nav.about", href: "/about" },
+] as const;
 
 const NAV_TEXT = "flex items-center gap-[42px] font-americana text-big-header-mobile capitalize whitespace-nowrap";
 
@@ -32,7 +33,7 @@ const INTRO =
 
 export type HeroLogoPosition = "left" | "center";
 
-export default function FrontHeroDesktop({
+export default async function FrontHeroDesktop({
   parallax = true,
   logoPosition = "left",
   className = "",
@@ -43,6 +44,7 @@ export default function FrontHeroDesktop({
   logoPosition?: HeroLogoPosition;
   className?: string;
 }) {
+  const t = await getT();
   return (
     <section
       className={`full-bleed relative flex h-screen flex-col overflow-hidden p-[42px] text-white ${className}`}
@@ -65,16 +67,16 @@ export default function FrontHeroDesktop({
           <header className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-[42px]">
             <nav aria-label="Primary" className={`${NAV_TEXT} justify-end`}>
               {NAV_LINKS.slice(0, 2).map((link) => (
-                <Link key={link.label} href={link.href} className="hover:opacity-70 transition-opacity">
-                  {link.label}
+                <Link key={t(link.key)} href={link.href} className="hover:opacity-70 transition-opacity">
+                  {t(link.key)}
                 </Link>
               ))}
             </nav>
             <Logo />
             <div className={`${NAV_TEXT} justify-start`}>
               {NAV_LINKS.slice(2).map((link) => (
-                <Link key={link.label} href={link.href} className="hover:opacity-70 transition-opacity">
-                  {link.label}
+                <Link key={t(link.key)} href={link.href} className="hover:opacity-70 transition-opacity">
+                  {t(link.key)}
                 </Link>
               ))}
               <CartLink />
@@ -87,8 +89,8 @@ export default function FrontHeroDesktop({
             <div className="flex items-start gap-[120px]">
               <nav aria-label="Primary" className={NAV_TEXT}>
                 {NAV_LINKS.map((link) => (
-                  <Link key={link.label} href={link.href} className="hover:opacity-70 transition-opacity">
-                    {link.label}
+                  <Link key={t(link.key)} href={link.href} className="hover:opacity-70 transition-opacity">
+                    {t(link.key)}
                   </Link>
                 ))}
               </nav>

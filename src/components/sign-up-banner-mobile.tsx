@@ -6,17 +6,19 @@ import {
   YogaWearTitle,
   type SignUpBannerVariant,
 } from "./sign-up-banner-shared";
+import { getT } from "@/lib/i18n-server";
 
 /**
  * Figma "Sign up banner mobile" (194:1023): a 607px rounded card inset by the 24px page margin.
  * Figma only draws the clothing (YOGA WEAR™) version; the other variants fall back to the text title.
  */
-export default function SignUpBannerMobile({
+export default async function SignUpBannerMobile({
   variant = "clothing",
   parallax = false,
   className = "",
   title = SIGN_UP_TITLE,
   description = SIGN_UP_DESCRIPTION,
+  buttonLabel,
 }: {
   variant?: SignUpBannerVariant;
   /** Let the photo drift as you scroll. */
@@ -24,7 +26,9 @@ export default function SignUpBannerMobile({
   className?: string;
   title?: string;
   description?: string;
+  buttonLabel?: string;
 }) {
+  const t = await getT();
   return (
     <section
       className={`relative mx-[24px] flex h-[607px] flex-col items-center justify-center gap-[24px] overflow-hidden rounded-[12px] p-[24px] text-white ${className}`}
@@ -77,7 +81,7 @@ export default function SignUpBannerMobile({
           name="email"
           type="email"
           required
-          placeholder="E-mail..."
+          placeholder={t("signup.placeholder")}
           autoComplete="email"
           className="h-[39px] w-full rounded-full border border-white bg-white pl-[12px] pr-[6px] font-gotham text-paragraph text-black outline-none placeholder:text-[#939393]"
         />
@@ -85,7 +89,7 @@ export default function SignUpBannerMobile({
           type="submit"
           className="flex h-[39px] w-full items-center justify-center rounded-full bg-black px-[12px] font-gotham text-paragraph text-white hover:opacity-80 transition-opacity"
         >
-          Get Notified
+          {buttonLabel ?? t("signup.button")}
         </button>
       </form>
     </section>

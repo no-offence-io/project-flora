@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CATEGORIES, type Category } from "@/lib/catalog-types";
+import { useT } from "@/components/i18n-provider";
 
 export type CategorySelection = Category | "All";
 
@@ -21,6 +22,8 @@ export default function CategoryFilter({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const t = useT();
+  const labelOf = (row: CategorySelection) => (row === "All" ? t("shop.all") : t(`category.${row}` as const));
 
   const list = (
     <ul className="flex w-full flex-col font-gotham text-paragraph text-black">
@@ -41,7 +44,7 @@ export default function CategoryFilter({
               }}
               className={`flex h-[26px] w-full items-center text-left transition-opacity ${active ? "text-black" : "text-black/50 hover:text-black"}`}
             >
-              {row}
+              {labelOf(row)}
             </button>
           </li>
         );
@@ -53,7 +56,7 @@ export default function CategoryFilter({
     <div className={className}>
       {/* Desktop sidebar */}
       <div className="hidden flex-col gap-[24px] md:flex">
-        <p className="font-gotham text-paragraph text-black">Product Categories</p>
+        <p className="font-gotham text-paragraph text-black">{t("shop.categories")}</p>
         {list}
       </div>
 
@@ -65,7 +68,7 @@ export default function CategoryFilter({
           onClick={() => setOpen((v) => !v)}
           className="flex items-center justify-end gap-[12px] font-gotham text-paragraph text-black"
         >
-          Filter
+          {t("shop.filter")}
           <svg
             width={9}
             height={11}

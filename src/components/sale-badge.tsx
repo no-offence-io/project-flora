@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { useT } from "@/components/i18n-provider";
 
 const OUTER_RADIUS = 32.5;
 const INNER_RADIUS = 19.5;
@@ -31,6 +32,7 @@ type Offsets = { words: number[]; dots: number[] };
  * change to font, weight, size or ring radius instead of relying on guessed constants.
  */
 export default function SaleBadge({ size = 65, className = "" }: { size?: number; className?: string }) {
+  const t = useT();
   const pathId = useId();
   const wordRef = useRef<SVGTextElement>(null);
   const dotRef = useRef<SVGTextElement>(null);
@@ -69,7 +71,7 @@ export default function SaleBadge({ size = 65, className = "" }: { size?: number
       height={size}
       viewBox="0 0 65 65"
       role="img"
-      aria-label="On sale"
+      aria-label={t("product.sale")}
       className={`motion-safe:animate-[spin_9s_linear_infinite] ${className}`}
     >
       <circle cx={32.5} cy={32.5} r={OUTER_RADIUS} fill="black" />

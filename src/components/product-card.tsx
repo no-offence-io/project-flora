@@ -6,6 +6,7 @@ import { useState } from "react";
 import SaleBadge from "./sale-badge";
 import { useScroller } from "./use-scroller";
 import type { SlideshowProduct } from "./products-slideshow";
+import { useT } from "@/components/i18n-provider";
 
 /**
  * Product card from Figma: grey image well, name, price (with optional struck compare price) and colour swatches.
@@ -36,6 +37,7 @@ export default function ProductCard({
    */
   allowImageScroll?: boolean;
 }) {
+  const t = useT();
   const slides = product.images && product.images.length > 0 ? product.images : [product.image];
   const { ref } = useScroller(0);
 
@@ -114,7 +116,7 @@ export default function ProductCard({
           </span>
         </Link>
         {product.colors && product.colors.length > 0 && (
-          <ul className="flex items-center gap-[8px]" aria-label="Available colours">
+          <ul className="flex items-center gap-[8px]" aria-label={t("product.colours")}>
             {product.colors.map((color, i) => (
               <li key={color.hex} className="flex">
                 <button

@@ -7,6 +7,7 @@ import { CartProvider } from "@/components/cart-context";
 import LoadingScreen from "@/components/loading-screen";
 import { SanityLive } from "@/sanity/lib/live";
 import { getLanguage } from "@/lib/language";
+import { I18nProvider } from "@/components/i18n-provider";
 
 /**
  * The shop's chrome: cart, menu, sticky navbar, footer and the intro animation. Everything a
@@ -16,7 +17,7 @@ import { getLanguage } from "@/lib/language";
 export default async function ShopLayout({ children }: { children: ReactNode }) {
   const lang = await getLanguage();
   return (
-    <>
+    <I18nProvider lang={lang}>
       <CartProvider>
         <NavMenuProvider>
           {/* The site is capped at 1600px and centred on wide desktops */}
@@ -33,6 +34,6 @@ export default async function ShopLayout({ children }: { children: ReactNode }) 
       <LoadingScreen />
       {/* Subscribes the page to Sanity content changes; required for sanityFetch to stay live. */}
       <SanityLive />
-    </>
+    </I18nProvider>
   );
 }

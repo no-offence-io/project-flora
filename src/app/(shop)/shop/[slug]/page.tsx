@@ -7,6 +7,7 @@ import ProductGallery from "@/components/product-gallery";
 import ProductsSlideshow from "@/components/products-slideshow";
 import { getProduct, getProducts } from "@/lib/catalog";
 import { LIFESTYLE_PHOTOS, toSlideshowProduct } from "@/lib/catalog-types";
+import { getT } from "@/lib/i18n-server";
 
 export async function generateMetadata({ params }: PageProps<"/shop/[slug]">): Promise<Metadata> {
   const { slug } = await params;
@@ -16,7 +17,7 @@ export async function generateMetadata({ params }: PageProps<"/shop/[slug]">): P
 
 export default async function ProductPage({ params }: PageProps<"/shop/[slug]">) {
   const { slug } = await params;
-  const [product, all] = await Promise.all([getProduct(slug), getProducts()]);
+  const [product, all, t] = await Promise.all([getProduct(slug), getProducts(), getT()]);
   if (!product) notFound();
 
   const related = all.filter((item) => item.slug !== product.slug).map(toSlideshowProduct);
@@ -41,7 +42,7 @@ export default async function ProductPage({ params }: PageProps<"/shop/[slug]">)
       </div>
 
       <div id="also-like">
-        <ProductsSlideshow title="You may also like" products={related} seeAllHref="/shop" />
+        <ProductsSlideshow title={t("product.alsoLike")} products={related} seeAllHref="/shop" />
       </div>
     </div>
   );

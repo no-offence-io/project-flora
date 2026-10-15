@@ -22,6 +22,7 @@ import OrderSummary from "./order-summary";
 import { getCountryCode } from "@/data/country-codes";
 import type { Customer, IntentResponse } from "@/lib/checkout-schema";
 import { getStripePromise } from "@/lib/stripe-client";
+import { useT } from "@/components/i18n-provider";
 
 type Quote = Pick<
   IntentResponse,
@@ -127,6 +128,7 @@ function readCustomer(form: HTMLFormElement): Customer {
  */
 export default function CheckoutClient({ formId }: { formId: string }) {
   const { items } = useCart();
+  const t = useT();
   const stripePromise = useMemo(() => getStripePromise(), []);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
@@ -167,7 +169,7 @@ export default function CheckoutClient({ formId }: { formId: string }) {
           message:
             body.issues?.[0]?.message ??
             body.error ??
-            "Could not start payment.",
+            t("pay.couldNotStart"),
         };
       }
       intentIdRef.current = body.paymentIntentId;
@@ -181,7 +183,7 @@ export default function CheckoutClient({ formId }: { formId: string }) {
       setQuoteError(null);
       return { ok: true, quote: next };
     },
-    [items],
+    [items, t],
   );
 
   // Keep the billing details on the PaymentIntent up to date as the form is filled in, rather than
@@ -278,9 +280,9 @@ export default function CheckoutClient({ formId }: { formId: string }) {
   if (items.length === 0) {
     return (
       <p className="font-gotham text-paragraph text-black/70">
-        Your cart is empty.{" "}
+        {t("cart.empty")}{" "}
         <Link href="/shop" className="text-black underline">
-          Back to the shop
+          {t("pay.backToShop")}
         </Link>
         .
       </p>
@@ -316,7 +318,7 @@ export default function CheckoutClient({ formId }: { formId: string }) {
           </Elements>
         ) : (
           <p className="m-0 text-black/50" role="status">
-            {quoteError ?? "Preparing payment…"}
+            {quoteError ?? t("pay.preparing")}
           </p>
         )}
       </OrderSummary>
@@ -361,6 +363,7 @@ function PaymentSection({
   klarnaGroup: StripeElementsOptions;
 }) {
   const stripe = useStripe();
+  const t = useT();
   const elements = useElements();
   const [message, setMessage] = useState<string | null>(null);
   /** Per column, whether Stripe found that button usable here; `null` until it reports. */
@@ -389,7 +392,7 @@ function PaymentSection({
     try {
       const { error: submitError } = await elements.submit();
       if (submitError) {
-        setMessage(submitError.message ?? "Please check your card details.");
+        setMessage(submitError.message ?? t("pay.checkCard"));
         return;
       }
       const { error } = await stripe.confirmPayment({
@@ -399,7 +402,7 @@ function PaymentSection({
       });
       // Only reached on failure — success redirects to return_url. Declines arrive here as card_error.
       if (error)
-        setMessage(error.message ?? "Payment failed. Please try again.");
+        setMessage(error.message ?? t("pay.failed"));
     } finally {
       onConfirmingChange(false);
     }
@@ -460,7 +463,7 @@ function PaymentSection({
           type="button"
           onClick={() =>
             setMessage(
-              "Vipps is coming soon. Please choose another way to pay for now.",
+              t("pay.vippsSoon"),
             )
           }
           disabled={confirming}
@@ -479,7 +482,7 @@ function PaymentSection({
 
       <div className="flex items-center gap-[12px] text-black/50">
         <span className="h-px flex-1 bg-black/25" />
-        Or pay with card
+        {t("pay.orCard")}
         <span className="h-px flex-1 bg-black/25" />
       </div>
 
@@ -510,15 +513,13 @@ function PaymentSection({
         disabled={!stripe || !elements || confirming}
         className="flex w-full items-center justify-center bg-black p-[12px] font-gotham text-paragraph text-white hover:opacity-80 transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {confirming ? "Confirming…" : "Confirm order"}
+        {confirming ? t("pay.confirming") : t("pay.confirm")}
       </button>
 
       <p className="m-0 text-black/50">
-        Your personal data will be used to process your order, support your
-        experience throughout this website, and for other purposes described in
-        our{" "}
+        {t("pay.privacy")}{" "}
         <Link href="/privacy" className="text-black underline">
-          privacy policy
+          {t("pay.privacyLink")}
         </Link>
         .
       </p>
@@ -563,6 +564,7 @@ function ExpressButton({
   validForm,
 }: Omit<ExpressColumnProps, "stripePromise" | "group">) {
   const stripe = useStripe();
+  const t = useT();
   const elements = useElements();
 
   useEffect(() => {
@@ -592,7 +594,7 @@ function ExpressButton({
       const { error: submitError } = await elements.submit();
       if (submitError) {
         event.paymentFailed({ reason: "fail" });
-        onMessage(submitError.message ?? "Payment failed. Please try again.");
+        onMessage(submitError.message ?? t("pay.failed"));
         return;
       }
       const { error } = await stripe.confirmPayment({
@@ -602,7 +604,7 @@ function ExpressButton({
       });
       if (error) {
         event.paymentFailed({ reason: "fail" });
-        onMessage(error.message ?? "Payment failed. Please try again.");
+        onMessage(error.message ?? t("pay.failed"));
       }
     } finally {
       onConfirmingChange(false);

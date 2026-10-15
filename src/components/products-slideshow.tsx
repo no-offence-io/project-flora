@@ -3,6 +3,7 @@
 import Link from "next/link";
 import ProductCard from "./product-card";
 import { PrevNextControls, useScroller } from "./use-scroller";
+import { useT } from "@/components/i18n-provider";
 
 export type ProductColor = {
   /** Swatch colour, drawn as an 8px square. */
@@ -55,6 +56,7 @@ export default function ProductsSlideshow({
   columns?: 3 | 4;
   className?: string;
 }) {
+  const t = useT();
   const { ref: scrollerRef, canPrev, canNext, scrollByItem } = useScroller(10);
 
   return (
@@ -67,7 +69,7 @@ export default function ProductsSlideshow({
 
         {/* Desktop: See all → */}
         <Link href={seeAllHref} className="hidden items-center gap-[10px] hover:opacity-70 transition-opacity md:flex">
-          See all
+          {t("slideshow.seeAll")}
           <ArrowRight />
         </Link>
       </div>

@@ -7,6 +7,7 @@ import {
   YogaWearTitle,
   type SignUpBannerVariant,
 } from "./sign-up-banner-shared";
+import { getT } from "@/lib/i18n-server";
 
 /**
  * Figma "Sign up banner desktop" (181:769).
@@ -14,12 +15,13 @@ import {
  * - clothing: full-bleed, "YOGA WEAR™" wordmark and care instructions along the bottom
  * - smaller: 673px rounded card inset by the 42px page margin
  */
-export default function SignUpBannerDesktop({
+export default async function SignUpBannerDesktop({
   variant = "default",
   parallax = false,
   className = "",
   title = SIGN_UP_TITLE,
   description = SIGN_UP_DESCRIPTION,
+  buttonLabel,
 }: {
   variant?: SignUpBannerVariant;
   /** Let the photo drift as you scroll. */
@@ -27,7 +29,9 @@ export default function SignUpBannerDesktop({
   className?: string;
   title?: string;
   description?: string;
+  buttonLabel?: string;
 }) {
+  const t = await getT();
   const isSmaller = variant === "smaller";
   const isClothing = variant === "clothing";
 
@@ -87,7 +91,7 @@ export default function SignUpBannerDesktop({
               name="email"
               type="email"
               required
-              placeholder="E-mail..."
+              placeholder={t("signup.placeholder")}
               autoComplete="email"
               className="min-w-0 flex-1 bg-transparent font-gotham text-paragraph text-white outline-none placeholder:text-white"
             />
@@ -95,7 +99,7 @@ export default function SignUpBannerDesktop({
               type="submit"
               className="shrink-0 rounded-full bg-black px-[12px] py-[6px] font-gotham text-paragraph whitespace-nowrap hover:opacity-80 transition-opacity"
             >
-              Get Notified
+              {buttonLabel ?? t("signup.button")}
             </button>
           </div>
         </form>

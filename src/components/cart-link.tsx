@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCart } from "./cart-context";
 import CartIcon from "./cart-icon";
 import CartItems from "./cart-items";
+import { useT } from "@/components/i18n-provider";
 
 /**
  * Cart entry point. `variant="text"` shows "Cart (N)" and reveals the cart rows in a corner popup on
@@ -11,7 +12,8 @@ import CartItems from "./cart-items";
  */
 export default function CartLink({ variant = "text", className = "" }: { variant?: "text" | "icon"; className?: string }) {
   const { count } = useCart();
-  const label = `Cart, ${count} items`;
+  const t = useT();
+  const label = `${t("cart.link")}, ${count} ${t("cart.items")}`;
 
   if (variant === "icon") {
     return (
@@ -24,7 +26,7 @@ export default function CartLink({ variant = "text", className = "" }: { variant
   return (
     <div className="group relative">
       <Link href="/checkout" aria-label={label} className={`hover:opacity-70 transition-opacity ${className}`}>
-        Cart ({count})
+        {t("cart.link")} ({count})
       </Link>
 
       {/* Popup: padding-top keeps the hover alive across the gap under the link */}
@@ -32,8 +34,8 @@ export default function CartLink({ variant = "text", className = "" }: { variant
         <div className="flex w-[420px] max-w-[calc(100vw-48px)] flex-col gap-[12px] border-[0.5px] border-black/25 bg-white p-[24px] text-black shadow-[0_12px_40px_rgba(0,0,0,0.12)]">
           <div className="flex flex-col gap-[12px]">
             <p className="m-0 flex items-start gap-[6px] font-gotham text-paragraph">
-              Order Summary
-              <span className="border-[0.5px] border-black px-[4px] py-[1px]">{count} Items</span>
+              {t("cart.summary")}
+              <span className="border-[0.5px] border-black px-[4px] py-[1px]">{count} {t("cart.itemsTag")}</span>
             </p>
             <div className="h-px w-full bg-black/25" />
           </div>
@@ -42,7 +44,7 @@ export default function CartLink({ variant = "text", className = "" }: { variant
             href="/checkout"
             className="flex w-full items-center justify-center bg-black p-[12px] font-gotham text-paragraph text-white hover:opacity-80 transition-opacity"
           >
-            Continue to checkout
+            {t("cart.continue")}
           </Link>
         </div>
       </div>

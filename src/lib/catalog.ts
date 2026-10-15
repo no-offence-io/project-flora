@@ -14,6 +14,9 @@ import { DEFAULT_RULES, type ShippingRules } from "./pricing";
  * components didn't change when the content moved out of the code.
  */
 
+/** Every read carries this tag; /api/revalidate drops it when Sanity reports a publish. */
+export const CONTENT_TAG = "sanity-content";
+
 /** A translated field: the visitor's language if it has a value, otherwise English. */
 const L = (field: string) => `coalesce(${field}[_key == $lang][0].value, ${field}[_key == "en"][0].value)`;
 const IMG = (field: string) => `{ "src": ${field}.asset->url, "alt": ${L(`${field}.alt`)} }`;
@@ -59,13 +62,13 @@ function toProduct(raw: RawProduct): Product {
 
 export async function getProducts(): Promise<Product[]> {
   const lang = await getLanguage();
-  const { data } = await sanityFetch({ query: PRODUCTS_QUERY, params: { lang }, stega: false });
+  const { data } = await sanityFetch({ query: PRODUCTS_QUERY, params: { lang }, stega: false, tags: [CONTENT_TAG] });
   return (data as RawProduct[]).map(toProduct);
 }
 
 export async function getProduct(slug: string): Promise<Product | null> {
   const lang = await getLanguage();
-  const { data } = await sanityFetch({ query: PRODUCT_QUERY, params: { slug, lang }, stega: false });
+  const { data } = await sanityFetch({ query: PRODUCT_QUERY, params: { slug, lang }, stega: false, tags: [CONTENT_TAG] });
   return data ? toProduct(data as RawProduct) : null;
 }
 
@@ -99,7 +102,7 @@ const HOME_QUERY = defineQuery(`*[_id == "homePage"][0]{
 
 export async function getHomePage(): Promise<{ productsTitle: string; values: { title: string; intro: string; items: ScrollyValue[] } }> {
   const lang = await getLanguage();
-  const { data } = await sanityFetch({ query: HOME_QUERY, params: { lang }, stega: false });
+  const { data } = await sanityFetch({ query: HOME_QUERY, params: { lang }, stega: false, tags: [CONTENT_TAG] });
   const d = (data ?? {}) as { productsTitle?: string | null; values?: { title?: string | null; intro?: string | null; items?: { title?: string | null; description?: string | null; image?: RawImage | null }[] | null } | null };
   return {
     productsTitle: d.productsTitle ?? "All items",
@@ -118,7 +121,7 @@ const FAQ_QUERY = defineQuery(`*[_type == "faqItem"] | order(order asc){ "title"
 
 export async function getFaq(): Promise<DropdownListItem[]> {
   const lang = await getLanguage();
-  const { data } = await sanityFetch({ query: FAQ_QUERY, params: { lang }, stega: false });
+  const { data } = await sanityFetch({ query: FAQ_QUERY, params: { lang }, stega: false, tags: [CONTENT_TAG] });
   return ((data ?? []) as { title?: string | null; answer?: Block[] | null; image?: RawImage | null }[]).map((f) => ({
     title: f.title ?? "",
     content: paragraphs(f.answer),
@@ -136,7 +139,7 @@ export type PolicyContent = { title: string; intro: string; items: DropdownListI
  */
 export async function getPolicy(page: string): Promise<PolicyContent | null> {
   const lang = await getLanguage();
-  const { data } = await sanityFetch({ query: POLICY_QUERY, params: { page, lang }, stega: false });
+  const { data } = await sanityFetch({ query: POLICY_QUERY, params: { page, lang }, stega: false, tags: [CONTENT_TAG] });
   if (!data) return null;
   const d = data as { title?: string | null; intro?: string | null; body?: Block[] | null };
   const items = paragraphs(d.body).map((p, i) => {
@@ -152,7 +155,7 @@ export type SiteCopy = { siteName: string; announcement: string; signUpTitle: st
 
 export async function getSiteCopy(): Promise<SiteCopy> {
   const lang: Lang = await getLanguage();
-  const { data } = await sanityFetch({ query: SETTINGS_QUERY, params: { lang }, stega: false });
+  const { data } = await sanityFetch({ query: SETTINGS_QUERY, params: { lang }, stega: false, tags: [CONTENT_TAG] });
   const d = (data ?? {}) as Partial<Record<keyof SiteCopy, string | null>>;
   return {
     siteName: d.siteName ?? "Flöra",

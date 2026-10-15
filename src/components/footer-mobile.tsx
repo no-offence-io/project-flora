@@ -2,8 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { FooterOverlay, NAV_LINKS, SocialLinks } from "./footer-shared";
 import { ParallaxLayer } from "./parallax";
+import { getT } from "@/lib/i18n-server";
 
-export default function FooterMobile({ parallax = true, className = "" }: { parallax?: boolean; className?: string }) {
+export default async function FooterMobile({ parallax = true, className = "" }: { parallax?: boolean; className?: string }) {
+  const t = await getT();
   return (
     <footer
       className={`full-bleed relative flex h-screen flex-col items-center justify-end gap-[10px] overflow-hidden p-[24px] text-white ${className}`}
@@ -42,8 +44,8 @@ export default function FooterMobile({ parallax = true, className = "" }: { para
             className="flex w-[259px] flex-wrap content-center items-center justify-center gap-x-[24px] gap-y-[12px] font-gotham text-paragraph whitespace-nowrap"
           >
             {NAV_LINKS.map((link) => (
-              <Link key={link.label} href={link.href} className="hover:opacity-70 transition-opacity">
-                {link.label}
+              <Link key={t(link.key)} href={link.href} className="hover:opacity-70 transition-opacity">
+                {t(link.key)}
               </Link>
             ))}
           </nav>
@@ -51,7 +53,7 @@ export default function FooterMobile({ parallax = true, className = "" }: { para
           <SocialLinks />
 
           <p className="text-center font-americana text-[12px] leading-normal uppercase whitespace-nowrap">
-            Design & website by No Offence
+            {t("footer.credit")}
             <br />
             © 2026 Flöra
           </p>

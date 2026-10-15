@@ -4,12 +4,13 @@ import CartLink from "./cart-link";
 import { BurgerButton } from "./nav-menu";
 import LanguageSwitch from "./language-switch";
 import { getLanguage } from "@/lib/language";
+import { getT } from "@/lib/i18n-server";
 
 export const NAV_LINKS = [
-  { label: "Shop", href: "/shop" },
-  { label: "Values", href: "/#values" },
-  { label: "About", href: "/about" },
-];
+  { key: "nav.shop", href: "/shop" },
+  { key: "nav.values", href: "/#values" },
+  { key: "nav.about", href: "/about" },
+] as const;
 
 /**
  * Page navbar from Figma "Navbar desktop" (99:312) and "Navbar mobile" (41:1499).
@@ -17,6 +18,7 @@ export const NAV_LINKS = [
  */
 export default async function Navbar({ tone = "dark", className = "" }: { tone?: "dark" | "light"; className?: string }) {
   const lang = await getLanguage();
+  const t = await getT();
   const color = tone === "dark" ? "text-black" : "text-white";
   const logoFilter = tone === "dark" ? "invert" : "";
 
@@ -54,8 +56,8 @@ export default async function Navbar({ tone = "dark", className = "" }: { tone?:
         <div className="flex items-center gap-[120px]">
           <nav aria-label="Primary" className="flex items-center gap-[42px] font-gotham text-paragraph whitespace-nowrap">
             {NAV_LINKS.map((link) => (
-              <Link key={link.label} href={link.href} className="hover:opacity-70 transition-opacity">
-                {link.label}
+              <Link key={link.key} href={link.href} className="hover:opacity-70 transition-opacity">
+                {t(link.key)}
               </Link>
             ))}
           </nav>

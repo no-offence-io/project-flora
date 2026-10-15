@@ -1,12 +1,12 @@
 import Image from "next/image";
 
 export const NAV_LINKS = [
-  { label: "Terms", href: "/terms" },
-  { label: "Refunds & Exchange", href: "/refunds-and-exchange" },
-  { label: "Privacy", href: "/privacy" },
-  { label: "Shipping", href: "/shipping" },
-  { label: "FAQ", href: "/faq" },
-];
+  { key: "footer.terms", href: "/terms" },
+  { key: "footer.refunds", href: "/refunds-and-exchange" },
+  { key: "footer.privacy", href: "/privacy" },
+  { key: "footer.shipping", href: "/shipping" },
+  { key: "footer.faq", href: "/faq" },
+] as const;
 
 export const SOCIAL_LINKS = [
   {

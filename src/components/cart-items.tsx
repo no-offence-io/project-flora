@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "./cart-context";
+import { useT } from "@/components/i18n-provider";
 
 /** Black circle with a white cross, from Figma "Frame 90" (16px). */
 function RemoveIcon() {
@@ -27,9 +28,10 @@ function QtyArrow() {
 /** Cart rows from the Figma order summary: thumbnail, name, measurements, quantity control and remove cross. */
 export default function CartItems({ className = "" }: { className?: string }) {
   const { items, setQuantity, remove } = useCart();
+  const t = useT();
 
   if (items.length === 0) {
-    return <p className={`m-0 font-gotham text-paragraph text-black/50 ${className}`}>Your cart is empty.</p>;
+    return <p className={`m-0 font-gotham text-paragraph text-black/50 ${className}`}>{t("cart.empty")}</p>;
   }
 
   return (
@@ -65,7 +67,7 @@ export default function CartItems({ className = "" }: { className?: string }) {
               >
                 {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
                   <option key={n} value={n}>
-                    {n} qty
+                    {n} {t("cart.qty")}
                   </option>
                 ))}
               </select>
@@ -78,7 +80,7 @@ export default function CartItems({ className = "" }: { className?: string }) {
           <button
             type="button"
             onClick={() => remove(item.id)}
-            aria-label={`Remove ${item.name}`}
+            aria-label={`${t("cart.remove")} ${item.name}`}
             className="absolute -top-[8px] -right-[8px] hover:opacity-70 transition-opacity"
           >
             <RemoveIcon />

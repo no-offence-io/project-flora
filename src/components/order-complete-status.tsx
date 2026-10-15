@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useCart } from "./cart-context";
 import { formatNok, orderReference } from "@/lib/money";
 import { getStripePromise } from "@/lib/stripe-client";
+import { useT } from "@/components/i18n-provider";
 
 type View =
   | { kind: "loading" }
@@ -23,6 +24,7 @@ export default function OrderCompleteStatus() {
   const params = useSearchParams();
   const clientSecret = params.get("payment_intent_client_secret");
   const { clear } = useCart();
+  const t = useT();
   const configured = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
   const [view, setView] = useState<View>({ kind: clientSecret && configured ? "loading" : "none" });
 
@@ -61,7 +63,7 @@ export default function OrderCompleteStatus() {
 
   const back = (
     <Link href="/checkout" className="text-black underline">
-      Back to checkout
+      {t("complete.back")}
     </Link>
   );
 
@@ -69,40 +71,38 @@ export default function OrderCompleteStatus() {
     <div className="flex max-w-[521px] flex-col gap-[24px] font-gotham text-paragraph text-black">
       {view.kind === "loading" && (
         <p className="m-0 text-black/70" role="status">
-          Checking your payment…
+          {t("complete.checking")}
         </p>
       )}
       {view.kind === "none" && (
         <p className="m-0 text-black/70">
-          No payment to show. {back}
+          {t("complete.none")} {back}
         </p>
       )}
       {view.kind === "succeeded" && (
         <>
-          <h1 className="m-0 font-americana text-big-header-mobile capitalize md:text-big-header-desktop">Thank you</h1>
+          <h1 className="m-0 font-americana text-big-header-mobile capitalize md:text-big-header-desktop">{t("complete.thanks")}</h1>
           <p className="m-0 text-black/70">
-            Your payment of {formatNok(view.amountOre)} went through. Your order reference is <strong className="text-black">{view.reference}</strong>.
-            A receipt is on its way to your email.
+            {t("complete.success", { amount: formatNok(view.amountOre) })} <strong className="text-black">{view.reference}</strong>. {t("complete.receipt")}
           </p>
           <Link href="/shop" className="text-black underline">
-            Continue shopping
+            {t("complete.continue")}
           </Link>
         </>
       )}
       {view.kind === "processing" && (
         <>
-          <h1 className="m-0 font-americana text-big-header-mobile capitalize md:text-big-header-desktop">Almost there</h1>
+          <h1 className="m-0 font-americana text-big-header-mobile capitalize md:text-big-header-desktop">{t("complete.almost")}</h1>
           <p className="m-0 text-black/70">
-            Your payment is still processing. Reference <strong className="text-black">{view.reference}</strong>. We will email you as
-            soon as it is confirmed.
+            {t("complete.processing")} <strong className="text-black">{view.reference}</strong>. {t("complete.processing2")}
           </p>
         </>
       )}
       {view.kind === "failed" && (
         <>
-          <h1 className="m-0 font-americana text-big-header-mobile capitalize md:text-big-header-desktop">Payment not completed</h1>
+          <h1 className="m-0 font-americana text-big-header-mobile capitalize md:text-big-header-desktop">{t("complete.notCompleted")}</h1>
           <p className="m-0 text-black/70">
-            The payment did not go through and nothing was charged. {back}
+            {t("complete.nothingCharged")} {back}
           </p>
         </>
       )}

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useCart } from "./cart-context";
 import CartItems from "./cart-items";
 import { formatNok, type Totals } from "@/lib/money";
+import { useT } from "@/components/i18n-provider";
 
 /**
  * Order summary card from the Figma checkout page: cart rows and the pricing block, then whatever
@@ -23,6 +24,7 @@ export default function OrderSummary({
   className?: string;
 }) {
   const { count } = useCart();
+  const t = useT();
   const pending = "…";
 
   return (
@@ -31,8 +33,8 @@ export default function OrderSummary({
     >
       <div className="flex flex-col gap-[12px]">
         <h2 className="m-0 flex items-start gap-[6px] font-gotham text-paragraph">
-          Order Summary
-          <span className="border-[0.5px] border-black px-[4px] py-[1px] text-paragraph">{count} Items</span>
+          {t("cart.summary")}
+          <span className="border-[0.5px] border-black px-[4px] py-[1px] text-paragraph">{count} {t("cart.itemsTag")}</span>
         </h2>
         <div className="h-px w-full bg-black/25" />
       </div>
@@ -42,20 +44,20 @@ export default function OrderSummary({
 
         <dl className="m-0 flex flex-col gap-[12px] bg-[#fafbfc] p-[24px]" aria-busy={!totals}>
           <div className="flex justify-between">
-            <dt>Subtotal</dt>
+            <dt>{t("summary.subtotal")}</dt>
             <dd className="m-0">{totals ? formatNok(totals.subtotalOre) : pending}</dd>
           </div>
           <div className="flex justify-between text-[11px] leading-normal text-black/50">
-            <dt>Shipping</dt>
-            <dd className="m-0">{totals ? (totals.shippingOre === 0 ? "Free" : formatNok(totals.shippingOre)) : pending}</dd>
+            <dt>{t("summary.shipping")}</dt>
+            <dd className="m-0">{totals ? (totals.shippingOre === 0 ? t("summary.free") : formatNok(totals.shippingOre)) : pending}</dd>
           </div>
           <div className="flex justify-between text-[11px] leading-normal text-black/50">
-            <dt>VAT 25% (included)</dt>
+            <dt>{t("summary.vat")}</dt>
             <dd className="m-0">{totals ? formatNok(totals.vatIncludedOre) : pending}</dd>
           </div>
           <div className="h-px w-full bg-black/25" />
           <div className="flex justify-between">
-            <dt>Total</dt>
+            <dt>{t("summary.total")}</dt>
             <dd className="m-0">{totals ? formatNok(totals.totalOre) : pending}</dd>
           </div>
         </dl>

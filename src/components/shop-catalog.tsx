@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import CategoryFilter, { type CategorySelection } from "./category-filter";
 import ProductCard from "./product-card";
 import { toSlideshowProduct, type Product } from "@/lib/catalog-types";
+import { useT } from "@/components/i18n-provider";
 
 const INTRO =
   "Browse upcoming garments in the Permanent Collection and sign up for notifications on each product page to be the first to know when they’re available.";
@@ -14,6 +15,7 @@ const INTRO =
  */
 export default function ShopCatalog({ products, title = "All items" }: { products: Product[]; title?: string }) {
   const [category, setCategory] = useState<CategorySelection>("All");
+  const t = useT();
   const [query, setQuery] = useState("");
 
   const visible = useMemo(() => {
@@ -29,12 +31,12 @@ export default function ShopCatalog({ products, title = "All items" }: { product
         <h1 className="m-0 font-americana text-big-header-mobile capitalize text-black md:text-big-header-desktop">{title}</h1>
         <p className="font-gotham text-paragraph text-black/70 md:hidden">{INTRO}</p>
         <label className="hidden md:block">
-          <span className="sr-only">Search products</span>
+          <span className="sr-only">{t("shop.search")}</span>
           <input
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search..."
+            placeholder={t("shop.searchPlaceholder")}
             className="w-[279px] border-b border-black bg-transparent py-[6px] pr-[6px] pl-[12px] font-gotham text-paragraph text-black outline-none placeholder:text-black"
           />
         </label>
@@ -52,7 +54,7 @@ export default function ShopCatalog({ products, title = "All items" }: { product
               imageSizes="(min-width: 768px) 30vw, 50vw"
             />
           ))}
-          {visible.length === 0 && <p className="col-span-full font-gotham text-paragraph text-black/50">No items match.</p>}
+          {visible.length === 0 && <p className="col-span-full font-gotham text-paragraph text-black/50">{t("shop.noMatch")}</p>}
         </div>
       </div>
     </div>

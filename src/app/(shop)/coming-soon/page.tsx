@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getT } from "@/lib/i18n-server";
 
 export const metadata: Metadata = {
   title: "Flöra – Coming soon",
@@ -22,7 +23,8 @@ const DOT_RIGHT =
  * navbar — rendered by the root layout on every route — stay out of sight behind it. `.coming-soon-gate`
  * is what locks the page behind it from scrolling (see globals.css).
  */
-export default function ComingSoonPage() {
+export default async function ComingSoonPage() {
+  const t = await getT();
   return (
     <div className="coming-soon-gate fixed inset-0 z-[200] flex flex-col items-center justify-center gap-[24px] bg-white px-[24px] text-center">
       <svg width={36} height={38} viewBox="0 0 36 38" aria-label="Flöra" className="h-[38px] w-auto">
@@ -31,10 +33,10 @@ export default function ComingSoonPage() {
         <path d={DOT_RIGHT} fill="black" />
       </svg>
 
-      <h1 className="m-0 font-americana text-big-header-mobile capitalize text-black md:text-big-header-desktop">Coming soon</h1>
+      <h1 className="m-0 font-americana text-big-header-mobile capitalize text-black md:text-big-header-desktop">{t("comingSoon.title")}</h1>
 
       <p className="m-0 max-w-[420px] font-gotham text-paragraph text-black/70">
-        Something new is growing. Our first collection arrives shortly.
+        {t("comingSoon.text")}
       </p>
     </div>
   );

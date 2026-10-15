@@ -72,9 +72,19 @@ the content any more — `scripts/migrate-content.mjs` is the record of what was
 
 **Language.** An EN / NO switch in the navbar and the menu sets a `flora-lang` cookie (a server
 action, so it works without JavaScript); every query takes `$lang` and falls back to English per
-field, so a half-translated site shows English where Norwegian is missing rather than a gap. The
-UI chrome (buttons, nav labels, checkout form) is still English-only; translating it is a
-dictionary job, separate from content.
+field, so a half-translated site shows English where Norwegian is missing rather than a gap.
+
+The chrome — navigation, footer, cart, product buttons, the whole checkout, order-complete, the
+coming-soon page — is translated from one dictionary, `src/lib/i18n.ts`. Server components call
+`await getT()` (`src/lib/i18n-server.ts`); client components call `useT()` from the
+`I18nProvider` mounted in the shop layout. Add a string by adding a key to both languages; TypeScript
+refuses unknown keys. Admin screens stay English.
+
+**Edits reach the site without a browser open.** Every storefront read is tagged `sanity-content`;
+a Sanity webhook ("Storefront revalidate", GROQ-powered, on any publish of the content types) POSTs
+to `/api/revalidate` with `x-revalidate-secret`, which drops the tag. The Live Content API does the
+same through any open browser; the webhook covers quiet hours. `REVALIDATE_SECRET` must match on
+Vercel and in the webhook (Sanity Manage → API → Webhooks).
 
 **Policy pages.** Their text is plain paragraphs in the editor; a paragraph written as
 "Heading — text" becomes a collapsible section on the page.

@@ -14,12 +14,13 @@ import {
   type ReactNode,
 } from "react";
 import { SOCIAL_LINKS } from "./footer-shared";
+import { useT } from "@/components/i18n-provider";
 
 const MENU_LINKS = [
-  { label: "Shop", href: "/shop" },
-  { label: "Values", href: "/values" },
-  { label: "About", href: "/about" },
-];
+  { key: "nav.shop", href: "/shop" },
+  { key: "nav.values", href: "/#values" },
+  { key: "nav.about", href: "/about" },
+] as const;
 
 type NavMenuContextValue = {
   isOpen: boolean;
@@ -51,12 +52,13 @@ export function useNavMenu() {
 
 /** Three-line burger from the Figma mobile navbar (36px wide, 3px lines, 8px gap). */
 export function BurgerButton({ className = "" }: { className?: string }) {
+  const t = useT();
   const { open } = useNavMenu();
   return (
     <button
       type="button"
       onClick={open}
-      aria-label="Open menu"
+      aria-label={t("menu.open")}
       aria-haspopup="dialog"
       className={`flex w-[36px] flex-col gap-[8px] hover:opacity-70 transition-opacity ${className}`}
     >
@@ -72,6 +74,7 @@ export function BurgerButton({ className = "" }: { className?: string }) {
  * and "Desktop navbar expanded" (3:146) from `md` up.
  */
 export function NavMenuOverlay({ lang = "en" }: { lang?: Lang }) {
+  const t = useT();
   const { isOpen, close } = useNavMenu();
 
   useEffect(() => {
@@ -124,7 +127,7 @@ export function NavMenuOverlay({ lang = "en" }: { lang?: Lang }) {
       <button
         type="button"
         onClick={close}
-        aria-label="Close menu"
+        aria-label={t("menu.close")}
         autoFocus
         className="absolute top-[24px] right-[24px] flex size-[36px] items-center justify-center outline-none hover:opacity-70 transition-opacity focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white md:top-[42px] md:right-[42px] md:size-[47.587px]"
       >
@@ -138,8 +141,8 @@ export function NavMenuOverlay({ lang = "en" }: { lang?: Lang }) {
         className="absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-[24px] font-americana text-big-header-mobile capitalize whitespace-nowrap md:flex-row md:gap-[60px] md:text-big-header-desktop"
       >
         {MENU_LINKS.map((link) => (
-          <Link key={link.label} href={link.href} onClick={close} className="hover:opacity-70 transition-opacity">
-            {link.label}
+          <Link key={link.key} href={link.href} onClick={close} className="hover:opacity-70 transition-opacity">
+            {t(link.key)}
           </Link>
         ))}
       </nav>
