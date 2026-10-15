@@ -35,6 +35,7 @@ const en = {
   "faq.title": "Frequently asked questions",
   "signup.placeholder": "E-mail...", "signup.button": "Get Notified",
   "comingSoon.title": "Coming soon", "comingSoon.text": "Something new is growing. Our first collection arrives shortly.",
+  "meta.shop": "All items – Flöra", "meta.faq": "FAQ – Flöra", "meta.checkout": "Checkout – Flöra", "meta.orderComplete": "Order complete – Flöra", "meta.comingSoon": "Flöra – Coming soon",
 } as const;
 
 export type Key = keyof typeof en;
@@ -69,6 +70,7 @@ const no: Record<Key, string> = {
   "faq.title": "Ofte stilte spørsmål",
   "signup.placeholder": "E-post...", "signup.button": "Få beskjed",
   "comingSoon.title": "Kommer snart", "comingSoon.text": "Noe nytt vokser frem. Vår første kolleksjon kommer snart.",
+  "meta.shop": "Alle produkter – Flöra", "meta.faq": "Ofte stilte spørsmål – Flöra", "meta.checkout": "Kasse – Flöra", "meta.orderComplete": "Ordre fullført – Flöra", "meta.comingSoon": "Flöra – Kommer snart",
 };
 
 const DICT: Record<Lang, Record<Key, string>> = { en, no };

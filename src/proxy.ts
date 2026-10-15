@@ -18,6 +18,7 @@ const PREVIEW_COOKIE = "flora-preview";
  *   - `/.well-known/…`, which Apple fetches to verify the domain for Apple Pay. Blocking it breaks
  *     the wallet buttons on this domain.
  *   - `/admin` and `/api/auth`, so the dashboard works while the shop is closed. It has its own login.
+ *   - `/api/revalidate`, which Sanity calls after a publish; it has its own secret.
  * See the matcher below, which also lets static assets through so this page can render at all.
  */
 export function proxy(request: NextRequest) {
@@ -58,6 +59,6 @@ export function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     // `api/auth` stays reachable while the shop is hidden; `/admin` is handled at the top of proxy().
-    "/((?!_next/static|_next/image|favicon.ico|\\.well-known|api/webhooks|api/auth|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|mp4|ico|woff|woff2|otf|ttf)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|\\.well-known|api/webhooks|api/auth|api/revalidate|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|mp4|ico|woff|woff2|otf|ttf)$).*)",
   ],
 };

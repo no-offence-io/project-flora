@@ -5,7 +5,10 @@ import SignUpBanner from "@/components/sign-up-banner";
 import { getFaq, getHomePage } from "@/lib/catalog";
 import { getT } from "@/lib/i18n-server";
 
-export const metadata: Metadata = { title: "FAQ – Flöra" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t("meta.faq") };
+}
 
 export default async function FaqPage() {
   const [items, home, t] = await Promise.all([getFaq(), getHomePage(), getT()]);

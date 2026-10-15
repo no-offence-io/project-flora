@@ -4,7 +4,10 @@ import CheckoutSteps from "@/components/checkout-steps";
 import Navbar from "@/components/navbar";
 import { getT } from "@/lib/i18n-server";
 
-export const metadata: Metadata = { title: "Checkout – Flöra" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t("meta.checkout") };
+}
 
 const FORM_ID = "billing-details";
 

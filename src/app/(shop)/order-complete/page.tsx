@@ -5,7 +5,10 @@ import Navbar from "@/components/navbar";
 import OrderCompleteStatus from "@/components/order-complete-status";
 import { getT } from "@/lib/i18n-server";
 
-export const metadata: Metadata = { title: "Order complete – Flöra" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t("meta.orderComplete") };
+}
 
 export default async function OrderCompletePage() {
   const t = await getT();

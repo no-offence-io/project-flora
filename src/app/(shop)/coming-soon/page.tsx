@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import { getT } from "@/lib/i18n-server";
 
-export const metadata: Metadata = {
-  title: "Flöra – Coming soon",
-  description: "Flöra. Something new is growing.",
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
   // The placeholder must not be what search engines remember the domain for.
-  robots: { index: false, follow: false },
-};
+  return { title: t("meta.comingSoon"), description: t("comingSoon.text"), robots: { index: false, follow: false } };
+}
 
 /** The Flöra bud mark, same paths as the intro animation. */
 const RING =

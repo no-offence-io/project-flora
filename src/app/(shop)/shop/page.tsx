@@ -3,8 +3,12 @@ import Navbar from "@/components/navbar";
 import ShopCatalog from "@/components/shop-catalog";
 import SignUpBanner from "@/components/sign-up-banner";
 import { getHomePage, getProducts } from "@/lib/catalog";
+import { getT } from "@/lib/i18n-server";
 
-export const metadata: Metadata = { title: "All items – Flöra" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t("meta.shop") };
+}
 
 export default async function ShopPage() {
   const [products, home] = await Promise.all([getProducts(), getHomePage()]);
