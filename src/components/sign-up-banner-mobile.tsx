@@ -15,11 +15,15 @@ export default function SignUpBannerMobile({
   variant = "clothing",
   parallax = false,
   className = "",
+  title = SIGN_UP_TITLE,
+  description = SIGN_UP_DESCRIPTION,
 }: {
   variant?: SignUpBannerVariant;
   /** Let the photo drift as you scroll. */
   parallax?: boolean;
   className?: string;
+  title?: string;
+  description?: string;
 }) {
   return (
     <section
@@ -52,11 +56,11 @@ export default function SignUpBannerMobile({
           <YogaWearTitle />
         ) : (
           <h2 className="font-americana text-big-header-mobile text-center uppercase">
-            {SIGN_UP_TITLE}
+            {title}
           </h2>
         )}
         <p className="w-full text-center font-gotham text-paragraph">
-          {SIGN_UP_DESCRIPTION}
+          {description}
         </p>
       </div>
 

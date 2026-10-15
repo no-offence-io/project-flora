@@ -1,15 +1,17 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import Navbar from "./navbar";
+import { useEffect, useState, type ReactNode } from "react";
 
 /**
  * Fixed copy of the dark navbar that stays hidden above the viewport and slides down when you
  * scroll up, then slides away again when you scroll down. It only arms itself past the top of
  * the page: past the hero on the front page, past the in-flow navbar everywhere else.
+ *
+ * The navbar itself comes in as a child: it is a server component (it reads the language cookie),
+ * and a client component can hold one but not import one.
  */
-export default function StickyNavbar({ threshold = 12 }: { threshold?: number }) {
+export default function StickyNavbar({ threshold = 12, children }: { threshold?: number; children: ReactNode }) {
   const pathname = usePathname();
   const [visible, setVisible] = useState(false);
 
@@ -55,9 +57,7 @@ export default function StickyNavbar({ threshold = 12 }: { threshold?: number })
         visible ? "translate-y-0" : "pointer-events-none -translate-y-full"
       }`}
     >
-      <div className="mx-auto w-full max-w-[1500px]">
-        <Navbar tone="dark" />
-      </div>
+      <div className="mx-auto w-full max-w-[1500px]">{children}</div>
     </div>
   );
 }

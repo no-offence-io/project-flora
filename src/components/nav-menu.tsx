@@ -1,6 +1,8 @@
 "use client";
 
 import Image from "next/image";
+import LanguageSwitch from "./language-switch";
+import type { Lang } from "@/lib/language-shared";
 import Link from "next/link";
 import {
   createContext,
@@ -69,7 +71,7 @@ export function BurgerButton({ className = "" }: { className?: string }) {
  * Full-screen navigation from Figma "Phone navbar expanded" (3:200) below `md`
  * and "Desktop navbar expanded" (3:146) from `md` up.
  */
-export function NavMenuOverlay() {
+export function NavMenuOverlay({ lang = "en" }: { lang?: Lang }) {
   const { isOpen, close } = useNavMenu();
 
   useEffect(() => {
@@ -141,6 +143,11 @@ export function NavMenuOverlay() {
           </Link>
         ))}
       </nav>
+
+      {/* Language, under the links on mobile and bottom-left on desktop */}
+      <div className="absolute bottom-[72px] left-1/2 -translate-x-1/2 md:bottom-[42px] md:left-[42px] md:translate-x-0">
+        <LanguageSwitch current={lang} tone="light" />
+      </div>
 
       {/* Social icons: bottom-center at 24px tall on mobile, bottom-right at 40px tall on desktop.
           Figma orders them Instagram, YouTube, Spotify on mobile and Instagram, Spotify, YouTube on desktop. */}

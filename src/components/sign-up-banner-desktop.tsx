@@ -18,11 +18,15 @@ export default function SignUpBannerDesktop({
   variant = "default",
   parallax = false,
   className = "",
+  title = SIGN_UP_TITLE,
+  description = SIGN_UP_DESCRIPTION,
 }: {
   variant?: SignUpBannerVariant;
   /** Let the photo drift as you scroll. */
   parallax?: boolean;
   className?: string;
+  title?: string;
+  description?: string;
 }) {
   const isSmaller = variant === "smaller";
   const isClothing = variant === "clothing";
@@ -64,12 +68,12 @@ export default function SignUpBannerDesktop({
               <YogaWearTitle className="w-[521px]" />
             ) : (
               <h2 className="font-americana text-banner-title text-center uppercase whitespace-nowrap">
-                {SIGN_UP_TITLE}
+                {title}
               </h2>
             )}
           </div>
           <p className="w-full text-center font-gotham text-paragraph">
-            {SIGN_UP_DESCRIPTION}
+            {description}
           </p>
         </div>
 

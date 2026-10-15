@@ -2,7 +2,7 @@ import AddToCartButton from "./add-to-cart-button";
 import { CareInstructions } from "./care-icons";
 import ProductSpecs from "./product-specs";
 import { formatNok } from "@/lib/money";
-import type { Product } from "@/data/products";
+import type { Product } from "@/lib/catalog-types";
 
 /** Title, price, description, specifications, Add To Cart and care instructions from the Figma product page. */
 export default function ProductDetails({ product, className = "" }: { product: Product; className?: string }) {

@@ -5,24 +5,21 @@ import PhotoSlideshow from "@/components/photo-slideshow";
 import ProductDetails from "@/components/product-details";
 import ProductGallery from "@/components/product-gallery";
 import ProductsSlideshow from "@/components/products-slideshow";
-import { LIFESTYLE_PHOTOS, PRODUCTS, getProduct, toSlideshowProduct } from "@/data/products";
-
-export function generateStaticParams() {
-  return PRODUCTS.map((product) => ({ slug: product.slug }));
-}
+import { getProduct, getProducts } from "@/lib/catalog";
+import { LIFESTYLE_PHOTOS, toSlideshowProduct } from "@/lib/catalog-types";
 
 export async function generateMetadata({ params }: PageProps<"/shop/[slug]">): Promise<Metadata> {
   const { slug } = await params;
-  const product = getProduct(slug);
+  const product = await getProduct(slug);
   return { title: product ? `${product.name} – Flöra` : "Flöra" };
 }
 
 export default async function ProductPage({ params }: PageProps<"/shop/[slug]">) {
   const { slug } = await params;
-  const product = getProduct(slug);
+  const [product, all] = await Promise.all([getProduct(slug), getProducts()]);
   if (!product) notFound();
 
-  const related = PRODUCTS.filter((item) => item.slug !== product.slug).map(toSlideshowProduct);
+  const related = all.filter((item) => item.slug !== product.slug).map(toSlideshowProduct);
 
   return (
     <div className="flex flex-col gap-[60px] pb-[60px] md:gap-[120px] md:pb-[120px]">

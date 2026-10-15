@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Chevron from "./chevron";
-import type { ProductSpec } from "@/data/products";
+import type { ProductSpec } from "@/lib/catalog-types";
 
 /**
  * Specification rows from the Figma product page. Desktop shows label and value side by side;

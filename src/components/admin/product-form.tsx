@@ -53,12 +53,13 @@ export default function ProductForm({ product }: { product: ProductDoc | null })
         <Card>
           <Subheading>Photos</Subheading>
           <div className="h-px w-full bg-black/25" />
+          {/* The cart's thumbnail treatment: whole photo on a light box, never cropped or blown up. */}
           {p?.images?.length ? (
-            <div className="grid grid-cols-3 gap-[12px] md:grid-cols-4">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-[12px]">
               {p.images.map((img) => (
                 <label key={img._key} className="flex cursor-pointer flex-col gap-[6px]">
-                  <span className="relative aspect-[4/5] w-full overflow-hidden bg-[#f7f7f7]">
-                    {img.url && <Image src={img.url} alt="" fill sizes="200px" className="object-cover" />}
+                  <span className="relative flex aspect-[4/5] w-full items-center justify-center bg-[#f7f7f7] p-[12px]">
+                    {img.url && <Image src={img.url} alt="" fill sizes="160px" className="object-contain p-[12px]" />}
                   </span>
                   <span className="flex items-center gap-[6px] text-[11px] leading-normal text-black/50">
                     <input type="checkbox" name="removeImage" value={img._key} className="accent-black" /> Remove

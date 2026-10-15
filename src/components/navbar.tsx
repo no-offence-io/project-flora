@@ -2,6 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import CartLink from "./cart-link";
 import { BurgerButton } from "./nav-menu";
+import LanguageSwitch from "./language-switch";
+import { getLanguage } from "@/lib/language";
 
 export const NAV_LINKS = [
   { label: "Shop", href: "/shop" },
@@ -13,7 +15,8 @@ export const NAV_LINKS = [
  * Page navbar from Figma "Navbar desktop" (99:312) and "Navbar mobile" (41:1499).
  * `tone="dark"` is black-on-white for content pages; `tone="light"` is white for photo backgrounds.
  */
-export default function Navbar({ tone = "dark", className = "" }: { tone?: "dark" | "light"; className?: string }) {
+export default async function Navbar({ tone = "dark", className = "" }: { tone?: "dark" | "light"; className?: string }) {
+  const lang = await getLanguage();
   const color = tone === "dark" ? "text-black" : "text-white";
   const logoFilter = tone === "dark" ? "invert" : "";
 
@@ -56,7 +59,10 @@ export default function Navbar({ tone = "dark", className = "" }: { tone?: "dark
               </Link>
             ))}
           </nav>
-          <CartLink className="font-gotham text-paragraph" />
+          <div className="flex items-center gap-[42px]">
+            <LanguageSwitch current={lang} tone={tone} />
+            <CartLink className="font-gotham text-paragraph" />
+          </div>
         </div>
       </div>
     </header>

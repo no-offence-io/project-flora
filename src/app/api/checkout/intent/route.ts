@@ -31,7 +31,7 @@ export async function POST(req: Request) {
   }
   const { items, customer, paymentIntentId } = parsed.data;
 
-  const quote = quoteCart(items);
+  const quote = await quoteCart(items);
   if ("error" in quote) return NextResponse.json({ error: quote.error }, { status: 400 });
   const { lines, totals } = quote;
 

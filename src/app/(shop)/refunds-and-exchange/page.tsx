@@ -1,11 +1,7 @@
-import type { Metadata } from "next";
-import PolicyPage from "@/components/policy-page";
-import { getPolicyPage } from "@/data/policies";
+import PolicyPage, { policyMetadata } from "@/components/policy-page";
 
-const page = getPolicyPage("refunds-and-exchange")!;
-
-export const metadata: Metadata = { title: `${page.title} – Flöra` };
+export const generateMetadata = () => policyMetadata("refunds-and-exchange");
 
 export default function Page() {
-  return <PolicyPage page={page} />;
+  return <PolicyPage page="refunds-and-exchange" />;
 }

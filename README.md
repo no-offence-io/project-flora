@@ -62,8 +62,20 @@ own `package.json`) and is Ida's dashboard: Sanity's own login, roles and 2FA, n
   Sanity (products with photos, colours and spec rows; front page; FAQ; policy pages; site settings).
   Re-runnable: it upserts by slug or fixed id and uploads each image once. English only.
 
-Not done yet: the storefront still reads products and page copy from `src/data/*`. Moving those
-reads to Sanity (with a language switch) and migrating the current content in are the next steps.
+**The storefront reads Sanity.** `src/lib/catalog.ts` holds every query, projected straight into
+the shapes the components take (`src/lib/catalog-types.ts`). Pages use `sanityFetch` (Live Content
+API); checkout pricing (`src/lib/orders.ts`) reads products and the shipping rules from the API
+directly, never the CDN, so an edit is what the next checkout charges. There is no static copy of
+the content any more — `scripts/migrate-content.mjs` is the record of what was moved.
+
+**Language.** An EN / NO switch in the navbar and the menu sets a `flora-lang` cookie (a server
+action, so it works without JavaScript); every query takes `$lang` and falls back to English per
+field, so a half-translated site shows English where Norwegian is missing rather than a gap. The
+UI chrome (buttons, nav labels, checkout form) is still English-only; translating it is a
+dictionary job, separate from content.
+
+**Policy pages.** Their text is plain paragraphs in the editor; a paragraph written as
+"Heading — text" becomes a collapsible section on the page.
 
 ## Coming-soon gate
 

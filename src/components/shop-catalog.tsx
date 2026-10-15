@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import CategoryFilter, { type CategorySelection } from "./category-filter";
 import ProductCard from "./product-card";
-import { toSlideshowProduct, type Product } from "@/data/products";
+import { toSlideshowProduct, type Product } from "@/lib/catalog-types";
 
 const INTRO =
   "Browse upcoming garments in the Permanent Collection and sign up for notifications on each product page to be the first to know when they’re available.";

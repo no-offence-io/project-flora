@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useCart } from "./cart-context";
-import type { Product } from "@/data/products";
+import type { Product } from "@/lib/catalog-types";
 
 /** Black full-width Add To Cart button from the Figma product page; adds the product and confirms briefly. */
 export default function AddToCartButton({ product, className = "" }: { product: Product; className?: string }) {

@@ -1,5 +1,6 @@
 import "server-only";
 import type Stripe from "stripe";
+import { getShippingRules } from "./catalog";
 import { computeTotals } from "./pricing";
 import { orderReference } from "./money";
 import { getWriteClient } from "@/sanity/lib/write";
@@ -29,7 +30,7 @@ export async function recordOrder(intent: Stripe.PaymentIntent): Promise<Recorde
   if (await client.getDocument(docId)) return { orderNumber, created: false };
 
   const lines = parseLines(intent.metadata.items);
-  const totals = computeTotals(lines.map((l) => ({ unitPriceOre: l.p, quantity: l.qty })));
+  const totals = computeTotals(lines.map((l) => ({ unitPriceOre: l.p, quantity: l.qty })), await getShippingRules());
 
   const productIds = await client
     .fetch<{ slug?: string; _id?: string }[]>(`*[_type == "product" && slug.current in $slugs]{ "slug": slug.current, _id }`, {

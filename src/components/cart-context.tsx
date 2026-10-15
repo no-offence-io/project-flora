@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useSyncExternalStore, type ReactNode } from "react";
 import { cartItemFromProduct, type CartItem } from "@/data/cart";
-import type { Product } from "@/data/products";
+import type { Product } from "@/lib/catalog-types";
 
 type CartContextValue = {
   items: CartItem[];

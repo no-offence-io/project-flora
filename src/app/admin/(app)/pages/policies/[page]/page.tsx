@@ -26,7 +26,7 @@ export default async function PolicyEditor({ params, searchParams }: { params: P
             <Bilingual name="title" label="Title" en={getText(d.title, "en")} no={getText(d.title, "no")} required />
             <Bilingual name="intro" label="Intro" en={getText(d.intro, "en")} no={getText(d.intro, "no")} multiline rows={3} />
             <Bilingual name="body" label="Text" en={getBlocksText(d.body, "en")} no={getBlocksText(d.body, "no")} multiline rows={14} />
-            <Muted>Leave an empty line between paragraphs.</Muted>
+            <Muted>Leave an empty line between paragraphs. Start a paragraph with a heading and a dash, e.g. &quot;Orders — An order is confirmed…&quot;, and it becomes a collapsible section on the site.</Muted>
           </div>
         </Card>
         <Button className="md:max-w-[320px]">Save</Button>

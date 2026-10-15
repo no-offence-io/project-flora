@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CATEGORIES, type Category } from "@/data/products";
+import { CATEGORIES, type Category } from "@/lib/catalog-types";
 
 export type CategorySelection = Category | "All";
 

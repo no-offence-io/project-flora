@@ -2,16 +2,17 @@ import type { Metadata } from "next";
 import Navbar from "@/components/navbar";
 import ShopCatalog from "@/components/shop-catalog";
 import SignUpBanner from "@/components/sign-up-banner";
-import { PRODUCTS } from "@/data/products";
+import { getHomePage, getProducts } from "@/lib/catalog";
 
 export const metadata: Metadata = { title: "All items – Flöra" };
 
-export default function ShopPage() {
+export default async function ShopPage() {
+  const [products, home] = await Promise.all([getProducts(), getHomePage()]);
   return (
     <div className="flex flex-col gap-[60px] pb-[60px] md:gap-[120px] md:pb-[120px]">
       <div className="flex flex-col gap-[60px] md:gap-0">
         <Navbar tone="dark" />
-        <ShopCatalog products={PRODUCTS} />
+        <ShopCatalog products={products} title={home.productsTitle} />
       </div>
       <SignUpBanner variant="smaller" mobileVariant="clothing" />
     </div>
