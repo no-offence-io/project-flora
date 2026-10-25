@@ -15,7 +15,7 @@ export default async function OpenGraphImage() {
   return new ImageResponse(
     (
       <div style={{ width: "100%", height: "100%", display: "flex", position: "relative", background: "#000" }}>
-        <img src={src} alt="" width={1200} height={630} style={{ objectFit: "cover", width: "100%", height: "100%", objectPosition: "50% 28%" }} />
+        <img src={src} alt="" width={1200} height={630} style={{ objectFit: "cover", width: "100%", height: "100%", objectPosition: "50% 12%" }} />
         {/* Satori needs explicit edges — the `inset` shorthand is ignored and the layer collapses to the corner. */}
         <div style={{ position: "absolute", top: 0, left: 0, width: 1200, height: 630, background: "linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.6) 100%)" }} />
         <div style={{ position: "absolute", top: 0, left: 0, width: 1200, height: 630, display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: 72 }}>
