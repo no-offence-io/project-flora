@@ -6,9 +6,11 @@ const LINKS = [
   { label: "Dashboard", href: "/admin" },
   { label: "Orders", href: "/admin/orders" },
   { label: "Products", href: "/admin/products" },
+  { label: "Codes", href: "/admin/discounts" },
   { label: "Pages", href: "/admin/pages" },
   { label: "Media", href: "/admin/media" },
   { label: "Settings", href: "/admin/settings" },
+  { label: "Setup", href: "/admin/setup" },
 ];
 
 /**

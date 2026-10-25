@@ -7,8 +7,7 @@ import {
   YogaWearTitle,
   type SignUpBannerVariant,
 } from "./sign-up-banner-shared";
-import { getT } from "@/lib/i18n-server";
-import RolloverText from "./rollover-text";
+import SignUpForm from "./sign-up-form";
 
 /**
  * Figma "Sign up banner desktop" (181:769).
@@ -35,7 +34,6 @@ export default async function SignUpBannerDesktop({
   description?: string;
   buttonLabel?: string;
 }) {
-  const t = await getT();
   const isSmaller = variant === "smaller";
   const isClothing = variant === "clothing";
 
@@ -89,28 +87,7 @@ export default async function SignUpBannerDesktop({
           </p>
         </div>
 
-        <form action="#" method="post" className="w-[512px]">
-          <label htmlFor="signup-email-desktop" className="sr-only">
-            E-mail
-          </label>
-          <div className="flex items-center justify-between rounded-full border border-white py-[6px] pr-[6px] pl-[12px]">
-            <input
-              id="signup-email-desktop"
-              name="email"
-              type="email"
-              required
-              placeholder={t("signup.placeholder")}
-              autoComplete="email"
-              className="min-w-0 flex-1 bg-transparent font-gotham text-paragraph text-white outline-none placeholder:text-white"
-            />
-            <button
-              type="submit"
-              className="shrink-0 rounded-full bg-black px-[12px] py-[6px] font-gotham text-paragraph whitespace-nowrap"
-            >
-              <RolloverText text={buttonLabel ?? t("signup.button")} />
-            </button>
-          </div>
-        </form>
+        <SignUpForm layout="desktop" buttonLabel={buttonLabel} />
       </div>
 
       {isClothing && (

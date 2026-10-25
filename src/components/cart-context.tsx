@@ -1,15 +1,15 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useSyncExternalStore, type ReactNode } from "react";
-import { cartItemFromProduct, type CartItem } from "@/data/cart";
+import { cartItemFromProduct, lineKey, type CartItem, type LineOptions } from "@/data/cart";
 import type { Product } from "@/lib/catalog-types";
 
 type CartContextValue = {
   items: CartItem[];
   count: number;
-  add: (product: Product, quantity?: number) => void;
-  setQuantity: (id: string, quantity: number) => void;
-  remove: (id: string) => void;
+  add: (product: Product, quantity?: number, options?: LineOptions) => void;
+  setQuantity: (key: string, quantity: number) => void;
+  remove: (key: string) => void;
   /** Empty the cart — used once a payment has succeeded. */
   clear: () => void;
 };
@@ -17,7 +17,7 @@ type CartContextValue = {
 const CartContext = createContext<CartContextValue | null>(null);
 
 /* Tiny external store: the cart lives here and in local storage, and React subscribes to it. */
-const STORAGE_KEY = "flora-cart-v2"; // v2: lines carry unitPriceOre (NOK) instead of unitPrice
+const STORAGE_KEY = "flora-cart-v3"; // v3: lines keyed by product + size + measurements
 const EMPTY: CartItem[] = [];
 let cache: CartItem[] | null = null;
 const listeners = new Set<() => void>();
@@ -54,20 +54,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // The server renders an empty cart; the client swaps in the stored one right after hydration.
   const items = useSyncExternalStore(subscribe, read, () => EMPTY);
 
-  const add = useCallback((product: Product, quantity = 1) => {
+  const add = useCallback((product: Product, quantity = 1, options: LineOptions = {}) => {
     const list = read();
-    const existing = list.find((item) => item.id === product.slug);
+    const key = lineKey(product.slug, options);
+    const existing = list.find((item) => item.key === key);
     write(
       existing
-        ? list.map((item) => (item.id === product.slug ? { ...item, quantity: Math.min(10, item.quantity + quantity) } : item))
-        : [...list, cartItemFromProduct(product, quantity)],
+        ? list.map((item) => (item.key === key ? { ...item, quantity: Math.min(10, item.quantity + quantity) } : item))
+        : [...list, cartItemFromProduct(product, quantity, options)],
     );
   }, []);
   const setQuantity = useCallback(
-    (id: string, quantity: number) => write(read().map((item) => (item.id === id ? { ...item, quantity } : item))),
+    (key: string, quantity: number) => write(read().map((item) => (item.key === key ? { ...item, quantity } : item))),
     [],
   );
-  const remove = useCallback((id: string) => write(read().filter((item) => item.id !== id)), []);
+  const remove = useCallback((key: string) => write(read().filter((item) => item.key !== key)), []);
   const clear = useCallback(() => write(EMPTY), []);
 
   const value = useMemo(

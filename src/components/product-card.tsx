@@ -113,6 +113,7 @@ export default function ProductCard({
           <span className="flex gap-[12px]">
             <span>{product.price}</span>
             {product.compareAtPrice && <s className="text-[#c7c7c7]">{product.compareAtPrice}</s>}
+            {product.soldOut && <span className="text-black/50">{t("product.soldOut")}</span>}
           </span>
         </Link>
         {product.colors && product.colors.length > 0 && (

@@ -79,13 +79,62 @@ export const product = defineType({
         }),
     }),
     defineField({
+      name: 'sizing',
+      title: 'How is it sized?',
+      description:
+        'Measurements: the customer types their measurements in cm when ordering (the default — made to measure). Sizes: a fixed list, each with its own stock. None: one size, e.g. accessories or a vintage piece.',
+      type: 'string',
+      group: 'pricing',
+      options: {
+        list: [
+          {title: 'Customer gives measurements in cm', value: 'measurements'},
+          {title: 'Fixed sizes with stock per size', value: 'sizes'},
+          {title: 'No size', value: 'none'},
+        ],
+        layout: 'radio',
+      },
+      initialValue: 'measurements',
+    }),
+    defineField({
       name: 'stock',
       title: 'In stock',
-      description: 'Units available. Checkout refuses orders above this, and each paid order counts it down.',
+      description: 'Units available. Checkout refuses orders above this, and each paid order counts it down. Ignored for products with fixed sizes — each size has its own number.',
       type: 'number',
       group: 'pricing',
       validation: (rule) => rule.required().integer().min(0),
       initialValue: 0,
+    }),
+    defineField({
+      name: 'sizes',
+      title: 'Sizes',
+      description: 'Only used when "Fixed sizes" is chosen above.',
+      type: 'array',
+      group: 'pricing',
+      of: [
+        defineArrayMember({
+          type: 'object',
+          name: 'size',
+          fields: [
+            defineField({
+              name: 'label',
+              title: 'Size',
+              type: 'string',
+              validation: (rule) => rule.required().regex(/^[A-Za-z0-9 ./-]{1,20}$/, {name: 'size label (letters, numbers, space, . / -)'}),
+            }),
+            defineField({name: 'stock', title: 'In stock', type: 'number', validation: (rule) => rule.required().integer().min(0), initialValue: 0}),
+          ],
+          preview: {select: {label: 'label', stock: 'stock'}, prepare: ({label, stock}) => ({title: label, subtitle: `${stock ?? 0} in stock`})},
+        }),
+      ],
+      hidden: ({document}) => document?.sizing !== 'sizes',
+    }),
+    defineField({
+      name: 'vintage',
+      title: 'Vintage piece',
+      description: 'Shown on the Vintage page instead of the shop. Usually one of a kind: set "No size" and stock 1.',
+      type: 'boolean',
+      group: 'content',
+      initialValue: false,
     }),
 
     defineField({

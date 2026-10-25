@@ -7,6 +7,10 @@ export type Totals = {
   /** Portion of `totalOre` that is VAT. Informational — VAT is included in listed prices, never added. */
   vatIncludedOre: number;
   totalOre: number;
+  /** Taken off the subtotal by a discount code; 0 when none applies. */
+  discountOre: number;
+  /** The code that produced `discountOre`, as the server accepted it. */
+  discountCode?: string;
 };
 
 const nok = new Intl.NumberFormat("nb-NO", {

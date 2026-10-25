@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import CheckoutClient from "@/components/checkout-client";
 import CheckoutSteps from "@/components/checkout-steps";
 import Navbar from "@/components/navbar";
+import { getShipsTo } from "@/lib/catalog";
 import { getT } from "@/lib/i18n-server";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -12,7 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
 const FORM_ID = "billing-details";
 
 export default async function CheckoutPage() {
-  const t = await getT();
+  const [t, countries] = await Promise.all([getT(), getShipsTo()]);
   return (
     <div className="flex flex-col gap-[60px] pb-[60px] md:gap-[120px] md:pb-[120px]">
       <div className="flex flex-col gap-[24px] md:gap-[42px]">
@@ -27,7 +28,7 @@ export default async function CheckoutPage() {
             </h1>
           </div>
 
-          <CheckoutClient formId={FORM_ID} />
+          <CheckoutClient formId={FORM_ID} countries={countries} />
         </div>
       </div>
     </div>

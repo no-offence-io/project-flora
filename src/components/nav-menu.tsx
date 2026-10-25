@@ -19,7 +19,8 @@ import RolloverText from "./rollover-text";
 
 const MENU_LINKS = [
   { key: "nav.shop", href: "/shop" },
-  { key: "nav.values", href: "/#values" },
+  { key: "nav.vintage", href: "/vintage" },
+  { key: "nav.values", href: "/values" },
   { key: "nav.about", href: "/about" },
 ] as const;
 

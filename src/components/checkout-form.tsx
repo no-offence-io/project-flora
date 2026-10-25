@@ -3,6 +3,10 @@
 import Chevron from "./chevron";
 import PhonePrefixSelect from "./phone-prefix-select";
 import { useT } from "@/components/i18n-provider";
+import type { Key } from "@/lib/i18n";
+
+/** Countries with a translated name in the dictionary; any other is shown as written in Settings. */
+const TRANSLATED = new Set(["Norway", "Sweden", "Denmark", "Finland", "Germany", "United Kingdom"]);
 
 const FIELD = "w-full border border-black/20 bg-transparent p-[12px] font-gotham text-paragraph text-black outline-none placeholder:text-black focus:border-black/60";
 
@@ -33,8 +37,9 @@ function Field({
  * Billing details form from the Figma checkout page. Field labels sit inside the boxes as placeholders,
  * with visually hidden labels for assistive tech. Pairs sit side by side; the note fills the remaining height.
  */
-export default function CheckoutForm({ id = "checkout-form", className = "" }: { id?: string; className?: string }) {
+export default function CheckoutForm({ id = "checkout-form", countries, className = "" }: { id?: string; countries: string[]; className?: string }) {
   const t = useT();
+  const countryLabel = (c: string) => (TRANSLATED.has(c) ? t(`country.${c}` as Key) : c);
   return (
     <form id={id} noValidate={false} onSubmit={(e) => e.preventDefault()} className={`flex w-full flex-col gap-[24px] ${className}`}>
       <Field id="email" label={t("form.email")} type="email" autoComplete="email" />
@@ -49,10 +54,10 @@ export default function CheckoutForm({ id = "checkout-form", className = "" }: {
           <option value="" disabled>
             {t("form.country")}
           </option>
-          {/* Values stay English: the checkout API matches them to ISO codes by name. */}
-          {(["Norway", "Sweden", "Denmark", "Finland", "Germany", "United Kingdom"] as const).map((c) => (
+          {/* Values stay English: the shipping zones in Settings match them by name. */}
+          {countries.map((c) => (
             <option key={c} value={c}>
-              {t(`country.${c}` as const)}
+              {countryLabel(c)}
             </option>
           ))}
         </select>

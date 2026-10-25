@@ -2,6 +2,8 @@ import { Heading, Muted, Row } from "@/components/admin/ui";
 
 const PAGES = [
   { href: "/admin/pages/front-page", title: "Front page", sub: "Top video, products title, the Values section" },
+  { href: "/admin/pages/about", title: "About", sub: "Photo, title and text" },
+  { href: "/admin/pages/vintage", title: "Vintage", sub: "Intro for the vintage page" },
   { href: "/admin/pages/faq", title: "FAQ", sub: "Questions and answers" },
   { href: "/admin/pages/policies/terms", title: "Terms", sub: "Policy page" },
   { href: "/admin/pages/policies/refunds-and-exchange", title: "Refunds & exchange", sub: "Policy page" },

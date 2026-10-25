@@ -4,6 +4,7 @@ import { client } from "@/sanity/lib/client";
 import { sanityFetch } from "@/sanity/lib/live";
 import type { DropdownListItem } from "@/components/dropdown-list";
 import type { ScrollyValue } from "@/components/values-scrolly";
+import type { ProductSize, Sizing } from "./catalog-types";
 import { CATEGORIES, type Category, type Product } from "./catalog-types";
 import { getLanguage, type Lang } from "./language";
 import { DEFAULT_RULES, type ShippingRules } from "./pricing";
@@ -22,19 +23,21 @@ const L = (field: string) => `coalesce(${field}[_key == $lang][0].value, ${field
 const IMG = (field: string) => `{ "src": ${field}.asset->url, "alt": ${L(`${field}.alt`)} }`;
 
 const PRODUCT_FIELDS = `
-  "slug": slug.current, category, "name": ${L("name")}, priceOre, compareAtPriceOre, stock,
+  "slug": slug.current, category, "name": ${L("name")}, priceOre, compareAtPriceOre, stock, sizing, "sizes": sizes[]{ label, stock }, vintage,
   "description": ${L("description")},
   "colors": colors[]{ hex, "name": ${L("name")}, "image": ${IMG("image")} },
   "images": images[]${IMG("@")},
   "specs": specs[]{ "label": ${L("label")}, "value": ${L("value")}, emphasis, expandable, hideOnMobile }
 `;
 
-const PRODUCTS_QUERY = defineQuery(`*[_type == "product" && visible != false && defined(slug.current)] | order(_createdAt asc) { ${PRODUCT_FIELDS} }`);
+const PRODUCTS_QUERY = defineQuery(`*[_type == "product" && visible != false && vintage != true && defined(slug.current)] | order(_createdAt asc) { ${PRODUCT_FIELDS} }`);
+const VINTAGE_QUERY = defineQuery(`*[_type == "product" && visible != false && vintage == true && defined(slug.current)] | order(_createdAt desc) { ${PRODUCT_FIELDS} }`);
 const PRODUCT_QUERY = defineQuery(`*[_type == "product" && slug.current == $slug][0] { ${PRODUCT_FIELDS} }`);
 
 type RawImage = { src?: string | null; alt?: string | null };
 type RawProduct = {
   slug: string; category?: string | null; name?: string | null; priceOre?: number | null; compareAtPriceOre?: number | null; stock?: number | null;
+  sizing?: string | null; sizes?: { label?: string | null; stock?: number | null }[] | null; vintage?: boolean | null;
   description?: string | null;
   colors?: { hex?: string | null; name?: string | null; image?: RawImage | null }[] | null;
   images?: RawImage[] | null;
@@ -51,6 +54,9 @@ function toProduct(raw: RawProduct): Product {
     priceOre: raw.priceOre ?? 0,
     compareAtPriceOre: raw.compareAtPriceOre ?? undefined,
     stock: raw.stock ?? 0,
+    sizing: raw.sizing === "sizes" || raw.sizing === "none" ? raw.sizing : "measurements",
+    sizes: (raw.sizes ?? []).filter((s) => s?.label).map((s) => ({ label: s.label!, stock: s.stock ?? 0 })),
+    vintage: raw.vintage === true,
     description: raw.description ?? "",
     colors: (raw.colors ?? [])
       .filter((c) => c?.hex)
@@ -66,6 +72,12 @@ export async function getProducts(): Promise<Product[]> {
   return (data as RawProduct[]).map(toProduct);
 }
 
+export async function getVintageProducts(): Promise<Product[]> {
+  const lang = await getLanguage();
+  const { data } = await sanityFetch({ query: VINTAGE_QUERY, params: { lang }, stega: false, tags: [CONTENT_TAG] });
+  return (data as RawProduct[]).map(toProduct);
+}
+
 export async function getProduct(slug: string): Promise<Product | null> {
   const lang = await getLanguage();
   const { data } = await sanityFetch({ query: PRODUCT_QUERY, params: { slug, lang }, stega: false, tags: [CONTENT_TAG] });
@@ -76,20 +88,68 @@ export async function getProduct(slug: string): Promise<Product | null> {
  * For pricing a cart: straight from the API, never the CDN, so a stock or price change in the
  * editor is what the next checkout sees. English is fine here; only numbers are used.
  */
-export async function getCheckoutProducts(slugs: string[]): Promise<Map<string, { name: string; priceOre: number; stock: number }>> {
-  const rows = await client.withConfig({ useCdn: false }).fetch<{ slug: string; name: string | null; priceOre: number | null; stock: number | null }[]>(
-    `*[_type == "product" && visible != false && slug.current in $slugs]{ "slug": slug.current, "name": name[_key == "en"][0].value, priceOre, stock }`,
-    { slugs },
+export type CheckoutProduct = { name: string; priceOre: number; stock: number; sizing: Sizing; sizes: ProductSize[] };
+
+export async function getCheckoutProducts(slugs: string[]): Promise<Map<string, CheckoutProduct>> {
+  const rows = await client
+    .withConfig({ useCdn: false })
+    .fetch<{ slug: string; name: string | null; priceOre: number | null; stock: number | null; sizing?: string | null; sizes?: { label?: string | null; stock?: number | null }[] | null }[]>(
+      `*[_type == "product" && visible != false && slug.current in $slugs]{ "slug": slug.current, "name": name[_key == "en"][0].value, priceOre, stock, sizing, "sizes": sizes[]{ label, stock } }`,
+      { slugs },
+    );
+  return new Map(
+    rows.map((r) => [
+      r.slug,
+      {
+        name: r.name ?? r.slug,
+        priceOre: r.priceOre ?? 0,
+        stock: r.stock ?? 0,
+        sizing: (r.sizing === "sizes" || r.sizing === "none" ? r.sizing : "measurements") as Sizing,
+        sizes: (r.sizes ?? []).filter((s) => s?.label).map((s) => ({ label: s.label!, stock: s.stock ?? 0 })),
+      },
+    ]),
   );
-  return new Map(rows.map((r) => [r.slug, { name: r.name ?? r.slug, priceOre: r.priceOre ?? 0, stock: r.stock ?? 0 }]));
 }
 
+type RawRules = {
+  shippingOre?: number | null;
+  freeShippingFromOre?: number | null;
+  shippingZones?: { name?: string | null; countries?: string[] | null; shippingOre?: number | null; freeShippingFromOre?: number | null }[] | null;
+  shipsTo?: string[] | null;
+};
+
 export async function getShippingRules(): Promise<ShippingRules> {
-  const s = await client.withConfig({ useCdn: false }).fetch<{ shippingOre?: number; freeShippingFromOre?: number | null } | null>(`*[_id == "siteSettings"][0]{ shippingOre, freeShippingFromOre }`);
+  const s = await client.withConfig({ useCdn: false }).fetch<RawRules | null>(`*[_id == "siteSettings"][0]{ shippingOre, freeShippingFromOre, shippingZones, shipsTo }`);
   return {
     shippingOre: s?.shippingOre ?? DEFAULT_RULES.shippingOre,
     freeShippingFromOre: s?.freeShippingFromOre ?? DEFAULT_RULES.freeShippingFromOre,
+    zones: (s?.shippingZones ?? [])
+      .filter((z) => z && typeof z.shippingOre === "number" && (z.countries ?? []).length > 0)
+      .map((z) => ({ name: z.name ?? "", countries: (z.countries ?? []).map((c) => c.trim()).filter(Boolean), shippingOre: z.shippingOre!, freeShippingFromOre: z.freeShippingFromOre ?? null })),
+    shipsTo: (s?.shipsTo ?? []).map((c) => c.trim()).filter(Boolean),
   };
+}
+
+/** The countries offered in the checkout: from settings, else the built-in list. */
+export const DEFAULT_SHIPS_TO = ["Norway", "Sweden", "Denmark", "Finland", "Germany", "United Kingdom"];
+export async function getShipsTo(): Promise<string[]> {
+  const { data } = await sanityFetch({ query: SHIPS_TO_QUERY, stega: false, tags: [CONTENT_TAG] });
+  const list = ((data ?? []) as string[]).map((c) => c.trim()).filter(Boolean);
+  return list.length ? list : DEFAULT_SHIPS_TO;
+}
+const SHIPS_TO_QUERY = defineQuery(`*[_id == "siteSettings"][0].shipsTo`);
+
+/** What a made-to-measure product asks the customer for, and the size guide under it. */
+export type SizingSettings = { fields: { label: string; hint: string }[]; sizeGuide: string };
+export const DEFAULT_MEASUREMENTS = { en: ["Bust", "Waist", "Hips", "Height"], no: ["Byste", "Midje", "Hofter", "Høyde"] };
+const SIZING_QUERY = defineQuery(`*[_id == "siteSettings"][0]{ "fields": measurementFields[]{ "label": ${L("label")}, "hint": ${L("hint")} }, "sizeGuide": ${L("sizeGuide")} }`);
+
+export async function getSizingSettings(): Promise<SizingSettings> {
+  const lang = await getLanguage();
+  const { data } = await sanityFetch({ query: SIZING_QUERY, params: { lang }, stega: false, tags: [CONTENT_TAG] });
+  const d = (data ?? {}) as { fields?: { label?: string | null; hint?: string | null }[] | null; sizeGuide?: string | null };
+  const fields = (d.fields ?? []).filter((f) => f?.label).map((f) => ({ label: f.label!, hint: f.hint ?? "" }));
+  return { fields: fields.length ? fields : DEFAULT_MEASUREMENTS[lang].map((label) => ({ label, hint: "" })), sizeGuide: d.sizeGuide ?? "" };
 }
 
 // ---- pages ------------------------------------------------------------------------------------
@@ -176,5 +236,33 @@ export async function getSiteCopy(): Promise<SiteCopy> {
     contactEmail: d.contactEmail ?? "",
     signUpImage: d.signUpImage ?? undefined,
     footerImage: d.footerImage ?? undefined,
+  };
+}
+
+// ---- about & vintage --------------------------------------------------------------------------
+
+const ABOUT_QUERY = defineQuery(`*[_id == "aboutPage"][0]{ "title": ${L("title")}, "intro": ${L("intro")}, "body": ${L("body")}, "image": ${IMG("image")} }`);
+export type AboutContent = { title: string; intro: string; paragraphs: string[]; image?: { src: string; alt: string } };
+
+export async function getAboutPage(): Promise<AboutContent | null> {
+  const lang = await getLanguage();
+  const { data } = await sanityFetch({ query: ABOUT_QUERY, params: { lang }, stega: false, tags: [CONTENT_TAG] });
+  const d = data as { title?: string | null; intro?: string | null; body?: Block[] | null; image?: RawImage | null } | null;
+  if (!d) return null;
+  return { title: d.title ?? "About", intro: d.intro ?? "", paragraphs: paragraphs(d.body), ...(d.image?.src ? { image: { src: d.image.src, alt: d.image.alt ?? "" } } : {}) };
+}
+
+const VINTAGE_PAGE_QUERY = defineQuery(`*[_id == "vintagePage"][0]{ "title": ${L("title")}, "intro": ${L("intro")}, "emptyText": ${L("emptyText")}, "image": ${IMG("image")} }`);
+export type VintageContent = { title: string; intro: string; emptyText: string; image?: { src: string; alt: string } };
+
+export async function getVintagePage(): Promise<VintageContent> {
+  const lang = await getLanguage();
+  const { data } = await sanityFetch({ query: VINTAGE_PAGE_QUERY, params: { lang }, stega: false, tags: [CONTENT_TAG] });
+  const d = (data ?? {}) as { title?: string | null; intro?: string | null; emptyText?: string | null; image?: RawImage | null };
+  return {
+    title: d.title ?? "Vintage",
+    intro: d.intro ?? "",
+    emptyText: d.emptyText ?? (lang === "no" ? "Ingen vintageplagg til salgs akkurat nå." : "No vintage pieces for sale right now."),
+    ...(d.image?.src ? { image: { src: d.image.src, alt: d.image.alt ?? "" } } : {}),
   };
 }

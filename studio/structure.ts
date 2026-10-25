@@ -1,11 +1,11 @@
-import {BasketIcon, CogIcon, DocumentIcon, HelpCircleIcon, HomeIcon, TagIcon} from './icons'
+import {BasketIcon, CogIcon, DocumentIcon, HelpCircleIcon, HomeIcon, TagIcon, UserIcon} from './icons'
 import type {StructureResolver} from 'sanity/structure'
 
 /** Document types pinned to exactly one document each. Kept out of the generic lists below. */
-export const SINGLETONS = ['homePage', 'siteSettings']
+export const SINGLETONS = ['homePage', 'siteSettings', 'aboutPage', 'vintagePage']
 
 /** Types no one should create by hand: orders come from the Stripe webhook. */
-export const NOT_CREATABLE = [...SINGLETONS, 'order']
+export const NOT_CREATABLE = [...SINGLETONS, 'order', 'subscriber']
 
 export const structure: StructureResolver = (S) =>
   S.list()
@@ -22,12 +22,22 @@ export const structure: StructureResolver = (S) =>
       S.divider(),
 
       S.listItem().title('Products').icon(TagIcon).child(S.documentTypeList('product').title('Products')),
+      S.listItem().title('Discount codes').icon(TagIcon).child(S.documentTypeList('discount').title('Discount codes')),
+      S.listItem().title('Subscribers').icon(UserIcon).child(S.documentTypeList('subscriber').title('Newsletter subscribers').defaultOrdering([{field: 'signedUpAt', direction: 'desc'}])),
       S.divider(),
 
       S.listItem()
         .title('Front page')
         .icon(HomeIcon)
         .child(S.document().schemaType('homePage').documentId('homePage').title('Front page')),
+      S.listItem()
+        .title('About page')
+        .icon(DocumentIcon)
+        .child(S.document().schemaType('aboutPage').documentId('aboutPage').title('About page')),
+      S.listItem()
+        .title('Vintage page')
+        .icon(DocumentIcon)
+        .child(S.document().schemaType('vintagePage').documentId('vintagePage').title('Vintage page')),
       S.listItem().title('FAQ').icon(HelpCircleIcon).child(S.documentTypeList('faqItem').title('FAQ')),
       S.listItem()
         .title('Policy pages')

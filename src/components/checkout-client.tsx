@@ -127,7 +127,7 @@ function readCustomer(form: HTMLFormElement): Customer {
  * PaymentIntent), shows the server's totals, and mounts Stripe's buttons and card fields against
  * that intent. Every amount on screen and every amount charged comes from the same server quote.
  */
-export default function CheckoutClient({ formId }: { formId: string }) {
+export default function CheckoutClient({ formId, countries }: { formId: string; countries: string[] }) {
   const { items } = useCart();
   const t = useT();
   const stripePromise = useMemo(() => getStripePromise(), []);
@@ -135,6 +135,10 @@ export default function CheckoutClient({ formId }: { formId: string }) {
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [confirming, setConfirming] = useState(false);
+  // The shipping country, sent ahead of the rest of the form so the shipping line follows it.
+  const [country, setCountry] = useState<string | null>(null);
+  const [discountCode, setDiscountCode] = useState("");
+  const [discountError, setDiscountError] = useState<string | null>(null);
   const intentIdRef = useRef<string | null>(null);
 
   const requestIntent = useCallback(
@@ -146,8 +150,12 @@ export default function CheckoutClient({ formId }: { formId: string }) {
           items: items.map((item) => ({
             id: item.id,
             quantity: item.quantity,
+            ...(item.size ? { size: item.size } : {}),
+            ...(item.measurements.length ? { measurements: item.measurements } : {}),
           })),
           ...(withCustomer ? { customer: withCustomer } : {}),
+          ...(!withCustomer && country ? { country } : {}),
+          ...(discountCode ? { discountCode } : {}),
           ...(intentIdRef.current
             ? { paymentIntentId: intentIdRef.current }
             : {}),
@@ -174,6 +182,7 @@ export default function CheckoutClient({ formId }: { formId: string }) {
         };
       }
       intentIdRef.current = body.paymentIntentId;
+      setDiscountError(body.discountError ?? null);
       const next: Quote = {
         clientSecret: body.clientSecret,
         paymentIntentId: body.paymentIntentId,
@@ -184,7 +193,7 @@ export default function CheckoutClient({ formId }: { formId: string }) {
       setQuoteError(null);
       return { ok: true, quote: next };
     },
-    [items, t],
+    [items, t, country, discountCode],
   );
 
   // Keep the billing details on the PaymentIntent up to date as the form is filled in, rather than
@@ -197,8 +206,10 @@ export default function CheckoutClient({ formId }: { formId: string }) {
     if (!hasItems || !(form instanceof HTMLFormElement)) return;
 
     let timer = 0;
-    const snapshot = () =>
+    const snapshot = () => {
       setCustomer(form.checkValidity() ? readCustomer(form) : null);
+      setCountry(String(new FormData(form).get("country") ?? "") || null);
+    };
     const onInput = () => {
       window.clearTimeout(timer);
       timer = window.setTimeout(snapshot, 300);
@@ -297,8 +308,25 @@ export default function CheckoutClient({ formId }: { formId: string }) {
 
   return (
     <div className="flex flex-col gap-[60px] md:flex-row md:items-stretch md:gap-[42px]">
-      <CheckoutForm id={formId} className="md:min-w-0 md:flex-1" />
-      <OrderSummary totals={totals}>
+      <CheckoutForm id={formId} countries={countries} className="md:min-w-0 md:flex-1" />
+      <OrderSummary
+        totals={totals}
+        discount={
+          <DiscountField
+            applied={totals?.discountCode ?? null}
+            error={discountError}
+            disabled={confirming}
+            onApply={(code) => {
+              setDiscountError(null);
+              setDiscountCode(code);
+            }}
+            onRemove={() => {
+              setDiscountError(null);
+              setDiscountCode("");
+            }}
+          />
+        }
+      >
         {!stripePromise ? (
           <p className="m-0 text-black/50">
             Payments are not configured: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is
@@ -630,5 +658,74 @@ function ExpressButton({
         onAvailability(false);
       }}
     />
+  );
+}
+
+/**
+ * Discount code, as a row of the order summary. The browser only ever sends the code; the server
+ * answers with the new totals (and the reason if it refused), so nothing here computes money.
+ */
+function DiscountField({
+  applied,
+  error,
+  disabled,
+  onApply,
+  onRemove,
+}: {
+  applied: string | null;
+  error: string | null;
+  disabled: boolean;
+  onApply: (code: string) => void;
+  onRemove: () => void;
+}) {
+  const t = useT();
+  const [draft, setDraft] = useState("");
+
+  if (applied) {
+    return (
+      <p className="m-0 flex items-center justify-between gap-[12px] border-[0.25px] border-black/25 p-[12px] font-gotham text-paragraph text-black">
+        <span>
+          {t("discount.label")}: <strong className="font-normal uppercase">{applied}</strong>
+        </span>
+        <button type="button" onClick={onRemove} disabled={disabled} className="text-black/50 underline hover:text-black transition-colors">
+          {t("discount.remove")}
+        </button>
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-[6px]">
+      <div className="flex gap-[12px]">
+        <label className="min-w-0 flex-1">
+          <span className="sr-only">{t("discount.label")}</span>
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                if (draft.trim()) onApply(draft.trim());
+              }
+            }}
+            placeholder={t("discount.placeholder")}
+            autoComplete="off"
+            className="w-full border border-black/20 bg-transparent p-[12px] font-gotham text-paragraph text-black uppercase outline-none placeholder:normal-case placeholder:text-black/50 focus:border-black/60"
+          />
+        </label>
+        <button
+          type="button"
+          disabled={disabled || !draft.trim()}
+          onClick={() => onApply(draft.trim())}
+          className="shrink-0 border border-black px-[24px] font-gotham text-paragraph text-black disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <RolloverText text={t("discount.apply")} />
+        </button>
+      </div>
+      {error && (
+        <p className="m-0 font-gotham text-[11px] leading-normal text-[#b00020]" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }

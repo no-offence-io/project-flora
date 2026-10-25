@@ -6,9 +6,17 @@ import type { Totals } from "./money";
  * a `price`, `amount`, `total` or any other unexpected key is rejected outright, not ignored. The
  * only things the client may state about a line are which product and how many.
  */
+export const measurementSchema = z.strictObject({
+  label: z.string().trim().min(1).max(40),
+  /** Centimetres, as typed; whole or half numbers. */
+  value: z.string().trim().regex(/^\d{1,3}([.,]\d)?$/),
+});
+
 export const cartLineSchema = z.strictObject({
   id: z.string().min(1).max(100),
   quantity: z.number().int().min(1).max(10),
+  size: z.string().trim().min(1).max(20).optional(),
+  measurements: z.array(measurementSchema).max(12).optional(),
 });
 
 export const customerSchema = z.strictObject({
@@ -26,7 +34,11 @@ export const customerSchema = z.strictObject({
 });
 
 export const intentRequestSchema = z.strictObject({
-  items: z.array(cartLineSchema).min(1).max(50),
+  items: z.array(cartLineSchema).min(1).max(20),
+  /** The shipping country, sent as soon as it is chosen so the shipping line can follow it. */
+  country: z.string().trim().min(1).max(100).optional(),
+  /** A discount code as typed; the server decides what, if anything, it is worth. */
+  discountCode: z.string().trim().max(40).optional(),
   /** Absent while the cart is being quoted; present when the customer confirms. */
   customer: customerSchema.optional(),
   /** Reuse an existing PaymentIntent rather than creating a fresh one on every cart change. */
@@ -36,11 +48,13 @@ export const intentRequestSchema = z.strictObject({
 export type IntentRequest = z.infer<typeof intentRequestSchema>;
 export type Customer = z.infer<typeof customerSchema>;
 
-export type QuotedLine = { id: string; name: string; quantity: number; unitPriceOre: number };
+export type QuotedLine = { id: string; name: string; quantity: number; unitPriceOre: number; size?: string; measurements?: { label: string; value: string }[] };
 
 export type IntentResponse = {
   clientSecret: string;
   paymentIntentId: string;
   totals: Totals;
   lines: QuotedLine[];
+  /** Why the code the customer typed was not applied, if it wasn't. */
+  discountError?: string;
 };

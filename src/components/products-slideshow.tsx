@@ -22,6 +22,8 @@ export type SlideshowProduct = {
   price: string;
   /** Previous price, shown struck-out in light grey next to the current one. */
   compareAtPrice?: string;
+  /** Shown as a label on the card; the product page still opens. */
+  soldOut?: boolean;
   /** Colour options; hovering or focusing a swatch previews its image in the thumbnail. */
   colors?: ProductColor[];
   /** Default photo, shown before any hover and used when `images` has nothing else to slide through. */

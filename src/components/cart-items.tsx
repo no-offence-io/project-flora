@@ -37,7 +37,7 @@ export default function CartItems({ className = "" }: { className?: string }) {
   return (
     <ul className={`flex flex-col gap-[12px] font-gotham text-paragraph text-black ${className}`}>
       {items.map((item) => (
-        <li key={item.id} className="relative flex gap-[12px] border-[0.25px] border-black/25 p-[12px]">
+        <li key={item.key} className="relative flex gap-[12px] border-[0.25px] border-black/25 p-[12px]">
           <div className="flex w-[84px] shrink-0 items-center justify-center self-stretch bg-[#f7f7f7] p-[12px]">
             <div className="relative h-full min-h-[84px] w-full">
               <Image src={item.image.src} alt={item.image.alt} fill sizes="84px" className="object-contain" />
@@ -48,21 +48,23 @@ export default function CartItems({ className = "" }: { className?: string }) {
             <p className="m-0">
               <Link href={item.href} className="hover:opacity-70 transition-opacity">
                 {item.name}
-                {item.variant ? ` - ${item.variant}` : ""} x {item.quantity}
+                {item.size ? ` - ${item.size}` : ""} x {item.quantity}
               </Link>
             </p>
-            <ul className="flex flex-col gap-[5px] text-[11px] leading-normal whitespace-nowrap">
-              {item.attributes.map((attr) => (
-                <li key={attr.label}>
-                  {attr.label}: <span className="text-black/50">{attr.value}</span>
-                </li>
-              ))}
-            </ul>
+            {item.measurements.length > 0 && (
+              <ul className="flex flex-col gap-[5px] text-[11px] leading-normal whitespace-nowrap">
+                {item.measurements.map((m) => (
+                  <li key={m.label}>
+                    {m.label}: <span className="text-black/50">{m.value} cm</span>
+                  </li>
+                ))}
+              </ul>
+            )}
             <label className="relative inline-flex w-max items-center gap-[6px] border-[0.25px] border-black px-[8px] py-[4px]">
               <span className="sr-only">Quantity for {item.name}</span>
               <select
                 value={item.quantity}
-                onChange={(event) => setQuantity(item.id, Number(event.target.value))}
+                onChange={(event) => setQuantity(item.key, Number(event.target.value))}
                 className="appearance-none bg-transparent pr-[14px] font-gotham text-paragraph outline-none"
               >
                 {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
@@ -79,7 +81,7 @@ export default function CartItems({ className = "" }: { className?: string }) {
 
           <button
             type="button"
-            onClick={() => remove(item.id)}
+            onClick={() => remove(item.key)}
             aria-label={`${t("cart.remove")} ${item.name}`}
             className="absolute -top-[8px] -right-[8px] hover:opacity-70 transition-opacity"
           >

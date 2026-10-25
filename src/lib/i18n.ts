@@ -36,6 +36,20 @@ const en = {
   "signup.placeholder": "E-mail...", "signup.button": "Get Notified",
   "comingSoon.title": "Coming soon", "comingSoon.text": "Something new is growing. Our first collection arrives shortly.",
   "meta.shop": "All items – Flöra", "meta.faq": "FAQ – Flöra", "meta.checkout": "Checkout – Flöra", "meta.orderComplete": "Order complete – Flöra", "meta.comingSoon": "Flöra – Coming soon",
+  "meta.vintage": "Vintage – Flöra", "meta.values": "Values – Flöra", "meta.about": "About – Flöra", "meta.order": "Find your order – Flöra", "meta.notFound": "Page not found – Flöra",
+  "nav.vintage": "Vintage",
+  "product.soldOut": "Sold out", "product.size": "Size", "product.chooseSize": "Choose a size", "product.measurements": "Your measurements",
+  "product.measurementsHint": "In centimetres. We make this piece to your measurements.", "product.addMeasurements": "Please fill in your measurements",
+  "product.sizeGuide": "How to measure", "product.leftInStock": "Only {count} left", "product.vintage": "Vintage",
+  "vintage.oneOfAKind": "One of a kind",
+  "signup.thanks": "Thank you — you're on the list.", "signup.invalid": "Please enter a valid email address.", "signup.failed": "Something went wrong. Please try again.",
+  "discount.label": "Discount code", "discount.placeholder": "Code", "discount.apply": "Apply", "discount.remove": "Remove", "summary.discount": "Discount",
+  "order.title": "Find your order", "order.intro": "Enter your order number and the email you ordered with.", "order.number": "Order number", "order.email": "E-mail",
+  "order.find": "Find order", "order.notFound": "We couldn't find an order with that number and email.", "order.status": "Status", "order.tracking": "Tracking number",
+  "order.track": "Track your parcel", "order.items": "Items", "order.orderedAt": "Ordered",
+  "status.paid": "Paid – being made", "status.shipped": "Shipped", "status.delivered": "Delivered", "status.refunded": "Refunded", "status.cancelled": "Cancelled",
+  "notFound.title": "Page not found", "notFound.text": "The page you were looking for doesn't exist or has moved.", "notFound.back": "Back to the front page",
+  "error.title": "Something went wrong", "error.text": "An unexpected error occurred. Please try again.", "error.retry": "Try again",
 } as const;
 
 export type Key = keyof typeof en;
@@ -71,6 +85,20 @@ const no: Record<Key, string> = {
   "signup.placeholder": "E-post...", "signup.button": "Få beskjed",
   "comingSoon.title": "Kommer snart", "comingSoon.text": "Noe nytt vokser frem. Vår første kolleksjon kommer snart.",
   "meta.shop": "Alle produkter – Flöra", "meta.faq": "Ofte stilte spørsmål – Flöra", "meta.checkout": "Kasse – Flöra", "meta.orderComplete": "Ordre fullført – Flöra", "meta.comingSoon": "Flöra – Kommer snart",
+  "meta.vintage": "Vintage – Flöra", "meta.values": "Verdier – Flöra", "meta.about": "Om oss – Flöra", "meta.order": "Finn ordren din – Flöra", "meta.notFound": "Siden finnes ikke – Flöra",
+  "nav.vintage": "Vintage",
+  "product.soldOut": "Utsolgt", "product.size": "Størrelse", "product.chooseSize": "Velg størrelse", "product.measurements": "Dine mål",
+  "product.measurementsHint": "I centimeter. Vi syr dette plagget etter dine mål.", "product.addMeasurements": "Fyll inn målene dine",
+  "product.sizeGuide": "Slik måler du", "product.leftInStock": "Bare {count} igjen", "product.vintage": "Vintage",
+  "vintage.oneOfAKind": "Unikt plagg",
+  "signup.thanks": "Takk — du står på listen.", "signup.invalid": "Skriv inn en gyldig e-postadresse.", "signup.failed": "Noe gikk galt. Prøv igjen.",
+  "discount.label": "Rabattkode", "discount.placeholder": "Kode", "discount.apply": "Bruk", "discount.remove": "Fjern", "summary.discount": "Rabatt",
+  "order.title": "Finn ordren din", "order.intro": "Skriv inn ordrenummeret og e-posten du bestilte med.", "order.number": "Ordrenummer", "order.email": "E-post",
+  "order.find": "Finn ordre", "order.notFound": "Vi fant ingen ordre med det nummeret og den e-posten.", "order.status": "Status", "order.tracking": "Sporingsnummer",
+  "order.track": "Spor pakken", "order.items": "Varer", "order.orderedAt": "Bestilt",
+  "status.paid": "Betalt – sys nå", "status.shipped": "Sendt", "status.delivered": "Levert", "status.refunded": "Refundert", "status.cancelled": "Kansellert",
+  "notFound.title": "Siden finnes ikke", "notFound.text": "Siden du lette etter finnes ikke eller er flyttet.", "notFound.back": "Tilbake til forsiden",
+  "error.title": "Noe gikk galt", "error.text": "Det oppstod en uventet feil. Prøv igjen.", "error.retry": "Prøv igjen",
 };
 
 const DICT: Record<Lang, Record<Key, string>> = { en, no };

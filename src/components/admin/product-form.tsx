@@ -16,6 +16,9 @@ export type ProductDoc = {
   stock?: number;
   visible?: boolean;
   images?: { _key: string; asset?: { _ref: string }; url?: string }[];
+  sizing?: string;
+  sizes?: { _key: string; label?: string; stock?: number }[];
+  vintage?: boolean;
   colors?: { _key: string; name?: LocalizedString; hex?: string; image?: { _ref: string; url: string } | null }[];
   specs?: { _key: string; label?: LocalizedString; value?: LocalizedString; emphasis?: boolean; expandable?: boolean; hideOnMobile?: boolean }[];
 };
@@ -24,6 +27,7 @@ export type ProductDoc = {
 export const PRODUCT_ADMIN_PROJECTION = `{
   ...,
   "images": images[]{ _key, asset, "url": asset->url },
+  "sizes": sizes[]{ _key, label, stock },
   "colors": colors[]{ _key, name, hex, "image": select(defined(image.asset) => { "_ref": image.asset._ref, "url": image.asset->url }) },
   "specs": specs[]{ _key, label, value, emphasis, expandable, hideOnMobile }
 }`;
@@ -35,6 +39,8 @@ export default function ProductForm({ product }: { product: ProductDoc | null })
   const p = product;
   const existing = (p?.images ?? []).filter((img) => img.asset?._ref).map((img) => ({ _key: img._key, asset: { _ref: img.asset!._ref } }));
   const colorSlots = [...(p?.colors ?? []), null];
+  const sizeSlots = [...(p?.sizes ?? []), null, null];
+  const sizing = p?.sizing === "sizes" || p?.sizing === "none" ? p.sizing : "measurements";
   const specSlots = [...(p?.specs ?? []), null];
 
   return (
@@ -60,6 +66,41 @@ export default function ProductForm({ product }: { product: ProductDoc | null })
               </Select>
             </Labelled>
             <Bilingual name="description" label="Description" en={getText(p?.description, "en")} no={getText(p?.description, "no")} multiline rows={5} />
+            <Checkbox name="vintage" label="Vintage piece — shown on the Vintage page instead of the shop" defaultChecked={p?.vintage === true} />
+          </div>
+        </Card>
+
+        <Card>
+          <Subheading>Sizing</Subheading>
+          <div className="h-px w-full bg-black/25" />
+          <div className="flex flex-col gap-[24px]">
+            <Labelled label="How is it sized?" hint="Measurements: the customer types their measurements in cm when ordering (what to ask for is set under Settings → Sizing). Fixed sizes: a list with stock per size. No size: one size, e.g. accessories or a vintage piece.">
+              <Select name="sizing" defaultValue={sizing}>
+                <option value="measurements">Customer gives measurements in cm</option>
+                <option value="sizes">Fixed sizes with stock per size</option>
+                <option value="none">No size</option>
+              </Select>
+            </Labelled>
+            <Muted>Sizes (only used with &quot;Fixed sizes&quot;; empty rows are ignored):</Muted>
+            <input type="hidden" name="sizeCount" value={sizeSlots.length} />
+            <div className="flex flex-col gap-[12px]">
+              {sizeSlots.map((sz, i) => (
+                <div key={sz?._key ?? `new-${i}`} className="flex items-end gap-[12px]">
+                  <input type="hidden" name={`sizeKey_${i}`} value={sz?._key ?? ""} />
+                  <Labelled label="Size" className="flex-1">
+                    <Input name={`sizeLabel_${i}`} defaultValue={sz?.label ?? ""} placeholder="e.g. S, M, 38" />
+                  </Labelled>
+                  <Labelled label="In stock" className="w-[120px]">
+                    <Input name={`sizeStock_${i}`} type="number" min={0} step={1} defaultValue={sz?.stock ?? 0} />
+                  </Labelled>
+                  {sz && (
+                    <label className="flex h-[44px] items-center gap-[6px] whitespace-nowrap text-[11px] text-black/50">
+                      <input type="checkbox" name={`sizeRemove_${i}`} className="accent-black" /> Remove
+                    </label>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </Card>
 
@@ -143,7 +184,7 @@ export default function ProductForm({ product }: { product: ProductDoc | null })
             <Labelled label="Previous price (kr), if on sale" hint="Leave empty unless the product is on sale. Shown struck through, and turns on the sale badge.">
               <Input name="compareAtPrice" inputMode="decimal" defaultValue={oreToKroner(p?.compareAtPriceOre)} />
             </Labelled>
-            <Labelled label="In stock" hint="Counts down by itself with every paid order.">
+            <Labelled label="In stock" hint="Counts down by itself with every paid order. Ignored for fixed sizes — each size has its own number.">
               <Input name="stock" type="number" min={0} step={1} defaultValue={p?.stock ?? 0} required />
             </Labelled>
             <Checkbox name="visible" label="Show in the shop" defaultChecked={p ? p.visible !== false : true} />

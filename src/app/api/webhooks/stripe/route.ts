@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { sendOrderConfirmation } from "@/lib/notify";
 import { getStripe } from "@/lib/stripe";
 import { recordOrder } from "@/lib/record-order";
+import { getWriteClient } from "@/sanity/lib/write";
 
 /**
  * Stripe → us. This is the only place an order is ever created: the success page displays state,
@@ -45,7 +46,8 @@ export async function POST(req: Request) {
       // The order document in Sanity is the record; it is written first and is the unique key.
       // If this throws (say SANITY_TOKEN is missing on the server), the 500 below makes Stripe
       // retry for days, and the retry succeeds once the server is fixed — nothing is lost.
-      const { orderNumber, created } = await recordOrder(intent);
+      const order = await recordOrder(intent);
+      const { orderNumber, created } = order;
       if (!created) break; // a retry or replay: the order, and its stock, are already recorded
 
       // Stamp the PaymentIntent too, so the order number is visible in the Stripe dashboard.
@@ -54,12 +56,13 @@ export async function POST(req: Request) {
       });
       console.info(`[order ${orderNumber}] created from ${intent.id}: ${intent.amount} ${intent.currency}`);
 
-      await sendOrderConfirmation({
-        orderNumber,
-        email: intent.receipt_email ?? intent.metadata.customer_email ?? null,
-        totalOre: intent.amount,
-        currency: intent.currency,
-      });
+      // Email is best-effort: a provider outage must not make Stripe retry and re-run the order.
+      try {
+        const sent = await sendOrderConfirmation(order);
+        if (sent) await getWriteClient().patch(order.docId).set({ confirmationSentAt: new Date().toISOString() }).commit();
+      } catch (err) {
+        console.error(`[order ${orderNumber}] confirmation email failed`, err);
+      }
       break;
     }
     case "payment_intent.payment_failed": {

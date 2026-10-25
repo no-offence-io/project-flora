@@ -16,10 +16,13 @@ import { useT } from "@/components/i18n-provider";
  */
 export default function OrderSummary({
   totals,
+  discount,
   children,
   className = "",
 }: {
   totals: Totals | null;
+  /** The discount-code row, between the cart lines and the amounts. */
+  discount?: ReactNode;
   children?: ReactNode;
   className?: string;
 }) {
@@ -41,12 +44,22 @@ export default function OrderSummary({
 
       <div className="flex flex-col gap-[12px]">
         <CartItems />
+        {discount}
 
         <dl className="m-0 flex flex-col gap-[12px] bg-[#fafbfc] p-[24px]" aria-busy={!totals}>
           <div className="flex justify-between">
             <dt>{t("summary.subtotal")}</dt>
             <dd className="m-0">{totals ? formatNok(totals.subtotalOre) : pending}</dd>
           </div>
+          {totals && totals.discountOre > 0 && (
+            <div className="flex justify-between text-[11px] leading-normal text-black/50">
+              <dt>
+                {t("summary.discount")}
+                {totals.discountCode ? ` (${totals.discountCode})` : ""}
+              </dt>
+              <dd className="m-0">−{formatNok(totals.discountOre)}</dd>
+            </div>
+          )}
           <div className="flex justify-between text-[11px] leading-normal text-black/50">
             <dt>{t("summary.shipping")}</dt>
             <dd className="m-0">{totals ? (totals.shippingOre === 0 ? t("summary.free") : formatNok(totals.shippingOre)) : pending}</dd>

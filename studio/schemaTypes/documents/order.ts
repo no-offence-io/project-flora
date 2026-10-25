@@ -38,6 +38,9 @@ export const order = defineType({
     defineField({name: 'trackingNumber', title: 'Tracking number', type: 'string', group: 'fulfilment'}),
     defineField({name: 'internalNote', title: 'Internal note', type: 'text', rows: 3, group: 'fulfilment'}),
     defineField({name: 'orderedAt', title: 'Ordered at', type: 'datetime', readOnly: true, group: 'fulfilment'}),
+    defineField({name: 'language', title: 'Customer language', type: 'string', readOnly: true, group: 'fulfilment'}),
+    defineField({name: 'confirmationSentAt', title: 'Confirmation email sent', type: 'datetime', readOnly: true, group: 'fulfilment'}),
+    defineField({name: 'shippingEmailSentAt', title: 'Shipping email sent', type: 'datetime', readOnly: true, group: 'fulfilment'}),
 
     defineField({
       name: 'customer',
@@ -69,15 +72,31 @@ export const order = defineType({
             defineField({name: 'name', type: 'string'}),
             defineField({name: 'quantity', type: 'number'}),
             defineField({name: 'unitPriceOre', title: 'Unit price (øre)', type: 'number'}),
+            defineField({name: 'size', title: 'Size', type: 'string'}),
+            defineField({
+              name: 'measurements',
+              title: 'Measurements (cm)',
+              type: 'array',
+              of: [
+                defineArrayMember({
+                  type: 'object',
+                  name: 'measurement',
+                  fields: [defineField({name: 'label', type: 'string'}), defineField({name: 'value', type: 'string'})],
+                  preview: {select: {label: 'label', value: 'value'}, prepare: ({label, value}) => ({title: `${label}: ${value} cm`})},
+                }),
+              ],
+            }),
           ],
           preview: {
-            select: {name: 'name', quantity: 'quantity', unitPriceOre: 'unitPriceOre'},
-            prepare: ({name, quantity, unitPriceOre}) => ({title: `${quantity} × ${name}`, subtitle: `${(unitPriceOre ?? 0) / 100} kr each`}),
+            select: {name: 'name', quantity: 'quantity', unitPriceOre: 'unitPriceOre', size: 'size'},
+            prepare: ({name, quantity, unitPriceOre, size}) => ({title: `${quantity} × ${name}${size ? ` (${size})` : ''}`, subtitle: `${(unitPriceOre ?? 0) / 100} kr each`}),
           },
         }),
       ],
     }),
     defineField({name: 'subtotalOre', title: 'Subtotal (øre)', type: 'number', readOnly: true, group: 'payment'}),
+    defineField({name: 'discountCode', title: 'Discount code', type: 'string', readOnly: true, group: 'payment'}),
+    defineField({name: 'discountOre', title: 'Discount (øre)', type: 'number', readOnly: true, group: 'payment'}),
     defineField({name: 'shippingOre', title: 'Shipping (øre)', type: 'number', readOnly: true, group: 'payment'}),
     defineField({name: 'vatIncludedOre', title: 'Of which VAT (øre)', type: 'number', readOnly: true, group: 'payment'}),
     defineField({name: 'totalOre', title: 'Total (øre)', type: 'number', readOnly: true, group: 'payment'}),

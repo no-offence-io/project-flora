@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { intentRequestSchema, type IntentResponse } from "@/lib/checkout-schema";
-import { METADATA_SITE, quoteCart } from "@/lib/orders";
+import { getLanguage } from "@/lib/language";
+import { METADATA_SITE, quoteCart, quoteToMetadata } from "@/lib/orders";
 import { assertStripeEnvironment, getStripe, StripeConfigError } from "@/lib/stripe";
 
 /** A PaymentIntent can only have its amount changed before the customer has confirmed it. */
@@ -29,17 +30,16 @@ export async function POST(req: Request) {
     console.warn("[checkout/intent] rejected:", issues);
     return NextResponse.json({ error: "Invalid request", issues }, { status: 400 });
   }
-  const { items, customer, paymentIntentId } = parsed.data;
+  const { items, customer, paymentIntentId, discountCode } = parsed.data;
+  const country = customer?.country ?? parsed.data.country;
 
-  const quote = await quoteCart(items);
+  const quote = await quoteCart(items, { country, discountCode });
   if ("error" in quote) return NextResponse.json({ error: quote.error }, { status: 400 });
   const { lines, totals } = quote;
 
-  const metadata: Record<string, string> = {
-    site: METADATA_SITE,
-    // Price as charged travels with the line, so the order record never has to re-derive it later.
-    items: JSON.stringify(lines.map((l) => ({ id: l.id, qty: l.quantity, p: l.unitPriceOre }))),
-  };
+  // Price as charged, sizes and measurements travel on the intent, so the order record never has
+  // to re-derive them later — and the customer's language, so their emails match the site they saw.
+  const metadata = quoteToMetadata(quote, { lang: await getLanguage(), country });
   if (customer) {
     metadata.customer_email = customer.email;
     metadata.customer_name = `${customer.firstName} ${customer.lastName}`;
@@ -76,7 +76,7 @@ export async function POST(req: Request) {
     }
     if (!intent.client_secret) throw new Error("PaymentIntent has no client secret");
 
-    const response: IntentResponse = { clientSecret: intent.client_secret, paymentIntentId: intent.id, totals, lines };
+    const response: IntentResponse = { clientSecret: intent.client_secret, paymentIntentId: intent.id, totals, lines, ...(quote.discountError ? { discountError: quote.discountError } : {}) };
     return NextResponse.json(response);
   } catch (err) {
     console.error("[checkout/intent]", err);

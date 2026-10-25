@@ -28,18 +28,47 @@ export async function saveOrder(formData: FormData) {
   if (!parsed.success) throw new Error("Invalid order update");
   const { id, ...fields } = parsed.data;
 
-  const before = await adminClient().getDocument(id);
   await adminClient().patch(id).set(fields).commit();
-
-  // Shipping notification hook: fires once, on the move to "shipped". Sends nothing until the
-  // email provider is configured — see src/lib/notify.ts.
-  if (fields.status === "shipped" && before?.status !== "shipped") {
-    const { sendShippingNotification } = await import("@/lib/notify");
-    await sendShippingNotification({ orderId: id, trackingNumber: fields.trackingNumber });
-  }
   revalidatePath("/admin");
   revalidatePath("/admin/orders");
   revalidatePath(`/admin/orders/${id}`);
+  redirect(`/admin/orders/${id}?saved=1`);
+}
+
+/**
+ * The "Send" button on an order: saves the tracking number, marks the order shipped and emails the
+ * customer. Can be pressed again (a corrected number, a lost email); each send is stamped.
+ */
+export async function sendShippingEmail(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!id.startsWith("order-")) throw new Error("Invalid order");
+  const trackingNumber = String(formData.get("trackingNumber") ?? "").trim().slice(0, 100);
+  const order = await adminClient().fetch<{ orderNumber?: string; language?: string; customer?: { email?: string } } | null>(`*[_id == $id][0]{ orderNumber, language, customer }`, { id });
+  if (!order) throw new Error("Order not found");
+
+  const { emailConfigured, sendShippingNotification, trackingUrlFor } = await import("@/lib/notify");
+  if (!emailConfigured()) redirect(`/admin/orders/${id}?error=${encodeURIComponent("Email isn't connected yet — see Setup.")}`);
+  if (!order.customer?.email) redirect(`/admin/orders/${id}?error=${encodeURIComponent("This order has no customer email.")}`);
+
+  await adminClient().patch(id).set({ trackingNumber, status: "shipped" }).commit();
+  try {
+    await sendShippingNotification({
+      orderNumber: order.orderNumber ?? id,
+      email: order.customer.email,
+      language: order.language === "no" ? "no" : "en",
+      trackingNumber,
+      trackingUrl: trackingUrlFor(trackingNumber),
+    });
+  } catch (err) {
+    console.error("[admin] shipping email failed", err);
+    redirect(`/admin/orders/${id}?error=${encodeURIComponent("The email could not be sent. The order is marked shipped; try again in a moment.")}`);
+  }
+  await adminClient().patch(id).set({ shippingEmailSentAt: new Date().toISOString() }).commit();
+  revalidatePath("/admin");
+  revalidatePath("/admin/orders");
+  revalidatePath(`/admin/orders/${id}`);
+  redirect(`/admin/orders/${id}?sent=1`);
 }
 
 const CATEGORIES = ["Tops", "Skirts", "Sets", "Accessories"] as const;
@@ -54,6 +83,8 @@ export async function saveProduct(formData: FormData) {
   const priceOre = kronerToOre(formData.get("price"));
   const compareAtPriceOre = kronerToOre(formData.get("compareAtPrice"));
   const stock = Number(formData.get("stock") ?? 0);
+  const sizingRaw = String(formData.get("sizing") ?? "measurements");
+  const sizing = sizingRaw === "sizes" || sizingRaw === "none" ? sizingRaw : "measurements";
 
   if (!name.some((v) => v._key === "en")) throw new Error("An English name is required");
   if (!slug) throw new Error("A web address is required");
@@ -70,8 +101,23 @@ export async function saveProduct(formData: FormData) {
     priceOre,
     compareAtPriceOre: compareAtPriceOre ?? null,
     stock,
+    sizing,
+    vintage: formData.get("vintage") === "on",
     visible: formData.get("visible") === "on",
   };
+
+  // Sizes: numbered slots like the colours below; a blank label drops the slot.
+  const sizes = [];
+  for (let i = 0; i < (Number(formData.get("sizeCount")) || 0); i++) {
+    if (formData.get(`sizeRemove_${i}`) === "on") continue;
+    const label = String(formData.get(`sizeLabel_${i}`) ?? "").trim();
+    if (!label) continue;
+    if (!/^[A-Za-z0-9 ./-]{1,20}$/.test(label)) throw new Error(`Size "${label}" may only use letters, numbers, space, . / -`);
+    const sizeStock = Number(formData.get(`sizeStock_${i}`) ?? 0);
+    if (!Number.isInteger(sizeStock) || sizeStock < 0) throw new Error(`Stock for size ${label} must be a whole number`);
+    sizes.push({ _key: String(formData.get(`sizeKey_${i}`) ?? "") || `z${Date.now().toString(36)}${i}`, _type: "size", label, stock: sizeStock });
+  }
+  if (sizing === "sizes" && sizes.length === 0) throw new Error("Add at least one size, or choose another way of sizing");
 
   // Photos: keep the ones not ticked for removal, then append any new uploads.
   const removed = new Set(formData.getAll("removeImage").map(String));
@@ -119,9 +165,9 @@ export async function saveProduct(formData: FormData) {
 
   let docId = id;
   if (id) {
-    await client.patch(id).set({ ...fields, images, colors, specs }).commit();
+    await client.patch(id).set({ ...fields, images, colors, specs, sizes }).commit();
   } else {
-    const created = await client.create({ _type: "product", ...fields, images, colors, specs });
+    const created = await client.create({ _type: "product", ...fields, images, colors, specs, sizes });
     docId = created._id;
   }
   revalidatePath("/admin");
@@ -143,6 +189,31 @@ export async function saveSettings(formData: FormData) {
   const shippingOre = kronerToOre(formData.get("shipping"));
   const freeFrom = kronerToOre(formData.get("freeShippingFrom"));
   const [signUpImage, footerImage] = await Promise.all([readImageField(formData, "signUpImage"), readImageField(formData, "footerImage")]);
+
+  const measurementFields: Record<string, unknown>[] = [];
+  for (let i = 0; i < (Number(formData.get("measureCount")) || 0); i++) {
+    if (formData.get(`measureRemove_${i}`) === "on") continue;
+    const label = readLocalizedString(formData, `measureLabel_${i}`);
+    if (!label.some((v) => v._key === "en" && v.value)) continue;
+    measurementFields.push({ _key: String(formData.get(`measureKey_${i}`) ?? "") || `mf${Date.now().toString(36)}${i}`, _type: "measurementField", label, hint: readLocalizedString(formData, `measureHint_${i}`) });
+  }
+  const shippingZones: Record<string, unknown>[] = [];
+  for (let i = 0; i < (Number(formData.get("zoneCount")) || 0); i++) {
+    if (formData.get(`zoneRemove_${i}`) === "on") continue;
+    const name = String(formData.get(`zoneName_${i}`) ?? "").trim();
+    const countries = String(formData.get(`zoneCountries_${i}`) ?? "").split(/[,\n]/).map((c) => c.trim()).filter(Boolean);
+    const price = kronerToOre(formData.get(`zonePrice_${i}`));
+    if (!name && countries.length === 0) continue;
+    if (!name || countries.length === 0 || price === undefined) throw new Error(`Shipping zone ${i + 1} needs a name, at least one country and a price`);
+    shippingZones.push({
+      _key: String(formData.get(`zoneKey_${i}`) ?? "") || `zn${Date.now().toString(36)}${i}`,
+      _type: "shippingZone",
+      name,
+      countries,
+      shippingOre: price,
+      freeShippingFromOre: kronerToOre(formData.get(`zoneFreeFrom_${i}`)) ?? null,
+    });
+  }
   await adminClient()
     .createIfNotExists({ _id: "siteSettings", _type: "siteSettings" })
     .then(() =>
@@ -161,6 +232,10 @@ export async function saveSettings(formData: FormData) {
           freeShippingFromOre: freeFrom ?? null,
           signUpImage,
           footerImage,
+          measurementFields,
+          sizeGuide: readLocalizedString(formData, "sizeGuide", "text"),
+          shippingZones,
+          shipsTo: String(formData.get("shipsTo") ?? "").split(/[,\n]/).map((c) => c.trim()).filter(Boolean),
         })
         .commit(),
     );
@@ -276,4 +351,104 @@ export async function deleteMedia(formData: FormData) {
   await adminClient().delete(id);
   revalidatePath("/admin/media");
   redirect("/admin/media");
+}
+
+export async function saveDiscount(formData: FormData) {
+  await requireAdmin();
+  const parsed = z
+    .object({
+      id: z.string().optional(),
+      code: z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{2,30}$/, "Codes use capital letters, numbers and dashes (2–30 characters)"),
+      description: z.string().trim().max(200),
+      kind: z.enum(["percent", "amount", "shipping"]),
+      value: z.string().trim(),
+      freeShipping: z.string().optional(),
+      active: z.string().optional(),
+      startsAt: z.string().optional(),
+      endsAt: z.string().optional(),
+      minSubtotal: z.string().optional(),
+      maxUses: z.string().optional(),
+    })
+    .safeParse(Object.fromEntries(formData));
+  if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Invalid discount");
+  const d = parsed.data;
+  const value = d.kind === "percent" ? Math.min(100, Math.max(0, Number(d.value) || 0)) : d.kind === "amount" ? (kronerToOre(d.value) ?? 0) : 0;
+  if (d.kind !== "shipping" && value <= 0) throw new Error("Give the discount a value");
+  const toDate = (v?: string) => (v ? new Date(v).toISOString() : null);
+  const fields = {
+    code: d.code,
+    description: d.description,
+    kind: d.kind,
+    value,
+    freeShipping: d.freeShipping === "on",
+    active: d.active === "on",
+    startsAt: toDate(d.startsAt),
+    endsAt: toDate(d.endsAt),
+    minSubtotalOre: kronerToOre(d.minSubtotal ?? "") ?? null,
+    maxUses: d.maxUses ? Math.max(1, Math.round(Number(d.maxUses))) : null,
+  };
+  const taken = await adminClient().fetch<string | null>(`*[_type == "discount" && code == $code && _id != $id][0]._id`, { code: d.code, id: d.id ?? "" });
+  if (taken) throw new Error(`The code ${d.code} already exists`);
+  let docId = d.id ?? "";
+  if (docId) await adminClient().patch(docId).set(fields).commit();
+  else docId = (await adminClient().create({ _type: "discount", uses: 0, ...fields }))._id;
+  revalidatePath("/admin/discounts");
+  redirect(`/admin/discounts/${docId}?saved=1`);
+}
+
+export async function deleteDiscount(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (id) await adminClient().delete(id);
+  revalidatePath("/admin/discounts");
+  redirect("/admin/discounts");
+}
+
+export async function saveAboutPage(formData: FormData) {
+  await requireAdmin();
+  const image = await readImageField(formData, "image");
+  await adminClient().createIfNotExists({ _id: "aboutPage", _type: "aboutPage" });
+  await adminClient()
+    .patch("aboutPage")
+    .set({ title: readLocalizedString(formData, "title"), intro: readLocalizedString(formData, "intro", "text"), body: readLocalizedBlocks(formData, "body"), image })
+    .commit();
+  revalidatePath("/admin/pages/about");
+  redirect("/admin/pages/about?saved=1");
+}
+
+export async function saveVintagePage(formData: FormData) {
+  await requireAdmin();
+  const image = await readImageField(formData, "image");
+  await adminClient().createIfNotExists({ _id: "vintagePage", _type: "vintagePage" });
+  await adminClient()
+    .patch("vintagePage")
+    .set({ title: readLocalizedString(formData, "title"), intro: readLocalizedString(formData, "intro", "text"), emptyText: readLocalizedString(formData, "emptyText", "text"), image })
+    .commit();
+  revalidatePath("/admin/pages/vintage");
+  redirect("/admin/pages/vintage?saved=1");
+}
+
+/** Setup page: send every template to the signed-in admin so the key, sender and look can be checked. */
+export async function sendTestEmails() {
+  const admin = await requireAdmin();
+  const notify = await import("@/lib/notify");
+  if (!notify.emailConfigured()) redirect(`/admin/setup?error=${encodeURIComponent("RESEND_API_KEY is not set.")}`);
+  try {
+    await notify.sendTestEmail(admin.email);
+    await notify.sendOrderConfirmation({
+      orderNumber: "FL-TEST0001",
+      language: "en",
+      customer: { name: "Test Customer", email: admin.email, address: "Testveien 1, 0150 Oslo, Norway" },
+      lines: [
+        { name: "Miss Flow top", quantity: 1, unitPriceOre: 89000, measurements: [{ label: "Bust", value: "88" }, { label: "Waist", value: "70" }, { label: "Hips", value: "94" }, { label: "Height", value: "170" }] },
+        { name: "Wrap skirt", quantity: 2, unitPriceOre: 129000, size: "M", measurements: [] },
+      ],
+      totals: { subtotalOre: 347000, discountOre: 34700, discountCode: "WELCOME10", shippingOre: 0, vatIncludedOre: 62460, totalOre: 312300 },
+    });
+    await notify.sendShippingNotification({ orderNumber: "FL-TEST0001", email: admin.email, language: "en", trackingNumber: "TESTNO123456789", trackingUrl: notify.trackingUrlFor("TESTNO123456789") });
+    await notify.sendNewsletterWelcome(admin.email, "en");
+  } catch (err) {
+    redirect(`/admin/setup?error=${encodeURIComponent(err instanceof Error ? err.message : "Sending failed")}`);
+  }
+  redirect(`/admin/setup?sent=${encodeURIComponent(admin.email)}`);
 }

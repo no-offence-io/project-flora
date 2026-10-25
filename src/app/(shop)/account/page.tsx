@@ -1,9 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth, authConfigured, signOut } from "@/auth";
-import { DEFAULT_ATTRIBUTES } from "@/data/cart";
 
 export const metadata = { title: "Your account – Flöra" };
+
+/** Preview data until customer accounts store real measurements. */
+const SAMPLE_MEASUREMENTS = [
+  { label: "Bust", value: "88" },
+  { label: "Waist", value: "70" },
+  { label: "Hips", value: "94" },
+];
 
 export default async function AccountPage() {
   const session = authConfigured ? await auth() : null;
@@ -24,7 +30,7 @@ export default async function AccountPage() {
           </h2>
           <div className="h-px w-full bg-black/25" />
           <ul className="m-0 flex list-none flex-col gap-[5px] p-0 text-[11px] leading-normal">
-            {DEFAULT_ATTRIBUTES.map((a) => (
+            {SAMPLE_MEASUREMENTS.map((a) => (
               <li key={a.label}>
                 {a.label}: <span className="text-black/50">—</span>
               </li>

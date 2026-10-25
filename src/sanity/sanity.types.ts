@@ -50,23 +50,48 @@ export type LocalizedImage = {
   alt?: InternationalizedArrayString;
 };
 
-export type PolicyPage = {
+export type Subscriber = {
   _id: string;
-  _type: "policyPage";
+  _type: "subscriber";
   _createdAt: string;
   _updatedAt: string;
   _rev: string;
-  page?: "terms" | "refunds-and-exchange" | "privacy" | "shipping";
-  title?: InternationalizedArrayString;
-  intro?: InternationalizedArrayText;
-  body?: InternationalizedArraySimpleBlockContent;
+  email?: string;
+  language?: string;
+  signedUpAt?: string;
+  unsubscribedAt?: string;
 };
 
-export type InternationalizedArraySimpleBlockContent = Array<
-  {
-    _key: string;
-  } & InternationalizedArraySimpleBlockContentValue
->;
+export type Discount = {
+  _id: string;
+  _type: "discount";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  code?: string;
+  description?: string;
+  kind?: "percent" | "amount" | "shipping";
+  value?: number;
+  freeShipping?: boolean;
+  active?: boolean;
+  startsAt?: string;
+  endsAt?: string;
+  minSubtotalOre?: number;
+  maxUses?: number;
+  uses?: number;
+};
+
+export type VintagePage = {
+  _id: string;
+  _type: "vintagePage";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  title?: InternationalizedArrayString;
+  intro?: InternationalizedArrayText;
+  image?: LocalizedImage;
+  emptyText?: InternationalizedArrayText;
+};
 
 export type InternationalizedArrayText = Array<
   {
@@ -79,6 +104,36 @@ export type InternationalizedArrayString = Array<
     _key: string;
   } & InternationalizedArrayStringValue
 >;
+
+export type AboutPage = {
+  _id: string;
+  _type: "aboutPage";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  title?: InternationalizedArrayString;
+  intro?: InternationalizedArrayText;
+  body?: InternationalizedArraySimpleBlockContent;
+  image?: LocalizedImage;
+};
+
+export type InternationalizedArraySimpleBlockContent = Array<
+  {
+    _key: string;
+  } & InternationalizedArraySimpleBlockContentValue
+>;
+
+export type PolicyPage = {
+  _id: string;
+  _type: "policyPage";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  page?: "terms" | "refunds-and-exchange" | "privacy" | "shipping";
+  title?: InternationalizedArrayString;
+  intro?: InternationalizedArrayText;
+  body?: InternationalizedArraySimpleBlockContent;
+};
 
 export type FaqItem = {
   _id: string;
@@ -110,6 +165,22 @@ export type SiteSettings = {
   contactEmail?: string;
   shippingOre?: number;
   freeShippingFromOre?: number;
+  shippingZones?: Array<{
+    name?: string;
+    countries?: Array<string>;
+    shippingOre?: number;
+    freeShippingFromOre?: number;
+    _type: "shippingZone";
+    _key: string;
+  }>;
+  shipsTo?: Array<string>;
+  measurementFields?: Array<{
+    label?: InternationalizedArrayString;
+    hint?: InternationalizedArrayString;
+    _type: "measurementField";
+    _key: string;
+  }>;
+  sizeGuide?: InternationalizedArrayText;
 };
 
 export type SanityFileAssetReference = {
@@ -166,6 +237,9 @@ export type Order = {
   trackingNumber?: string;
   internalNote?: string;
   orderedAt?: string;
+  language?: string;
+  confirmationSentAt?: string;
+  shippingEmailSentAt?: string;
   customer?: {
     name?: string;
     email?: string;
@@ -178,10 +252,19 @@ export type Order = {
     name?: string;
     quantity?: number;
     unitPriceOre?: number;
+    size?: string;
+    measurements?: Array<{
+      label?: string;
+      value?: string;
+      _type: "measurement";
+      _key: string;
+    }>;
     _type: "orderItem";
     _key: string;
   }>;
   subtotalOre?: number;
+  discountCode?: string;
+  discountOre?: number;
   shippingOre?: number;
   vatIncludedOre?: number;
   totalOre?: number;
@@ -203,7 +286,15 @@ export type Product = {
   visible?: boolean;
   priceOre?: number;
   compareAtPriceOre?: number;
+  sizing?: "measurements" | "sizes" | "none";
   stock?: number;
+  sizes?: Array<{
+    label?: string;
+    stock?: number;
+    _type: "size";
+    _key: string;
+  }>;
+  vintage?: boolean;
   images?: Array<
     {
       _key: string;
@@ -368,10 +459,14 @@ export type AllSanitySchemaTypes =
   | SimpleBlockContent
   | SanityImageAssetReference
   | LocalizedImage
-  | PolicyPage
-  | InternationalizedArraySimpleBlockContent
+  | Subscriber
+  | Discount
+  | VintagePage
   | InternationalizedArrayText
   | InternationalizedArrayString
+  | AboutPage
+  | InternationalizedArraySimpleBlockContent
+  | PolicyPage
   | FaqItem
   | SiteSettings
   | SanityFileAssetReference

@@ -75,6 +75,40 @@ can be an uploaded MP4/WebM (served from Sanity's CDN — bandwidth counts, keep
 neither, in which case the built-in `/hero/*.mp4` plays; the sign-up banner and footer photos work
 the same way with their built-in images.
 
+**Sizing.** A product is sized one of three ways (`sizing` on the product): the customer gives
+their **measurements in cm** on the product page (the default — made to measure; the fields asked for
+are set under Settings → Sizing, with an optional size guide), a **fixed size list** with stock per
+size, or **no size**. The choice rides on the cart line (`src/data/cart.ts`, one line per product +
+size + measurements), is validated server-side in `quoteCart`, travels on the PaymentIntent
+(`src/lib/order-metadata.ts` keeps every value under Stripe's 500-character limit) and lands on the
+order, where the admin shows it per item. Sized products count down the chosen size's own stock.
+Sold out disables the button and labels the card.
+
+**Shipping zones and discount codes.** Settings → Shipping holds the flat price, the countries
+offered at checkout and zones with their own price/threshold; the checkout sends the country as soon
+as it is chosen so the shipping line follows. Discount codes are documents (Codes in the admin):
+percent, amount or free shipping, with dates, minimum order and a usage cap. The browser sends only
+the code; `src/lib/discounts.ts` decides what it is worth, the webhook counts the use. All the maths
+is in `src/lib/pricing.ts`, which is pure and unit-tested (`npm test`).
+
+**Email** goes through Resend (`src/lib/notify.ts`, HTTP API, no SDK): order confirmation (with a
+copy to `EMAIL_NOTIFY`), shipping notification with a Posten tracking link, newsletter welcome, and a
+test set from Setup. Templates are bilingual and follow the customer's language at the time of
+ordering. Without `RESEND_API_KEY` nothing is sent, and the admin says so where it matters. The order
+page's **Send** button saves the tracking number, marks the order shipped and emails the customer.
+
+**Newsletter** sign-ups are `subscriber` documents (hashed-email ids, so a double sign-up is a no-op;
+a honeypot field drops bots). **Find your order** (`/order`) needs the order number *and* the email.
+
+**Setup** (`/admin/setup`) lists every outside service with connected / to-do and the exact steps:
+Stripe live switch, Resend, Vercel Analytics (cookieless; enable once in the Vercel project), Vipps
+(needs a merchant agreement), Sanity token.
+
+**Pages.** `/vintage` lists products flagged *vintage* on a paper background with a two-column grid;
+`/values` and `/about` are editable under Pages. SEO: `sitemap.xml`, `robots.txt` (everything
+disallowed while the coming-soon gate is on), a generated Open Graph image, product `Product`
+JSON-LD with price and availability. Custom 404 and error pages in the shop chrome.
+
 **The storefront reads Sanity.** `src/lib/catalog.ts` holds every query, projected straight into
 the shapes the components take (`src/lib/catalog-types.ts`). Pages use `sanityFetch` (Live Content
 API); checkout pricing (`src/lib/orders.ts`) reads products and the shipping rules from the API
