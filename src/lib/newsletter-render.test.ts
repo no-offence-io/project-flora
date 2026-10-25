@@ -33,6 +33,14 @@ describe("newsletter renderer", () => {
     expect(html).not.toContain("a.gif");
     expect(html).not.toContain("collection-hero.jpg");
   });
+  it("adds the drag script and block tags only in editable previews, never in what is sent", () => {
+    const sent = renderNewsletter(blocks, { lang: "en", products, unsubscribeUrl: "#" });
+    expect(sent).not.toContain("data-block=");
+    expect(sent).not.toContain("<script");
+    const preview = renderNewsletter(blocks, { lang: "en", products, unsubscribeUrl: "#", editable: true });
+    expect(preview).toContain("<script");
+    expect(preview.match(/data-block="/g)?.length).toBe(blocks.length);
+  });
   it("escapes what the editor types", () => {
     const html = renderNewsletter([{ id: "x", kind: "heading", text: { en: "<script>alert(1)</script>", no: "" } }], { lang: "en", products: {}, unsubscribeUrl: "#" });
     expect(html).not.toContain("<script>");

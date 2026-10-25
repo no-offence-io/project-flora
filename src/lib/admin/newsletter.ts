@@ -29,9 +29,9 @@ export async function productsForNewsletter(ids: string[]): Promise<Record<strin
 
 export const productIdsIn = (blocks: Block[]) => blocks.flatMap((b) => (b.kind === "products" ? b.ids : []));
 
-export async function renderForLang(blocks: Block[], lang: "en" | "no", unsubscribeUrl: string): Promise<string> {
+export async function renderForLang(blocks: Block[], lang: "en" | "no", unsubscribeUrl: string, editable = false): Promise<string> {
   const products = await productsForNewsletter(productIdsIn(blocks));
-  return renderNewsletter(blocks, { lang, products, unsubscribeUrl });
+  return renderNewsletter(blocks, { lang, products, unsubscribeUrl, editable });
 }
 
 export async function sendNewsletterToAll(doc: NewsletterDoc): Promise<number> {

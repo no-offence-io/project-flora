@@ -223,6 +223,8 @@ export type RenderContext = {
   products: Record<string, NewsletterProduct>;
   /** The recipient's own unsubscribe link; the preview passes a placeholder. */
   unsubscribeUrl: string;
+  /** Preview only: tag every block, show empty ones, and add the script that makes them draggable. Never set when sending. */
+  editable?: boolean;
 };
 
 const textOf = (t: NewsletterText, lang: Lang) => (lang === "no" ? t.no || t.en : t.en || t.no);
@@ -249,7 +251,7 @@ function renderBlock(b: NewsletterBlock, ctx: RenderContext, t: (typeof T)[Lang]
     case "text":
       return `<tr><td align="center" style="padding:28px 72px 0 72px;">${paragraphs(textOf(b.text, lang))}</td></tr>`;
     case "image": {
-      if (!b.src) return "";
+      if (!b.src) return ctx.editable ? `<tr><td style="padding:40px 0 0 0;"><div style="height:280px;background:#f7f7f7;border:1px dashed rgba(0,0,0,0.3);"></div></td></tr>` : "";
       const img = `<img src="${esc(b.src)}" alt="${esc(b.alt)}" width="${W}" style="display:block;width:100%;height:auto;border:0;">`;
       return `<tr><td style="padding:40px 0 0 0;">${b.href ? `<a href="${esc(b.href)}">${img}</a>` : img}</td></tr>`;
     }
@@ -262,7 +264,7 @@ function renderBlock(b: NewsletterBlock, ctx: RenderContext, t: (typeof T)[Lang]
     }
     case "products": {
       const items = b.ids.map((id) => ctx.products[id]).filter(Boolean);
-      if (!items.length) return "";
+      if (!items.length) return ctx.editable ? `<tr><td align="center" style="padding:40px 24px 0 24px;${BODY}"><div style="padding:40px;border:1px dashed rgba(0,0,0,0.3);">Pieces — none chosen yet</div></td></tr>` : "";
       const cell = (p: NewsletterProduct) =>
         `<td width="50%" valign="bottom" align="center" style="padding:36px 18px 0 18px;"><a href="${esc(p.href)}" style="text-decoration:none;color:#000000;display:block;">${
           b.useGifs && p.gif
@@ -299,14 +301,48 @@ export function renderNewsletter(blocks: NewsletterBlock[], ctx: RenderContext):
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;"><tr><td align="center" style="padding:0;">
 <table role="presentation" width="${W}" cellpadding="0" cellspacing="0" style="max-width:${W}px;width:100%;">
   <tr><td align="center" style="padding:56px 24px 0 24px;"><a href="${base}" style="text-decoration:none;"><img src="${base}/email/flora-logo.png" alt="Flöra" width="112" height="25" style="display:block;width:112px;height:25px;border:0;"></a></td></tr>
-  ${blocks.map((b) => renderBlock(b, ctx, t)).join("\n")}
+  ${blocks.map((b) => tag(renderBlock(b, ctx, t), b.id, ctx.editable)).join("\n")}
   <tr><td align="center" style="padding:88px 24px 56px 24px;">
     <img src="${base}/email/flora-logo.png" alt="Flöra" width="64" height="14" style="display:block;width:64px;height:14px;border:0;margin:0 auto 20px auto;">
     <p style="margin:0 0 14px 0;${SANS}font-size:10px;line-height:1.8;letter-spacing:0.25em;text-transform:uppercase;color:#000000;"><a href="https://www.instagram.com/" style="color:#000000;text-decoration:none;">Instagram</a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="${base}/shop" style="color:#000000;text-decoration:none;">${ctx.lang === "no" ? "Butikk" : "Shop"}</a></p>
     <p style="margin:0;${SANS}font-size:10px;line-height:1.8;color:#9a9a9a;">${t.newsletterWhy} ${base.replace(/^https?:\/\//, "")} · <a href="${esc(ctx.unsubscribeUrl)}" style="color:#9a9a9a;">${t.unsubscribe}</a></p>
   </td></tr>
-</table></td></tr></table></body></html>`;
+</table></td></tr></table>${ctx.editable ? EDITOR_SCRIPT : ""}</body></html>`;
 }
+
+/** Preview: the first row of a block carries its id, so the editor script can find it. */
+const tag = (html: string, id: string, editable?: boolean) => (editable ? html.replace("<tr>", `<tr data-block="${id}">`) : html);
+
+/**
+ * Lives only in the preview iframe (sandboxed, scripts allowed, no origin). Makes every block
+ * draggable, accepts drops from the editor's own list and palette (their dataTransfer text is
+ * "flora-id:…" or "flora-kind:…"), and tells the parent what happened. Links are inert here.
+ */
+const EDITOR_SCRIPT = `<style>
+tr[data-block]{cursor:grab}tr[data-block]:hover>td{outline:1px dashed rgba(0,0,0,.45);outline-offset:-1px}
+tr[data-block].over>td{box-shadow:inset 0 3px 0 #000}tr[data-block].active>td{outline:1px solid #000;outline-offset:-1px}
+tr[data-block].dragging{opacity:.35}body{-webkit-user-select:none;user-select:none}
+</style><script>
+(function(){
+  var rows=Array.prototype.slice.call(document.querySelectorAll('tr[data-block]'));var dragId=null;
+  function send(m){parent.postMessage(Object.assign({flora:true},m),'*');}
+  function dataOf(e){var d=e.dataTransfer.getData('text/plain')||'';return d||(dragId?'flora-id:'+dragId:'');}
+  rows.forEach(function(tr){
+    tr.setAttribute('draggable','true');
+    tr.addEventListener('dragstart',function(e){dragId=tr.getAttribute('data-block');tr.classList.add('dragging');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','flora-id:'+dragId);send({type:'drag',id:dragId});});
+    tr.addEventListener('dragend',function(){dragId=null;rows.forEach(function(r){r.classList.remove('dragging','over');});send({type:'dragend'});});
+    tr.addEventListener('dragover',function(e){e.preventDefault();rows.forEach(function(r){r.classList.remove('over');});tr.classList.add('over');});
+    tr.addEventListener('dragleave',function(){tr.classList.remove('over');});
+    tr.addEventListener('drop',function(e){e.preventDefault();tr.classList.remove('over');send({type:'drop',data:dataOf(e),to:tr.getAttribute('data-block')});dragId=null;});
+    tr.addEventListener('click',function(e){e.preventDefault();send({type:'select',id:tr.getAttribute('data-block')});});
+  });
+  document.body.addEventListener('dragover',function(e){e.preventDefault();});
+  document.body.addEventListener('drop',function(e){e.preventDefault();if(!e.target.closest||!e.target.closest('tr[data-block]'))send({type:'drop',data:dataOf(e),to:null});});
+  Array.prototype.forEach.call(document.querySelectorAll('a'),function(a){a.addEventListener('click',function(e){e.preventDefault();});});
+  window.addEventListener('message',function(e){var m=e.data||{};if(!m.flora)return;if(m.type==='active'){rows.forEach(function(r){r.classList.toggle('active',r.getAttribute('data-block')===m.id);});var el=rows.filter(function(r){return r.getAttribute('data-block')===m.id})[0];if(el&&m.scroll)el.scrollIntoView({block:'center',behavior:'smooth'});}});
+  send({type:'ready'});
+})();
+</script>`;
 
 export function unsubscribeUrlFor(subscriberId: string): string {
   return `${siteUrl()}/newsletter/unsubscribe?id=${encodeURIComponent(subscriberId)}`;

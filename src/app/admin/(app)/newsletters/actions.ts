@@ -44,7 +44,7 @@ export async function saveNewsletter(input: { id: string | null; subjectEn: stri
 export async function previewNewsletter(input: { blocksJson: string; lang: "en" | "no" }): Promise<Result<{ html: string }>> {
   await requireAdmin();
   try {
-    const html = await renderForLang(parseBlocks(blocksSchema.parse(input.blocksJson)), input.lang, "#");
+    const html = await renderForLang(parseBlocks(blocksSchema.parse(input.blocksJson)), input.lang, "#", true);
     return { ok: true, html };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Could not render" };

@@ -39,6 +39,8 @@ export default function NewsletterEditor({ doc, products, subscribers, email, ma
   const [sure, setSure] = useState(false);
   const [picker, setPicker] = useState<{ onPick: (url: string) => void } | null>(null);
   const sent = doc?.status === "sent";
+  const frameRef = useRef<HTMLIFrameElement>(null);
+  const rowRefs = useRef<Record<string, HTMLLIElement | null>>({});
 
   // Preview: debounced round-trip to the server renderer.
   const blocksJson = JSON.stringify(blocks);
@@ -55,6 +57,10 @@ export default function NewsletterEditor({ doc, products, subscribers, email, ma
     setBlocks(next);
     setDirty(true);
   }, []);
+  const blocksRef = useRef(blocks);
+  useEffect(() => {
+    blocksRef.current = blocks;
+  }, [blocks]);
   const patch = (blockId: string, fn: (b: Block) => Block) => update(blocks.map((b) => (b.id === blockId ? fn(b) : b)));
   const move = (from: number, to: number) => {
     if (to < 0 || to >= blocks.length || from === to) return;
@@ -83,6 +89,56 @@ export default function NewsletterEditor({ doc, products, subscribers, email, ma
     update(blocks.filter((b) => b.id !== blockId));
     if (open === blockId) setOpen(null);
   };
+
+  // The preview is live too: its script reports drags, drops and clicks; we answer with the
+  // active block so it can outline it. Only messages from our own iframe are trusted.
+  const tellPreview = useCallback((id: string | null, scroll = false) => {
+    frameRef.current?.contentWindow?.postMessage({ flora: true, type: "active", id, scroll }, "*");
+  }, []);
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      if (e.source !== frameRef.current?.contentWindow || !e.data?.flora || sent) return;
+      const m = e.data as { type: string; id?: string; data?: string; to?: string | null };
+      const list = blocksRef.current;
+      if (m.type === "ready") tellPreview(open);
+      if (m.type === "select" && m.id) {
+        setOpen(m.id);
+        rowRefs.current[m.id]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+      if (m.type === "drag" && m.id) setDragging({ id: m.id });
+      if (m.type === "dragend") { setDragging(null); setOver(null); }
+      if (m.type === "drop") {
+        const toIndex = m.to ? list.findIndex((b) => b.id === m.to) : list.length;
+        const data = m.data ?? "";
+        if (data.startsWith("flora-id:")) {
+          const from = list.findIndex((b) => b.id === data.slice(9));
+          if (from >= 0 && toIndex >= 0 && from !== toIndex) {
+            // Dropping on a row puts the block before it; dropping on empty space puts it last.
+            const next = list.slice();
+            const [item] = next.splice(from, 1);
+            next.splice(toIndex > from ? toIndex - 1 : toIndex, 0, item);
+            update(next);
+          }
+        } else if (data.startsWith("flora-kind:")) {
+          const kind = data.slice(11) as BlockKind;
+          if (kind in BLOCK_LABELS) {
+            const b = newBlock(kind);
+            const next = list.slice();
+            next.splice(toIndex, 0, b);
+            update(next);
+            setOpen(b.id);
+          }
+        }
+        setDragging(null);
+        setOver(null);
+      }
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [open, sent, tellPreview, update]);
+  useEffect(() => {
+    tellPreview(open, true);
+  }, [open, tellPreview]);
 
   const run = async (label: string, fn: () => Promise<void>) => {
     setBusy(label);
@@ -178,15 +234,16 @@ export default function NewsletterEditor({ doc, products, subscribers, email, ma
         <section className="flex flex-col gap-[12px]">
           <div className="flex items-center justify-between">
             <h2 className="m-0 font-gotham text-paragraph text-black">Blocks</h2>
-            <span className="font-gotham text-[11px] text-black/50">Drag the ⋮⋮ handle to reorder</span>
+            <span className="font-gotham text-[11px] text-black/50">Drag here or in the preview; tap a block in the preview to open it</span>
           </div>
           <div className="h-px w-full bg-black/25" />
           <ol className="m-0 flex list-none flex-col gap-[6px] p-0">
             {blocks.map((b, i) => (
               <li
                 key={b.id}
+                ref={(el) => { rowRefs.current[b.id] = el; }}
                 draggable={!sent}
-                onDragStart={(e) => { setDragging({ id: b.id }); e.dataTransfer.effectAllowed = "move"; }}
+                onDragStart={(e) => { setDragging({ id: b.id }); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", `flora-id:${b.id}`); }}
                 onDragOver={(e) => { e.preventDefault(); setOver(b.id); }}
                 onDragLeave={() => setOver((o) => (o === b.id ? null : o))}
                 onDrop={(e) => { e.preventDefault(); dropAt(i); }}
@@ -234,7 +291,7 @@ export default function NewsletterEditor({ doc, products, subscribers, email, ma
                     key={kind}
                     type="button"
                     draggable
-                    onDragStart={(e) => { setDragging({ kind }); e.dataTransfer.effectAllowed = "copy"; }}
+                    onDragStart={(e) => { setDragging({ kind }); e.dataTransfer.effectAllowed = "copy"; e.dataTransfer.setData("text/plain", `flora-kind:${kind}`); }}
                     onDragEnd={() => { setDragging(null); setOver(null); }}
                     onClick={() => add(kind)}
                     title={BLOCK_LABELS[kind].hint}
@@ -273,7 +330,7 @@ export default function NewsletterEditor({ doc, products, subscribers, email, ma
           </div>
           <div className="h-px w-full bg-black/25" />
           <div className="flex justify-center bg-[#f7f7f7] p-[12px]">
-            <iframe title="Newsletter preview" srcDoc={html} sandbox="" style={{ width, height: "78vh", maxWidth: "100%" }} className="border-0 bg-white shadow-[0_12px_40px_rgba(0,0,0,0.08)]" />
+            <iframe ref={frameRef} title="Newsletter preview" srcDoc={html} sandbox="allow-scripts" onLoad={() => tellPreview(open)} style={{ width, height: "78vh", maxWidth: "100%" }} className="border-0 bg-white shadow-[0_12px_40px_rgba(0,0,0,0.08)]" />
           </div>
         </section>
       </div>
