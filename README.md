@@ -109,6 +109,19 @@ Stripe live switch, Resend, Vercel Analytics (cookieless; enable once in the Ver
 disallowed while the coming-soon gate is on), a generated Open Graph image, product `Product`
 JSON-LD with price and availability. Custom 404 and error pages in the shop chrome.
 
+**Newsletters** are built in `/admin/newsletters` from blocks (`src/lib/newsletter-blocks.ts`) in a
+drag-and-drop editor (`src/components/admin/newsletter-editor.tsx`) with a live preview; the server
+renders them (`renderNewsletter` in `src/lib/notify.ts`, unit-tested) and sends to every subscriber
+in their language with a personal unsubscribe link. **Product GIFs** (`src/lib/admin/gif.ts`, sharp +
+gifenc) are made on the product page from its photos and used by "pieces" blocks.
+
+**Brand** (Settings → Brand) can replace the logo, pick heading/body fonts (own files or Google
+Fonts), set type sizes and colours; `src/lib/brand.ts` turns that into CSS variables on `<html>`
+(the size tokens are a plain `@theme`, not inline, for exactly this). **Payments** shows the Stripe
+balance and refunds in full with confirmation. **Notifications** (`src/lib/notices.ts`): live health
+checks plus events the site writes (webhook, emails, sends, GIFs), unread count in the sidebar,
+owner email on errors.
+
 **The storefront reads Sanity.** `src/lib/catalog.ts` holds every query, projected straight into
 the shapes the components take (`src/lib/catalog-types.ts`). Pages use `sanityFetch` (Live Content
 API); checkout pricing (`src/lib/orders.ts`) reads products and the shipping rules from the API
