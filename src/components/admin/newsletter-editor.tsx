@@ -53,15 +53,62 @@ export default function NewsletterEditor({ doc, products, subscribers, email, ma
     return () => window.clearTimeout(timer);
   }, [blocksJson, lang]);
 
-  const update = useCallback((next: Block[]) => {
-    setBlocks(next);
-    setDirty(true);
-  }, []);
+  // Undo/redo over the block list: every change pushes the previous state; undo pops it onto the
+  // redo stack. Typing in a field coalesces into one step per field per burst (see BlockFields).
+  const past = useRef<Block[][]>([]);
+  const future = useRef<Block[][]>([]);
+  const lastKey = useRef<string | null>(null);
+  const lastAt = useRef(0);
+  const [history, setHistory] = useState({ canUndo: false, canRedo: false });
   const blocksRef = useRef(blocks);
   useEffect(() => {
     blocksRef.current = blocks;
   }, [blocks]);
-  const patch = (blockId: string, fn: (b: Block) => Block) => update(blocks.map((b) => (b.id === blockId ? fn(b) : b)));
+  const update = useCallback((next: Block[], coalesceKey?: string) => {
+    const quickRepeat = coalesceKey !== undefined && lastKey.current === coalesceKey && Date.now() - lastAt.current < 1200;
+    if (!quickRepeat) {
+      past.current.push(blocksRef.current);
+      if (past.current.length > 100) past.current.shift();
+      future.current = [];
+    }
+    lastKey.current = coalesceKey ?? null;
+    lastAt.current = Date.now();
+    setBlocks(next);
+    setDirty(true);
+    setHistory({ canUndo: past.current.length > 0, canRedo: future.current.length > 0 });
+  }, []);
+  const undo = useCallback(() => {
+    const prev = past.current.pop();
+    if (!prev) return;
+    future.current.push(blocksRef.current);
+    lastKey.current = null;
+    setBlocks(prev);
+    setDirty(true);
+    setHistory({ canUndo: past.current.length > 0, canRedo: future.current.length > 0 });
+  }, []);
+  const redo = useCallback(() => {
+    const next = future.current.pop();
+    if (!next) return;
+    past.current.push(blocksRef.current);
+    lastKey.current = null;
+    setBlocks(next);
+    setDirty(true);
+    setHistory({ canUndo: past.current.length > 0, canRedo: future.current.length > 0 });
+  }, []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "z") return;
+      const target = e.target as HTMLElement | null;
+      // Inside a text field the browser's own undo applies to the text; ours applies to the structure.
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
+      e.preventDefault();
+      if (e.shiftKey) redo();
+      else undo();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [undo, redo]);
+  const patch = (blockId: string, fn: (b: Block) => Block, coalesceKey?: string) => update(blocks.map((b) => (b.id === blockId ? fn(b) : b)), coalesceKey);
   const move = (from: number, to: number) => {
     if (to < 0 || to >= blocks.length || from === to) return;
     const next = blocks.slice();
@@ -232,9 +279,17 @@ export default function NewsletterEditor({ doc, products, subscribers, email, ma
       <div className="grid gap-[42px] md:max-w-[1200px] md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:items-start">
         {/* Blocks */}
         <section className="flex flex-col gap-[12px]">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-[12px]">
             <h2 className="m-0 font-gotham text-paragraph text-black">Blocks</h2>
-            <span className="font-gotham text-[11px] text-black/50">Drag here or in the preview; tap a block in the preview to open it</span>
+            <div className="flex items-center gap-[12px] font-gotham text-[11px]">
+              {!sent && (
+                <>
+                  <button type="button" onClick={undo} disabled={!history.canUndo} className={MUTED_LINK} title="Undo (⌘Z)">↶ Undo</button>
+                  <button type="button" onClick={redo} disabled={!history.canRedo} className={MUTED_LINK} title="Redo (⇧⌘Z)">↷ Redo</button>
+                </>
+              )}
+              <span className="text-black/50">Drag here or in the preview</span>
+            </div>
           </div>
           <div className="h-px w-full bg-black/25" />
           <ol className="m-0 flex list-none flex-col gap-[6px] p-0">
@@ -266,7 +321,7 @@ export default function NewsletterEditor({ doc, products, subscribers, email, ma
                 </div>
                 {open === b.id && (
                   <div className="flex flex-col gap-[12px] border-t border-black/25 p-[12px]">
-                    <BlockFields block={b} products={products} disabled={sent} onChange={(nb) => patch(b.id, () => nb)} pick={(onPick) => setPicker({ onPick })} />
+                    <BlockFields block={b} products={products} disabled={sent} onChange={(nb, key) => patch(b.id, () => nb, key ? `${b.id}:${key}` : undefined)} pick={(onPick) => setPicker({ onPick })} />
                   </div>
                 )}
               </li>
@@ -439,19 +494,19 @@ function Photo({ label, src, onChange, pick, disabled }: { label: string; src: s
   );
 }
 
-function BlockFields({ block: b, products, disabled, onChange, pick }: { block: Block; products: EditorProduct[]; disabled: boolean; onChange: (b: Block) => void; pick: (onPick: (url: string) => void) => void }): ReactNode {
+function BlockFields({ block: b, products, disabled, onChange, pick }: { block: Block; products: EditorProduct[]; disabled: boolean; onChange: (b: Block, coalesceKey?: string) => void; pick: (onPick: (url: string) => void) => void }): ReactNode {
   switch (b.kind) {
     case "kicker":
     case "heading":
-      return <Bi label={BLOCK_LABELS[b.kind].label} value={b.text} disabled={disabled} onChange={(text) => onChange({ ...b, text })} />;
+      return <Bi label={BLOCK_LABELS[b.kind].label} value={b.text} disabled={disabled} onChange={(text) => onChange({ ...b, text }, "text")} />;
     case "text":
     case "quote":
-      return <Bi label={b.kind === "text" ? "Text — leave an empty line between paragraphs" : "Quote"} value={b.text} multiline disabled={disabled} onChange={(text) => onChange({ ...b, text })} />;
+      return <Bi label={b.kind === "text" ? "Text — leave an empty line between paragraphs" : "Quote"} value={b.text} multiline disabled={disabled} onChange={(text) => onChange({ ...b, text }, "text")} />;
     case "image":
       return (
         <>
           <Photo label="Photo" src={b.src} disabled={disabled} pick={pick} onChange={(src) => onChange({ ...b, src })} />
-          <Url label="Link when tapped (optional)" value={b.href} disabled={disabled} onChange={(href) => onChange({ ...b, href })} />
+          <Url label="Link when tapped (optional)" value={b.href} disabled={disabled} onChange={(href) => onChange({ ...b, href }, "href")} />
         </>
       );
     case "twoImages":
@@ -460,8 +515,8 @@ function BlockFields({ block: b, products, disabled, onChange, pick }: { block: 
           {(["left", "right"] as const).map((side) => (
             <div key={side} className="flex flex-col gap-[12px]">
               <Photo label={side === "left" ? "Left photo" : "Right photo"} src={b[side].src} disabled={disabled} pick={pick} onChange={(src) => onChange({ ...b, [side]: { ...b[side], src } })} />
-              <Bi label="Caption" value={b[side].caption} disabled={disabled} onChange={(caption) => onChange({ ...b, [side]: { ...b[side], caption } })} />
-              <Url label="Link" value={b[side].href} disabled={disabled} onChange={(href) => onChange({ ...b, [side]: { ...b[side], href } })} />
+              <Bi label="Caption" value={b[side].caption} disabled={disabled} onChange={(caption) => onChange({ ...b, [side]: { ...b[side], caption } }, `${side}caption`)} />
+              <Url label="Link" value={b[side].href} disabled={disabled} onChange={(href) => onChange({ ...b, [side]: { ...b[side], href } }, `${side}href`)} />
             </div>
           ))}
         </div>
@@ -469,7 +524,7 @@ function BlockFields({ block: b, products, disabled, onChange, pick }: { block: 
     case "products":
       return (
         <>
-          <Bi label="Small line above the pieces" value={b.title} disabled={disabled} onChange={(title) => onChange({ ...b, title })} />
+          <Bi label="Small line above the pieces" value={b.title} disabled={disabled} onChange={(title) => onChange({ ...b, title }, "title")} />
           <span className={SMALL_LABEL}>Pieces — tick to include, in the order ticked</span>
           <ul className="m-0 grid list-none grid-cols-2 gap-[12px] p-0 md:grid-cols-4">
             {products.map((p) => {
@@ -500,8 +555,8 @@ function BlockFields({ block: b, products, disabled, onChange, pick }: { block: 
     case "button":
       return (
         <>
-          <Bi label="Label" value={b.label} disabled={disabled} onChange={(label) => onChange({ ...b, label })} />
-          <Url label="Link (empty = the shop)" value={b.href} disabled={disabled} onChange={(href) => onChange({ ...b, href })} />
+          <Bi label="Label" value={b.label} disabled={disabled} onChange={(label) => onChange({ ...b, label }, "label")} />
+          <Url label="Link (empty = the shop)" value={b.href} disabled={disabled} onChange={(href) => onChange({ ...b, href }, "href")} />
         </>
       );
     case "divider":
@@ -510,7 +565,7 @@ function BlockFields({ block: b, products, disabled, onChange, pick }: { block: 
       return (
         <label className="flex flex-col gap-[6px] md:max-w-[200px]">
           <span className={SMALL_LABEL}>Height (px)</span>
-          <input type="number" min={0} max={200} value={b.height} disabled={disabled} onChange={(e) => onChange({ ...b, height: Number(e.target.value) || 0 })} className={FIELD} />
+          <input type="number" min={0} max={200} value={b.height} disabled={disabled} onChange={(e) => onChange({ ...b, height: Number(e.target.value) || 0 }, "height")} className={FIELD} />
         </label>
       );
   }
