@@ -471,13 +471,21 @@ export async function sendSampleNewsletter() {
     await notify.sendNewsletter(
       { email: admin.email, id: "subscriber-00000000000000000000000000000000", language: "en" },
       {
-        subject: "The first collection is here – Flöra",
-        title: "The first collection",
+        subject: "The first collection – Flöra",
+        kicker: "New collection",
+        title: "Cut from the cloth, sewn to you",
         intro:
-          "Four pieces in natural fabrics, sewn to your measurements in Norway. Nothing hidden, nothing rushed.\n\nEach one is made when you order it, so tell us your measurements and we take it from there.",
-        heroImage: `${base}/signup/signup-bg.jpg`,
+          "Four pieces in natural fabrics, made in Norway to the measurements you give us. No sizes, no seasons, no hurry.\n\nEverything about Flöra is transparent. We are far from perfect, but we are honest — so you know exactly what you are getting.",
+        heroImage: `${base}/email/collection-hero.jpg`,
+        features: [
+          { image: `${base}/email/collection-a.jpg`, caption: "The wrap skirt", href: `${base}/shop/${products[0]?.slug ?? ""}` },
+          { image: `${base}/email/collection-b.jpg`, caption: "The Miss Flow top", href: `${base}/shop/${products[1]?.slug ?? ""}` },
+        ],
         products: products.map((p) => ({ name: p.name ?? "", priceOre: p.priceOre ?? 0, image: p.image, href: `${base}/shop/${p.slug ?? ""}` })),
+        quote: "Natural fabrics, honest production, and respect for the bodies wearing them.",
+        closing: { image: `${base}/email/collection-wide.jpg`, text: "Each piece is made when you order it. Give us four measurements and it is cut for you, not for a size chart." },
         shopUrl: `${base}/shop`,
+        shopLabel: "Discover the collection",
       },
     );
   } catch (err) {

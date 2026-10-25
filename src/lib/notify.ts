@@ -88,10 +88,18 @@ const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
  * The site's look in email terms: white, black text, a serif heading, hairline rules, 13px body.
  * Custom fonts don't load reliably in mail clients, so the stacks are the closest system faces.
  */
+const SERIF = "font-family: 'Americana', 'Didot', 'Bodoni 72', 'Iowan Old Style', Georgia, 'Times New Roman', serif;";
+const SANS = "font-family: 'Gotham', -apple-system, 'Helvetica Neue', Helvetica, Arial, sans-serif;";
+/** The site's own faces, for the mail clients that load web fonts (Apple Mail, iOS, Outlook for Mac); the rest fall back to the stacks above. */
+const FONT_FACES = () => `<style>
+@font-face{font-family:'Americana';src:url('${siteUrl()}/email/fonts/americana.otf') format('opentype');font-weight:400;font-style:normal;}
+@font-face{font-family:'Gotham';src:url('${siteUrl()}/email/fonts/gotham.otf') format('opentype');font-weight:325;font-style:normal;}
+</style>`;
+
 function layout(title: string, body: string) {
-  const serif = "font-family: 'Americana Std', 'Iowan Old Style', Georgia, 'Times New Roman', serif;";
-  const sans = "font-family: 'Gotham', -apple-system, 'Helvetica Neue', Helvetica, Arial, sans-serif;";
-  return `<!doctype html><html><body style="margin:0;padding:0;background:#ffffff;">
+  const serif = SERIF;
+  const sans = SANS;
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">${FONT_FACES()}</head><body style="margin:0;padding:0;background:#ffffff;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;"><tr><td align="center" style="padding:42px 24px;">
 <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;border:0.5px solid rgba(0,0,0,0.25);">
 <tr><td style="padding:24px;${sans}font-size:13.35px;line-height:1.4;color:#000000;">
@@ -202,50 +210,136 @@ export async function sendTestEmail(to: string, language: Lang = "en"): Promise<
 }
 
 export type NewsletterProduct = { name: string; priceOre: number; image?: string; href: string };
+export type NewsletterFeature = { image: string; caption: string; href: string };
 export type Newsletter = {
   subject: string;
+  /** Small spaced capitals above the title, e.g. "New collection". */
+  kicker: string;
   title: string;
   intro: string;
-  /** Full-width photo under the wordmark; omitted when there isn't one. */
-  heroImage?: string;
+  /** Portrait photo, full width under the wordmark. */
+  heroImage: string;
+  /** Two editorial photos side by side, each with a caption in small capitals. */
+  features?: [NewsletterFeature, NewsletterFeature];
   products: NewsletterProduct[];
+  /** One line in the serif, set large between the pieces and the closing. */
+  quote?: string;
+  /** Landscape photo with a short paragraph, before the button. */
+  closing?: { image: string; text: string };
   shopUrl?: string;
+  shopLabel?: string;
 };
 
+const KICKER = `${SANS}font-size:10px;line-height:1;letter-spacing:0.35em;text-transform:uppercase;color:#000000;`;
+const BODY = `${SANS}font-size:13px;line-height:1.85;color:#3a3a3a;`;
+const SMALL = `${SANS}font-size:10px;line-height:1.8;letter-spacing:0.2em;text-transform:uppercase;color:#000000;`;
+
 /**
- * A campaign mail — "New collection" and the like — in the shop's own look: wordmark, a photo, a
- * serif title, a few lines, the pieces two across on the light box exactly as the product cards
- * show them, one black button. Every recipient gets their own unsubscribe link (their subscriber
- * id, which is a hash nobody can guess from the address).
+ * A campaign mail — "New collection" and the like — set like a lookbook rather than a shop: white
+ * page, no box, the wordmark small and centred, one tall photograph, a large serif headline with
+ * air around it, spaced small capitals for everything that isn't a sentence, the pieces cut out on
+ * white two across with a hairline between rows, one line in the serif, and a single thin-bordered
+ * button. Nothing is coloured; the photographs carry it. Every recipient gets their own unsubscribe
+ * link (their subscriber id, a hash nobody can guess from the address).
  */
 export async function sendNewsletter(to: { email: string; id: string; language: Lang }, mail: Newsletter): Promise<boolean> {
   const t = T[to.language];
   const base = siteUrl();
-  const card = (p: NewsletterProduct) =>
-    `<td width="50%" valign="top" style="padding:6px;">
-      <a href="${p.href}" style="text-decoration:none;color:#000000;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="background:#f7f7f7;padding:24px 12px;">
-          ${p.image ? `<img src="${p.image}?w=400&h=500&fit=fill&bg=f7f7f7&fm=jpg&q=80" alt="${esc(p.name)}" width="200" height="250" style="display:block;width:200px;height:250px;border:0;">` : `<div style="width:200px;height:250px;"></div>`}
-        </td></tr></table>
-        <p style="margin:12px 0 0 0;font-size:13.35px;color:#000000;">${esc(p.name)}</p>
-        <p style="margin:6px 0 0 0;font-size:13.35px;color:#000000;">${formatNok(p.priceOre)}</p>
+  const shopUrl = mail.shopUrl ?? `${base}/shop`;
+  const W = 600;
+  const paragraphs = (text: string, style = BODY, align = "center") =>
+    text
+      .split(/\n\s*\n/)
+      .map((para) => `<p style="margin:0 0 18px 0;${style}text-align:${align};">${esc(para)}</p>`)
+      .join("");
+  const cut = (url: string, w: number, h: number) => `${url}?w=${w * 2}&h=${h * 2}&fit=max&fm=png`;
+  const productCell = (p: NewsletterProduct) =>
+    `<td width="50%" valign="bottom" align="center" style="padding:36px 18px 0 18px;">
+      <a href="${p.href}" style="text-decoration:none;color:#000000;display:block;">
+        ${p.image ? `<img src="${cut(p.image, 240, 300)}" alt="${esc(p.name)}" width="240" style="display:block;width:240px;max-width:100%;height:auto;max-height:300px;border:0;margin:0 auto;">` : `<div style="width:240px;height:300px;"></div>`}
+        <p style="margin:24px 0 0 0;${SMALL}">${esc(p.name)}</p>
+        <p style="margin:6px 0 0 0;${SANS}font-size:11px;line-height:1.6;color:#7a7a7a;">${formatNok(p.priceOre)}</p>
       </a>
     </td>`;
-  const rows: string[] = [];
+  const productRows: string[] = [];
   for (let i = 0; i < mail.products.length; i += 2) {
-    rows.push(`<tr>${card(mail.products[i])}${mail.products[i + 1] ? card(mail.products[i + 1]) : "<td></td>"}</tr>`);
+    productRows.push(
+      `<tr>${productCell(mail.products[i])}${mail.products[i + 1] ? productCell(mail.products[i + 1]) : "<td></td>"}</tr>` +
+        (i + 2 < mail.products.length ? `<tr><td colspan="2" style="padding:36px 18px 0 18px;"><div style="height:1px;background:#e6e6e6;"></div></td></tr>` : ""),
+    );
   }
-  const body =
-    (mail.heroImage ? `<img src="${mail.heroImage}" alt="" width="472" style="display:block;width:100%;max-width:472px;height:auto;border:0;margin:0 0 24px 0;">` : "") +
-    mail.intro
-      .split(/\n\s*\n/)
-      .map((para) => p(esc(para)))
-      .join("") +
-    (mail.products.length ? rule + `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 -6px;">${rows.join("")}</table>` : "") +
-    button(mail.shopUrl ?? `${base}/shop`, t.newsletterShop) +
-    rule +
-    `<p style="margin:0;font-size:11px;color:rgba(0,0,0,0.5);">${t.newsletterWhy} ${base.replace(/^https?:\/\//, "")}. <a href="${base}/newsletter/unsubscribe?id=${encodeURIComponent(to.id)}" style="color:rgba(0,0,0,0.5);">${t.unsubscribe}</a>.</p>`;
-  return sendMail({ to: [to.email], subject: mail.subject, html: layout(mail.title, body) });
+  const feature = (f: NewsletterFeature) =>
+    `<td width="50%" valign="top" style="padding:0 6px;">
+      <a href="${f.href}" style="text-decoration:none;color:#000000;">
+        <img src="${f.image}" alt="" width="282" style="display:block;width:100%;height:auto;border:0;">
+        <p style="margin:14px 0 0 0;${SMALL}text-align:center;">${esc(f.caption)}</p>
+      </a>
+    </td>`;
+
+  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">${FONT_FACES()}</head>
+<body style="margin:0;padding:0;background:#ffffff;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;"><tr><td align="center" style="padding:0;">
+<table role="presentation" width="${W}" cellpadding="0" cellspacing="0" style="max-width:${W}px;width:100%;">
+
+  <tr><td align="center" style="padding:56px 24px 40px 24px;">
+    <a href="${base}" style="text-decoration:none;"><img src="${base}/email/flora-logo.png" alt="Flöra" width="112" height="25" style="display:block;width:112px;height:25px;border:0;"></a>
+  </td></tr>
+
+  <tr><td align="center" style="padding:0 24px 20px 24px;${KICKER}">${esc(mail.kicker)}</td></tr>
+
+  <tr><td style="padding:0;">
+    <a href="${shopUrl}"><img src="${mail.heroImage}" alt="" width="${W}" style="display:block;width:100%;height:auto;border:0;"></a>
+  </td></tr>
+
+  <tr><td align="center" style="padding:64px 48px 0 48px;">
+    <h1 style="margin:0;${SERIF}font-size:44px;line-height:1.08;font-weight:400;letter-spacing:0.01em;color:#000000;text-align:center;">${esc(mail.title)}</h1>
+  </td></tr>
+  <tr><td align="center" style="padding:28px 0 0 0;"><div style="width:32px;height:1px;background:#000000;"></div></td></tr>
+  <tr><td align="center" style="padding:28px 72px 0 72px;">${paragraphs(mail.intro)}</td></tr>
+
+  ${
+    mail.features
+      ? `<tr><td style="padding:48px 18px 0 18px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>${feature(mail.features[0])}${feature(mail.features[1])}</tr></table></td></tr>`
+      : ""
+  }
+
+  ${
+    mail.products.length
+      ? `<tr><td align="center" style="padding:72px 24px 0 24px;${KICKER}">${esc(to.language === "no" ? "Plaggene" : "The pieces")}</td></tr>
+         <tr><td style="padding:0 6px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${productRows.join("")}</table></td></tr>`
+      : ""
+  }
+
+  ${
+    mail.quote
+      ? `<tr><td align="center" style="padding:80px 64px 0 64px;">
+           <p style="margin:0;${SERIF}font-size:26px;line-height:1.35;font-weight:400;color:#000000;text-align:center;">“${esc(mail.quote)}”</p>
+         </td></tr>`
+      : ""
+  }
+
+  ${
+    mail.closing
+      ? `<tr><td style="padding:72px 0 0 0;"><img src="${mail.closing.image}" alt="" width="${W}" style="display:block;width:100%;height:auto;border:0;"></td></tr>
+         <tr><td align="center" style="padding:40px 72px 0 72px;">${paragraphs(mail.closing.text)}</td></tr>`
+      : ""
+  }
+
+  <tr><td align="center" style="padding:40px 24px 0 24px;">
+    <a href="${shopUrl}" style="display:inline-block;border:1px solid #000000;padding:16px 36px;${KICKER}text-decoration:none;">${esc(mail.shopLabel ?? t.newsletterShop)}</a>
+  </td></tr>
+
+  <tr><td align="center" style="padding:88px 24px 56px 24px;">
+    <img src="${base}/email/flora-logo.png" alt="Flöra" width="64" height="14" style="display:block;width:64px;height:14px;border:0;margin:0 auto 20px auto;">
+    <p style="margin:0 0 14px 0;${SANS}font-size:10px;line-height:1.8;letter-spacing:0.25em;text-transform:uppercase;color:#000000;">
+      <a href="https://www.instagram.com/" style="color:#000000;text-decoration:none;">Instagram</a>
+      &nbsp;&nbsp;·&nbsp;&nbsp;<a href="${shopUrl}" style="color:#000000;text-decoration:none;">${esc(to.language === "no" ? "Butikk" : "Shop")}</a>
+    </p>
+    <p style="margin:0;${SANS}font-size:10px;line-height:1.8;color:#9a9a9a;">${t.newsletterWhy} ${base.replace(/^https?:\/\//, "")} · <a href="${base}/newsletter/unsubscribe?id=${encodeURIComponent(to.id)}" style="color:#9a9a9a;">${t.unsubscribe}</a></p>
+  </td></tr>
+
+</table></td></tr></table></body></html>`;
+  return sendMail({ to: [to.email], subject: mail.subject, html });
 }
 
 /** Posten/Bring tracking for Norwegian parcels; other carriers get no link, just the number. */
