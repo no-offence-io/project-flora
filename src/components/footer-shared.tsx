@@ -9,10 +9,13 @@ export const NAV_LINKS = [
   { key: "footer.journal", href: "/journal" },
 ] as const;
 
+/** Flöra's Instagram; Settings → Footer → Instagram URL overrides it when set. */
+export const INSTAGRAM_URL = "https://www.instagram.com/prosject.flora";
+
 export const SOCIAL_LINKS = [
   {
     label: "Instagram",
-    href: "https://www.instagram.com/",
+    href: INSTAGRAM_URL,
     icon: "/footer/instagram.svg",
     width: 18,
     height: 18,
@@ -46,13 +49,13 @@ export function FooterOverlay() {
   );
 }
 
-export function SocialLinks() {
+export function SocialLinks({ instagram }: { instagram?: string } = {}) {
   return (
     <ul className="flex h-[18px] items-center gap-[20px]">
       {SOCIAL_LINKS.map((social) => (
         <li key={social.label} className="flex">
           <a
-            href={social.href}
+            href={social.label === "Instagram" && instagram ? instagram : social.href}
             target="_blank"
             rel="noopener noreferrer"
             aria-label={social.label}

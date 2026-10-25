@@ -233,7 +233,7 @@ export async function getSiteCopy(): Promise<SiteCopy> {
     signUpText: d.signUpText ?? "",
     signUpButton: d.signUpButton ?? "Sign up",
     footerText: d.footerText ?? "",
-    instagram: d.instagram ?? "",
+    instagram: d.instagram ?? "https://www.instagram.com/prosject.flora",
     contactEmail: d.contactEmail ?? "",
     signUpImage: d.signUpImage ?? undefined,
     footerImage: d.footerImage ?? undefined,

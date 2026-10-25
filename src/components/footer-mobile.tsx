@@ -58,7 +58,7 @@ export default async function FooterMobile({ parallax = true, className = "" }: 
             ))}
           </nav>
 
-          <SocialLinks />
+          <SocialLinks instagram={copy.instagram} />
 
           <p className="text-center font-americana text-[12px] leading-normal uppercase whitespace-nowrap">
             {t("footer.credit")}

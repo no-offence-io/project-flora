@@ -3,6 +3,8 @@ import type { RecordedLine, RecordedOrder } from "./record-order";
 import { formatNok } from "./money";
 import type { Block as NewsletterBlock, L as NewsletterText } from "./newsletter-blocks";
 
+const INSTAGRAM_URL = "https://www.instagram.com/prosject.flora";
+
 /*
  * Transactional email through Resend's HTTP API (https://resend.com): one secret, no SDK. Each
  * sender below says whether it actually sent, so callers can stamp the order. Nothing here is ever
@@ -304,7 +306,7 @@ export function renderNewsletter(blocks: NewsletterBlock[], ctx: RenderContext):
   ${blocks.map((b) => tag(renderBlock(b, ctx, t), b.id, ctx.editable)).join("\n")}
   <tr><td align="center" style="padding:88px 24px 56px 24px;">
     <img src="${base}/email/flora-logo.png" alt="Flöra" width="64" height="14" style="display:block;width:64px;height:14px;border:0;margin:0 auto 20px auto;">
-    <p style="margin:0 0 14px 0;${SANS}font-size:10px;line-height:1.8;letter-spacing:0.25em;text-transform:uppercase;color:#000000;"><a href="https://www.instagram.com/" style="color:#000000;text-decoration:none;">Instagram</a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="${base}/shop" style="color:#000000;text-decoration:none;">${ctx.lang === "no" ? "Butikk" : "Shop"}</a></p>
+    <p style="margin:0 0 14px 0;${SANS}font-size:10px;line-height:1.8;letter-spacing:0.25em;text-transform:uppercase;color:#000000;"><a href="${INSTAGRAM_URL}" style="color:#000000;text-decoration:none;">Instagram</a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="${base}/shop" style="color:#000000;text-decoration:none;">${ctx.lang === "no" ? "Butikk" : "Shop"}</a></p>
     <p style="margin:0;${SANS}font-size:10px;line-height:1.8;color:#9a9a9a;">${t.newsletterWhy} ${base.replace(/^https?:\/\//, "")} · <a href="${esc(ctx.unsubscribeUrl)}" style="color:#9a9a9a;">${t.unsubscribe}</a></p>
   </td></tr>
 </table></td></tr></table>${ctx.editable ? EDITOR_SCRIPT : ""}</body></html>`;

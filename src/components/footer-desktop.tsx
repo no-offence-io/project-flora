@@ -53,7 +53,7 @@ export default async function FooterDesktop({ parallax = true, className = "" }:
           ))}
         </nav>
 
-        <SocialLinks />
+        <SocialLinks instagram={copy.instagram} />
 
         <p className="flex items-start gap-[12px] font-americana text-[12px] leading-normal uppercase whitespace-nowrap">
           <span>© 2026 Flöra</span>
