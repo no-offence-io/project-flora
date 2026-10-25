@@ -457,3 +457,31 @@ export async function sendTestEmails() {
   }
   redirect(`/admin/setup?sent=${encodeURIComponent(admin.email)}`);
 }
+
+/** Setup page: a "New collection" newsletter with the shop's real products, to the signed-in admin. */
+export async function sendSampleNewsletter() {
+  const admin = await requireAdmin();
+  const notify = await import("@/lib/notify");
+  if (!notify.emailConfigured()) redirect(`/admin/setup?error=${encodeURIComponent("RESEND_API_KEY is not set.")}`);
+  const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.prosjectflora.com").replace(/\/$/, "");
+  const products = await adminClient().fetch<{ name?: string; priceOre?: number; image?: string; slug?: string }[]>(
+    `*[_type == "product" && visible != false && vintage != true] | order(_createdAt asc)[0...4]{ "name": name[_key == "en"][0].value, priceOre, "image": images[0].asset->url, "slug": slug.current }`,
+  );
+  try {
+    await notify.sendNewsletter(
+      { email: admin.email, id: "subscriber-00000000000000000000000000000000", language: "en" },
+      {
+        subject: "The first collection is here – Flöra",
+        title: "The first collection",
+        intro:
+          "Four pieces in natural fabrics, sewn to your measurements in Norway. Nothing hidden, nothing rushed.\n\nEach one is made when you order it, so tell us your measurements and we take it from there.",
+        heroImage: `${base}/signup/signup-bg.jpg`,
+        products: products.map((p) => ({ name: p.name ?? "", priceOre: p.priceOre ?? 0, image: p.image, href: `${base}/shop/${p.slug ?? ""}` })),
+        shopUrl: `${base}/shop`,
+      },
+    );
+  } catch (err) {
+    redirect(`/admin/setup?error=${encodeURIComponent(err instanceof Error ? err.message : "Sending failed")}`);
+  }
+  redirect(`/admin/setup?newsletter=${encodeURIComponent(admin.email)}`);
+}

@@ -43,6 +43,9 @@ const T = {
     welcome: "You're on the list",
     welcomeText: "Thank you for signing up. You will be the first to hear about new pieces and when they are available.",
     visit: "Visit the shop",
+    newsletterShop: "Shop the collection",
+    newsletterWhy: "You get this because you signed up at",
+    unsubscribe: "Unsubscribe",
     testSubject: "Test email – Flöra",
     test: "It works",
     testText: "This is a test email from the Flöra admin. If you can read this, email is set up.",
@@ -70,6 +73,9 @@ const T = {
     welcome: "Du står på listen",
     welcomeText: "Takk for at du meldte deg på. Du får beskjed først om nye plagg og når de er tilgjengelige.",
     visit: "Gå til butikken",
+    newsletterShop: "Se kolleksjonen",
+    newsletterWhy: "Du får denne fordi du meldte deg på hos",
+    unsubscribe: "Meld deg av",
     testSubject: "Test-e-post – Flöra",
     test: "Det virker",
     testText: "Dette er en test-e-post fra Flöra-administrasjonen. Kan du lese dette, er e-post satt opp.",
@@ -193,6 +199,53 @@ export async function sendNewsletterWelcome(email: string, language: Lang): Prom
 export async function sendTestEmail(to: string, language: Lang = "en"): Promise<boolean> {
   const t = T[language];
   return sendMail({ to: [to], subject: t.testSubject, html: layout(t.test, p(t.testText)) });
+}
+
+export type NewsletterProduct = { name: string; priceOre: number; image?: string; href: string };
+export type Newsletter = {
+  subject: string;
+  title: string;
+  intro: string;
+  /** Full-width photo under the wordmark; omitted when there isn't one. */
+  heroImage?: string;
+  products: NewsletterProduct[];
+  shopUrl?: string;
+};
+
+/**
+ * A campaign mail — "New collection" and the like — in the shop's own look: wordmark, a photo, a
+ * serif title, a few lines, the pieces two across on the light box exactly as the product cards
+ * show them, one black button. Every recipient gets their own unsubscribe link (their subscriber
+ * id, which is a hash nobody can guess from the address).
+ */
+export async function sendNewsletter(to: { email: string; id: string; language: Lang }, mail: Newsletter): Promise<boolean> {
+  const t = T[to.language];
+  const base = siteUrl();
+  const card = (p: NewsletterProduct) =>
+    `<td width="50%" valign="top" style="padding:6px;">
+      <a href="${p.href}" style="text-decoration:none;color:#000000;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="background:#f7f7f7;padding:24px 12px;">
+          ${p.image ? `<img src="${p.image}?w=400&h=500&fit=fill&bg=f7f7f7&fm=jpg&q=80" alt="${esc(p.name)}" width="200" height="250" style="display:block;width:200px;height:250px;border:0;">` : `<div style="width:200px;height:250px;"></div>`}
+        </td></tr></table>
+        <p style="margin:12px 0 0 0;font-size:13.35px;color:#000000;">${esc(p.name)}</p>
+        <p style="margin:6px 0 0 0;font-size:13.35px;color:#000000;">${formatNok(p.priceOre)}</p>
+      </a>
+    </td>`;
+  const rows: string[] = [];
+  for (let i = 0; i < mail.products.length; i += 2) {
+    rows.push(`<tr>${card(mail.products[i])}${mail.products[i + 1] ? card(mail.products[i + 1]) : "<td></td>"}</tr>`);
+  }
+  const body =
+    (mail.heroImage ? `<img src="${mail.heroImage}" alt="" width="472" style="display:block;width:100%;max-width:472px;height:auto;border:0;margin:0 0 24px 0;">` : "") +
+    mail.intro
+      .split(/\n\s*\n/)
+      .map((para) => p(esc(para)))
+      .join("") +
+    (mail.products.length ? rule + `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 -6px;">${rows.join("")}</table>` : "") +
+    button(mail.shopUrl ?? `${base}/shop`, t.newsletterShop) +
+    rule +
+    `<p style="margin:0;font-size:11px;color:rgba(0,0,0,0.5);">${t.newsletterWhy} ${base.replace(/^https?:\/\//, "")}. <a href="${base}/newsletter/unsubscribe?id=${encodeURIComponent(to.id)}" style="color:rgba(0,0,0,0.5);">${t.unsubscribe}</a>.</p>`;
+  return sendMail({ to: [to.email], subject: mail.subject, html: layout(mail.title, body) });
 }
 
 /** Posten/Bring tracking for Norwegian parcels; other carriers get no link, just the number. */

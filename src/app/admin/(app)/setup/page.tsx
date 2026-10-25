@@ -1,4 +1,4 @@
-import { sendTestEmails } from "../actions";
+import { sendSampleNewsletter, sendTestEmails } from "../actions";
 import { Button, Card, Heading, Muted, Subheading, Tag } from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/admin/session";
 import { emailConfigured } from "@/lib/notify";
@@ -7,9 +7,9 @@ import { emailConfigured } from "@/lib/notify";
  * Every outside service the shop leans on, with whether it is connected and exactly what to paste
  * where if it isn't. Nothing here is secret: it only reports presence, never values.
  */
-export default async function SetupPage({ searchParams }: { searchParams: Promise<{ sent?: string; error?: string }> }) {
+export default async function SetupPage({ searchParams }: { searchParams: Promise<{ sent?: string; newsletter?: string; error?: string }> }) {
   const admin = await requireAdmin();
-  const { sent, error } = await searchParams;
+  const { sent, newsletter, error } = await searchParams;
   const stripeKey = process.env.STRIPE_SECRET_KEY ?? "";
   const stripeMode = stripeKey.startsWith("sk_live_") ? "live" : stripeKey.startsWith("sk_test_") ? "test" : "missing";
   const items: { title: string; ok: boolean; status: string; how: string[] }[] = [
@@ -64,6 +64,7 @@ export default async function SetupPage({ searchParams }: { searchParams: Promis
         <Heading>Setup</Heading>
         <Muted>What the shop is connected to. Keys live in Vercel, never here.</Muted>
         {sent && <Muted>Four test emails were sent to {sent} — a test note, an order confirmation, a shipping email and the newsletter welcome.</Muted>}
+        {newsletter && <Muted>A sample &quot;New collection&quot; newsletter was sent to {newsletter}.</Muted>}
         {error && (
           <p className="m-0 font-gotham text-paragraph text-[#b00020]" role="alert">
             {error}
@@ -87,9 +88,14 @@ export default async function SetupPage({ searchParams }: { searchParams: Promis
               </ol>
             )}
             {it.title.startsWith("Email") && emailConfigured() && (
-              <form action={sendTestEmails} className="md:max-w-[320px]">
-                <Button>Send test emails to {admin.email}</Button>
-              </form>
+              <div className="flex flex-col gap-[12px] md:max-w-[320px]">
+                <form action={sendTestEmails}>
+                  <Button>Send test emails to {admin.email}</Button>
+                </form>
+                <form action={sendSampleNewsletter}>
+                  <Button>Send a sample newsletter</Button>
+                </form>
+              </div>
             )}
           </Card>
         ))}
