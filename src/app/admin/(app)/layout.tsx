@@ -20,7 +20,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
       <AdminNav current={sectionOf(path)} email={admin.email} unread={unread} logo={logo} signOut={doSignOut} />
-      <main className="flex min-w-0 flex-1 flex-col gap-[42px] px-[24px] py-[42px] pb-[60px] md:px-[42px] md:pb-[120px]">{children}</main>
+      <main className="flex min-w-0 flex-1 flex-col gap-[42px] overflow-x-hidden px-[24px] py-[42px] pb-[60px] md:px-[42px] md:pb-[120px]">{children}</main>
     </div>
   );
 }

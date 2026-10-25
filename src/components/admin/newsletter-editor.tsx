@@ -231,7 +231,7 @@ export default function NewsletterEditor({ doc, products, subscribers, email, ma
   return (
     <div className="flex flex-col gap-[42px]">
       {/* Subject + actions */}
-      <section className="flex flex-col gap-[24px] md:max-w-[1200px]">
+      <section className="flex min-w-0 flex-col gap-[24px] md:max-w-[1200px]">
         <div className="flex flex-col gap-[12px] md:flex-row md:gap-[24px]">
           <label className="flex min-w-0 flex-1 flex-col gap-[6px]">
             <span className={SMALL_LABEL}>Subject line · English</span>
@@ -276,10 +276,10 @@ export default function NewsletterEditor({ doc, products, subscribers, email, ma
         )}
       </section>
 
-      <div className="grid gap-[42px] md:max-w-[1200px] md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:items-start">
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-[42px] md:max-w-[1200px] md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:items-start">
         {/* Blocks */}
-        <section className="flex flex-col gap-[12px]">
-          <div className="flex items-center justify-between gap-[12px]">
+        <section className="flex min-w-0 flex-col gap-[12px]">
+          <div className="flex flex-wrap items-center justify-between gap-[12px]">
             <h2 className="m-0 font-gotham text-paragraph text-black">Blocks</h2>
             <div className="flex items-center gap-[12px] font-gotham text-[11px]">
               {!sent && (
@@ -305,7 +305,7 @@ export default function NewsletterEditor({ doc, products, subscribers, email, ma
                 onDragEnd={() => { setDragging(null); setOver(null); }}
                 className={`border-[0.25px] border-black/25 bg-white transition-colors ${over === b.id && dragging?.id !== b.id ? "border-t-2 border-t-black bg-[#fafbfc]" : ""} ${dragging?.id === b.id ? "opacity-40" : ""}`}
               >
-                <div className="flex items-center gap-[12px] p-[12px] font-gotham text-paragraph text-black">
+                <div className="flex min-w-0 items-center gap-[12px] p-[12px] font-gotham text-paragraph text-black">
                   <span aria-hidden className={`select-none text-black/50 ${sent ? "" : "cursor-grab active:cursor-grabbing"}`}>⋮⋮</span>
                   <button type="button" onClick={() => setOpen(open === b.id ? null : b.id)} className="min-w-0 flex-1 truncate text-left">
                     <span>{BLOCK_LABELS[b.kind].label}</span>
@@ -360,7 +360,7 @@ export default function NewsletterEditor({ doc, products, subscribers, email, ma
           )}
 
           {!sent && id && (
-            <div className="mt-[30px] flex flex-col gap-[12px] border-[0.5px] border-black/25 p-[24px]">
+            <div className="mt-[30px] flex min-w-0 flex-col gap-[12px] border-[0.5px] border-black/25 p-[24px]">
               <h2 className="m-0 font-gotham text-paragraph text-black">Send to everyone</h2>
               <div className="h-px w-full bg-black/25" />
               <p className="m-0 font-gotham text-paragraph text-black/50">Goes to all {subscribers} subscribers, each in their own language, with their own unsubscribe link. Send yourself a test first.</p>
@@ -375,8 +375,8 @@ export default function NewsletterEditor({ doc, products, subscribers, email, ma
         </section>
 
         {/* Preview */}
-        <section className="flex flex-col gap-[12px] md:sticky md:top-[24px]">
-          <div className="flex items-center justify-between gap-[12px]">
+        <section className="flex min-w-0 flex-col gap-[12px] md:sticky md:top-[24px]">
+          <div className="flex flex-wrap items-center justify-between gap-[12px]">
             <h2 className="m-0 font-gotham text-paragraph text-black">Preview</h2>
             <div className="flex items-center gap-[12px] font-gotham text-paragraph">
               <Toggle value={lang} options={[["en", "EN"], ["no", "NO"]]} onChange={setLang} />
@@ -384,8 +384,8 @@ export default function NewsletterEditor({ doc, products, subscribers, email, ma
             </div>
           </div>
           <div className="h-px w-full bg-black/25" />
-          <div className="flex justify-center bg-[#f7f7f7] p-[12px]">
-            <iframe ref={frameRef} title="Newsletter preview" srcDoc={html} sandbox="allow-scripts" onLoad={() => tellPreview(open)} style={{ width, height: "78vh", maxWidth: "100%" }} className="border-0 bg-white shadow-[0_12px_40px_rgba(0,0,0,0.08)]" />
+          <div className="flex min-w-0 justify-center bg-[#f7f7f7] p-[12px]">
+            <iframe ref={frameRef} title="Newsletter preview" srcDoc={html} sandbox="allow-scripts" onLoad={() => tellPreview(open)} style={{ width: "100%", maxWidth: width, height: "78vh" }} className="border-0 bg-white shadow-[0_12px_40px_rgba(0,0,0,0.08)]" />
           </div>
         </section>
       </div>
