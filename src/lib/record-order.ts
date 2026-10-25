@@ -6,7 +6,7 @@ import { computeTotals } from "./pricing";
 import { orderReference } from "./money";
 import { getWriteClient } from "@/sanity/lib/write";
 
-export type RecordedLine = { name: string; quantity: number; unitPriceOre: number; size?: string; measurements: { label: string; value: string }[] };
+export type RecordedLine = { name: string; quantity: number; unitPriceOre: number; size?: string; measurements: { label: string; value: string }[]; /** First product photo, for the confirmation email. */ image?: string };
 export type RecordedOrder = {
   orderNumber: string;
   created: boolean;
@@ -38,12 +38,12 @@ export async function recordOrder(intent: Stripe.PaymentIntent): Promise<Recorde
   const language = m.lang === "no" ? "no" : "en";
 
   const lines = linesFromMetadata(m);
-  const productRows = await client.fetch<{ slug?: string; _id?: string; name?: string }[]>(
-    `*[_type == "product" && slug.current in $slugs]{ "slug": slug.current, _id, "name": name[_key == $lang][0].value }`,
+  const productRows = await client.fetch<{ slug?: string; _id?: string; name?: string; image?: string | null }[]>(
+    `*[_type == "product" && slug.current in $slugs]{ "slug": slug.current, _id, "name": name[_key == $lang][0].value, "image": images[0].asset->url }`,
     { slugs: lines.map((l) => l.id), lang: language },
   );
-  const products: Record<string, { _id: string; name: string }> = {};
-  for (const r of productRows) if (r.slug && r._id) products[r.slug] = { _id: r._id, name: r.name ?? r.slug };
+  const products: Record<string, { _id: string; name: string; image?: string }> = {};
+  for (const r of productRows) if (r.slug && r._id) products[r.slug] = { _id: r._id, name: r.name ?? r.slug, ...(r.image ? { image: r.image } : {}) };
 
   const recordedLines: RecordedLine[] = lines.map((l) => ({
     name: products[l.id]?.name ?? l.id,
@@ -51,6 +51,7 @@ export async function recordOrder(intent: Stripe.PaymentIntent): Promise<Recorde
     unitPriceOre: l.p,
     ...(l.s ? { size: l.s } : {}),
     measurements: l.measurements,
+    ...(products[l.id]?.image ? { image: products[l.id].image } : {}),
   }));
   const discountOre = Number(m.discount_ore ?? 0) || 0;
   const computed = computeTotals(

@@ -89,7 +89,7 @@ function layout(title: string, body: string) {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;"><tr><td align="center" style="padding:42px 24px;">
 <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;border:0.5px solid rgba(0,0,0,0.25);">
 <tr><td style="padding:24px;${sans}font-size:13.35px;line-height:1.4;color:#000000;">
-<p style="margin:0 0 24px 0;${serif}font-size:24px;line-height:1;letter-spacing:0.02em;">FLÖRA</p>
+<p style="margin:0 0 24px 0;"><img src="${siteUrl()}/email/flora-logo.png" alt="Flöra" width="134" height="30" style="display:block;width:134px;height:30px;border:0;"></p>
 <h1 style="margin:0 0 24px 0;${serif}font-size:32px;line-height:1;font-weight:400;">${esc(title)}</h1>
 ${body}
 </td></tr>
@@ -103,16 +103,23 @@ const row = (label: string, value: string, muted = false) =>
 const button = (href: string, label: string) =>
   `<p style="margin:24px 0 0 0;"><a href="${href}" style="display:inline-block;background:#000000;color:#ffffff;text-decoration:none;padding:12px 24px;font-size:13.35px;">${esc(label)}</a></p>`;
 
+/** A small product photo on the cart's light box, the whole photo visible (Sanity's image API does the fitting). */
+const thumb = (url: string) => `${url}?w=112&h=140&fit=fill&bg=f7f7f7&fm=jpg&q=80`;
+
 function linesTable(lines: RecordedLine[], t: (typeof T)[Lang]) {
+  const cell = "padding:8px 0;border-top:0.25px solid rgba(0,0,0,0.25);";
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${lines
     .map((l) => {
       const details = [
         ...(l.size ? [`${t.size}: ${esc(l.size)}`] : []),
         ...l.measurements.map((m) => `${esc(m.label)}: ${esc(m.value)} cm`),
       ];
-      return `<tr><td style="padding:6px 0;border-top:0.25px solid rgba(0,0,0,0.25);">${esc(l.name)} × ${l.quantity}${
+      const photo = l.image
+        ? `<td width="56" valign="top" style="${cell}padding-right:12px;"><img src="${thumb(l.image)}" alt="" width="56" height="70" style="display:block;width:56px;height:70px;background:#f7f7f7;border:0;"></td>`
+        : "";
+      return `<tr>${photo}<td valign="top" style="${cell}">${esc(l.name)} × ${l.quantity}${
         details.length ? `<br><span style="font-size:11px;color:rgba(0,0,0,0.5);">${details.join(" · ")}</span>` : ""
-      }</td><td align="right" valign="top" style="padding:6px 0;border-top:0.25px solid rgba(0,0,0,0.25);">${formatNok(l.unitPriceOre * l.quantity)}</td></tr>`;
+      }</td><td align="right" valign="top" style="${cell}">${formatNok(l.unitPriceOre * l.quantity)}</td></tr>`;
     })
     .join("")}</table>`;
 }

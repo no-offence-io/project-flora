@@ -433,6 +433,11 @@ export async function sendTestEmails() {
   const admin = await requireAdmin();
   const notify = await import("@/lib/notify");
   if (!notify.emailConfigured()) redirect(`/admin/setup?error=${encodeURIComponent("RESEND_API_KEY is not set.")}`);
+  // Real products, so the sample order looks like one of Ida's.
+  const sample = await adminClient().fetch<{ name?: string; priceOre?: number; image?: string }[]>(
+    `*[_type == "product" && visible != false] | order(_createdAt asc)[0...2]{ "name": name[_key == "en"][0].value, priceOre, "image": images[0].asset->url }`,
+  );
+  const [a, b] = [sample[0] ?? {}, sample[1] ?? sample[0] ?? {}];
   try {
     await notify.sendTestEmail(admin.email);
     await notify.sendOrderConfirmation({
@@ -440,8 +445,8 @@ export async function sendTestEmails() {
       language: "en",
       customer: { name: "Test Customer", email: admin.email, address: "Testveien 1, 0150 Oslo, Norway" },
       lines: [
-        { name: "Miss Flow top", quantity: 1, unitPriceOre: 89000, measurements: [{ label: "Bust", value: "88" }, { label: "Waist", value: "70" }, { label: "Hips", value: "94" }, { label: "Height", value: "170" }] },
-        { name: "Wrap skirt", quantity: 2, unitPriceOre: 129000, size: "M", measurements: [] },
+        { name: a.name ?? "Miss Flow top", quantity: 1, unitPriceOre: a.priceOre ?? 89000, image: a.image, measurements: [{ label: "Bust", value: "88" }, { label: "Waist", value: "70" }, { label: "Hips", value: "94" }, { label: "Height", value: "170" }] },
+        { name: b.name ?? "Wrap skirt", quantity: 2, unitPriceOre: b.priceOre ?? 129000, image: b.image, size: "M", measurements: [] },
       ],
       totals: { subtotalOre: 347000, discountOre: 34700, discountCode: "WELCOME10", shippingOre: 0, vatIncludedOre: 62460, totalOre: 312300 },
     });
