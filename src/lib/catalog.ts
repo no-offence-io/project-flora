@@ -23,7 +23,7 @@ const L = (field: string) => `coalesce(${field}[_key == $lang][0].value, ${field
 const IMG = (field: string) => `{ "src": ${field}.asset->url, "alt": ${L(`${field}.alt`)} }`;
 
 const PRODUCT_FIELDS = `
-  "slug": slug.current, category, "name": ${L("name")}, priceOre, compareAtPriceOre, stock, sizing, "sizes": sizes[]{ label, stock }, vintage,
+  "slug": slug.current, category, "name": name[_key == "en"][0].value, priceOre, compareAtPriceOre, stock, sizing, "sizes": sizes[]{ label, stock }, vintage, "gif": gif.asset->url,
   "description": ${L("description")},
   "colors": colors[]{ hex, "name": ${L("name")}, "image": ${IMG("image")} },
   "images": images[]${IMG("@")},
@@ -37,7 +37,7 @@ const PRODUCT_QUERY = defineQuery(`*[_type == "product" && slug.current == $slug
 type RawImage = { src?: string | null; alt?: string | null };
 type RawProduct = {
   slug: string; category?: string | null; name?: string | null; priceOre?: number | null; compareAtPriceOre?: number | null; stock?: number | null;
-  sizing?: string | null; sizes?: { label?: string | null; stock?: number | null }[] | null; vintage?: boolean | null;
+  sizing?: string | null; sizes?: { label?: string | null; stock?: number | null }[] | null; vintage?: boolean | null; gif?: string | null;
   description?: string | null;
   colors?: { hex?: string | null; name?: string | null; image?: RawImage | null }[] | null;
   images?: RawImage[] | null;
@@ -57,6 +57,7 @@ function toProduct(raw: RawProduct): Product {
     sizing: raw.sizing === "sizes" || raw.sizing === "none" ? raw.sizing : "measurements",
     sizes: (raw.sizes ?? []).filter((s) => s?.label).map((s) => ({ label: s.label!, stock: s.stock ?? 0 })),
     vintage: raw.vintage === true,
+    gif: raw.gif ?? undefined,
     description: raw.description ?? "",
     colors: (raw.colors ?? [])
       .filter((c) => c?.hex)

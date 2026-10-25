@@ -13,6 +13,7 @@ export const siteSettings = defineType({
     {name: 'footer', title: 'Footer'},
     {name: 'shop', title: 'Shop rules'},
     {name: 'sizing', title: 'Sizing'},
+    {name: 'brand', title: 'Brand'},
   ],
   fields: [
     defineField({name: 'siteName', title: 'Site name', type: 'string', group: 'general', initialValue: 'Flöra'}),
@@ -110,6 +111,29 @@ export const siteSettings = defineType({
             prepare: ({label}) => ({title: (Array.isArray(label) ? label.find((l) => l._key === 'en')?.value : undefined) ?? 'Measurement'}),
           },
         }),
+      ],
+    }),
+    defineField({
+      name: 'brand',
+      title: 'Brand',
+      description: 'Logo, fonts, sizes and colours for the whole site. Leave a field empty to keep the built-in design.',
+      type: 'object',
+      group: 'brand',
+      fields: [
+        defineField({
+          name: 'logo',
+          title: 'Logo',
+          description: 'White on transparent (SVG or PNG). The site darkens it where it sits on white.',
+          type: 'image',
+        }),
+        defineField({name: 'headingFont', title: 'Heading font', type: 'string'}),
+        defineField({name: 'bodyFont', title: 'Body font', type: 'string'}),
+        defineField({name: 'headingSizeDesktop', title: 'Heading size, desktop (px)', type: 'number', validation: (rule) => rule.min(16).max(160)}),
+        defineField({name: 'headingSizeMobile', title: 'Heading size, mobile (px)', type: 'number', validation: (rule) => rule.min(12).max(80)}),
+        defineField({name: 'bannerSize', title: 'Banner title size (px)', type: 'number', validation: (rule) => rule.min(16).max(200)}),
+        defineField({name: 'paragraphSize', title: 'Paragraph size (px)', type: 'number', validation: (rule) => rule.min(10).max(24)}),
+        defineField({name: 'backgroundColor', title: 'Background colour', description: 'Hex, e.g. #ffffff', type: 'string'}),
+        defineField({name: 'textColor', title: 'Text colour', description: 'Hex, e.g. #000000', type: 'string'}),
       ],
     }),
     defineField({

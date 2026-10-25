@@ -3,6 +3,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { Geist, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
+import { brandStyle, getBrand } from "@/lib/brand";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,12 +34,21 @@ export const metadata: Metadata = {
   openGraph: { siteName: "Flöra", type: "website", locale: "en_GB", alternateLocale: ["nb_NO"] },
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Settings → Brand can swap fonts, sizes and colours; it does so by overriding the variables the
+  // stylesheet already uses, so nothing else has to know.
+  const { style, fontHref } = brandStyle(await getBrand());
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${gotham.variable} ${americana.variable} h-full antialiased`}
+      style={style as React.CSSProperties}
     >
+      {fontHref && (
+        <head>
+          <link rel="stylesheet" href={fontHref} />
+        </head>
+      )}
       {/* Only fonts and global styles live here; each area (shop, admin, account) brings its own chrome in its own layout. */}
       <body className="min-h-full flex flex-col">
         {children}

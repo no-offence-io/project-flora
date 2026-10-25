@@ -50,6 +50,76 @@ export type LocalizedImage = {
   alt?: InternationalizedArrayString;
 };
 
+export type Notification = {
+  _id: string;
+  _type: "notification";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  kind?: "error" | "warning" | "info";
+  title?: string;
+  detail?: string;
+  source?: string;
+  href?: string;
+  createdAt?: string;
+  readAt?: string;
+};
+
+export type Post = {
+  _id: string;
+  _type: "post";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  title?: InternationalizedArrayString;
+  slug?: Slug;
+  date?: string;
+  image?: LocalizedImage;
+  intro?: InternationalizedArrayText;
+  body?: InternationalizedArraySimpleBlockContent;
+  published?: boolean;
+};
+
+export type InternationalizedArraySimpleBlockContent = Array<
+  {
+    _key: string;
+  } & InternationalizedArraySimpleBlockContentValue
+>;
+
+export type InternationalizedArrayText = Array<
+  {
+    _key: string;
+  } & InternationalizedArrayTextValue
+>;
+
+export type Slug = {
+  _type: "slug";
+  current?: string;
+  source?: string;
+};
+
+export type InternationalizedArrayString = Array<
+  {
+    _key: string;
+  } & InternationalizedArrayStringValue
+>;
+
+export type Newsletter = {
+  _id: string;
+  _type: "newsletter";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  title?: string;
+  subjectEn?: string;
+  subjectNo?: string;
+  blocks?: string;
+  status?: "draft" | "sent";
+  testSentAt?: string;
+  sentAt?: string;
+  sentCount?: number;
+};
+
 export type Subscriber = {
   _id: string;
   _type: "subscriber";
@@ -93,18 +163,6 @@ export type VintagePage = {
   emptyText?: InternationalizedArrayText;
 };
 
-export type InternationalizedArrayText = Array<
-  {
-    _key: string;
-  } & InternationalizedArrayTextValue
->;
-
-export type InternationalizedArrayString = Array<
-  {
-    _key: string;
-  } & InternationalizedArrayStringValue
->;
-
 export type AboutPage = {
   _id: string;
   _type: "aboutPage";
@@ -116,12 +174,6 @@ export type AboutPage = {
   body?: InternationalizedArraySimpleBlockContent;
   image?: LocalizedImage;
 };
-
-export type InternationalizedArraySimpleBlockContent = Array<
-  {
-    _key: string;
-  } & InternationalizedArraySimpleBlockContentValue
->;
 
 export type PolicyPage = {
   _id: string;
@@ -180,7 +232,40 @@ export type SiteSettings = {
     _type: "measurementField";
     _key: string;
   }>;
+  brand?: {
+    logo?: {
+      asset?: SanityImageAssetReference;
+      media?: unknown;
+      hotspot?: SanityImageHotspot;
+      crop?: SanityImageCrop;
+      _type: "image";
+    };
+    headingFont?: string;
+    bodyFont?: string;
+    headingSizeDesktop?: number;
+    headingSizeMobile?: number;
+    bannerSize?: number;
+    paragraphSize?: number;
+    backgroundColor?: string;
+    textColor?: string;
+  };
   sizeGuide?: InternationalizedArrayText;
+};
+
+export type SanityImageCrop = {
+  _type: "sanity.imageCrop";
+  top?: number;
+  bottom?: number;
+  left?: number;
+  right?: number;
+};
+
+export type SanityImageHotspot = {
+  _type: "sanity.imageHotspot";
+  x?: number;
+  y?: number;
+  height?: number;
+  width?: number;
 };
 
 export type SanityFileAssetReference = {
@@ -300,6 +385,11 @@ export type Product = {
       _key: string;
     } & LocalizedImage
   >;
+  gif?: {
+    asset?: SanityFileAssetReference;
+    media?: unknown;
+    _type: "file";
+  };
   colors?: Array<{
     name?: InternationalizedArrayString;
     hex?: string;
@@ -316,28 +406,6 @@ export type Product = {
     _type: "spec";
     _key: string;
   }>;
-};
-
-export type SanityImageCrop = {
-  _type: "sanity.imageCrop";
-  top?: number;
-  bottom?: number;
-  left?: number;
-  right?: number;
-};
-
-export type SanityImageHotspot = {
-  _type: "sanity.imageHotspot";
-  x?: number;
-  y?: number;
-  height?: number;
-  width?: number;
-};
-
-export type Slug = {
-  _type: "slug";
-  current?: string;
-  source?: string;
 };
 
 export type InternationalizedArraySimpleBlockContentValue = {
@@ -459,24 +527,27 @@ export type AllSanitySchemaTypes =
   | SimpleBlockContent
   | SanityImageAssetReference
   | LocalizedImage
+  | Notification
+  | Post
+  | InternationalizedArraySimpleBlockContent
+  | InternationalizedArrayText
+  | Slug
+  | InternationalizedArrayString
+  | Newsletter
   | Subscriber
   | Discount
   | VintagePage
-  | InternationalizedArrayText
-  | InternationalizedArrayString
   | AboutPage
-  | InternationalizedArraySimpleBlockContent
   | PolicyPage
   | FaqItem
   | SiteSettings
+  | SanityImageCrop
+  | SanityImageHotspot
   | SanityFileAssetReference
   | HomePage
   | ProductReference
   | Order
   | Product
-  | SanityImageCrop
-  | SanityImageHotspot
-  | Slug
   | InternationalizedArraySimpleBlockContentValue
   | InternationalizedArrayTextValue
   | InternationalizedArrayStringValue
@@ -488,6 +559,43 @@ export type AllSanitySchemaTypes =
   | SanityAssetSourceData
   | SanityImageAsset
   | Geopoint;
+
+// Source: ../src/lib/brand.ts
+// Variable: BRAND_QUERY
+// Query: *[_id == "siteSettings"][0].brand{ "logo": logo.asset->url, headingFont, bodyFont, headingSizeDesktop, headingSizeMobile, bannerSize, paragraphSize, backgroundColor, textColor }
+export type BRAND_QUERY_RESULT = null | {
+  logo: string | null;
+  headingFont: string | null;
+  bodyFont: string | null;
+  headingSizeDesktop: number | null;
+  headingSizeMobile: number | null;
+  bannerSize: number | null;
+  paragraphSize: number | null;
+  backgroundColor: string | null;
+  textColor: string | null;
+};
+
+// Source: ../src/lib/catalog.ts
+// Variable: SHIPS_TO_QUERY
+// Query: *[_id == "siteSettings"][0].shipsTo
+export type SHIPS_TO_QUERY_RESULT = Array<string> | null;
+
+// Source: ../src/lib/catalog.ts
+// Variable: SIZING_QUERY
+// Query: *[_id == "siteSettings"][0]{ "fields": measurementFields[]{ "label": coalesce(label[_key == $lang][0].value, label[_key == "en"][0].value), "hint": coalesce(hint[_key == $lang][0].value, hint[_key == "en"][0].value) }, "sizeGuide": coalesce(sizeGuide[_key == $lang][0].value, sizeGuide[_key == "en"][0].value) }
+export type SIZING_QUERY_RESULT =
+  | {
+      fields: null;
+      sizeGuide: null;
+    }
+  | {
+      fields: Array<{
+        label: string | null;
+        hint: string | null;
+      }> | null;
+      sizeGuide: string | null;
+    }
+  | null;
 
 // Source: ../src/lib/catalog.ts
 // Variable: POLICY_QUERY
@@ -531,6 +639,9 @@ export type SETTINGS_QUERY_RESULT =
 // Query TypeMap
 declare global {
   interface SanityQueries {
+    '*[_id == "siteSettings"][0].brand{ "logo": logo.asset->url, headingFont, bodyFont, headingSizeDesktop, headingSizeMobile, bannerSize, paragraphSize, backgroundColor, textColor }': BRAND_QUERY_RESULT;
+    '*[_id == "siteSettings"][0].shipsTo': SHIPS_TO_QUERY_RESULT;
+    '*[_id == "siteSettings"][0]{ "fields": measurementFields[]{ "label": coalesce(label[_key == $lang][0].value, label[_key == "en"][0].value), "hint": coalesce(hint[_key == $lang][0].value, hint[_key == "en"][0].value) }, "sizeGuide": coalesce(sizeGuide[_key == $lang][0].value, sizeGuide[_key == "en"][0].value) }': SIZING_QUERY_RESULT;
     '*[_type == "policyPage" && page == $page][0]{ "title": coalesce(title[_key == $lang][0].value, title[_key == "en"][0].value), "intro": coalesce(intro[_key == $lang][0].value, intro[_key == "en"][0].value), "body": coalesce(body[_key == $lang][0].value, body[_key == "en"][0].value) }': POLICY_QUERY_RESULT;
     '*[_id == "siteSettings"][0]{ siteName, "announcement": coalesce(announcement[_key == $lang][0].value, announcement[_key == "en"][0].value), "signUpTitle": coalesce(signUpTitle[_key == $lang][0].value, signUpTitle[_key == "en"][0].value), "signUpText": coalesce(signUpText[_key == $lang][0].value, signUpText[_key == "en"][0].value), "signUpButton": coalesce(signUpButton[_key == $lang][0].value, signUpButton[_key == "en"][0].value), "footerText": coalesce(footerText[_key == $lang][0].value, footerText[_key == "en"][0].value), instagram, contactEmail, "signUpImage": signUpImage.asset->url, "footerImage": footerImage.asset->url }': SETTINGS_QUERY_RESULT;
   }

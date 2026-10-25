@@ -13,7 +13,13 @@
   --font-mono: var(--font-geist-mono);
   --font-gotham: var(--font-gotham);
   --font-americana: var(--font-americana);
+}
 
+/*
+ * Not inline: these utilities reference the variables, so Site settings → Brand can override the
+ * sizes on <html> at request time and every text-* utility follows.
+ */
+@theme {
   /*
    * Typography ruleset from the Figma "Health" library text styles.
    * Use these `text-*` utilities instead of raw pixel sizes.
@@ -88,4 +94,17 @@ body:has(.coming-soon-gate) {
   .rollover__c {
     transition: none;
   }
+}
+
+/* The clear cross in search fields: the browser draws it in its own accent blue; ours is black. */
+input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  margin-left: 6px;
+  cursor: pointer;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1 1l8 8M9 1L1 9' stroke='black' stroke-width='1.2' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1 1l8 8M9 1L1 9' stroke='black' stroke-width='1.2' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
 }

@@ -50,6 +50,7 @@ const en = {
   "status.paid": "Paid – being made", "status.shipped": "Shipped", "status.delivered": "Delivered", "status.refunded": "Refunded", "status.cancelled": "Cancelled",
   "notFound.title": "Page not found", "notFound.text": "The page you were looking for doesn't exist or has moved.", "notFound.back": "Back to the front page",
   "error.title": "Something went wrong", "error.text": "An unexpected error occurred. Please try again.", "error.retry": "Try again",
+  "meta.journal": "Journal – Flöra", "journal.title": "Journal", "journal.empty": "Nothing written yet.", "footer.journal": "Journal",
   "newsletter.unsubscribeTitle": "Unsubscribe – Flöra", "newsletter.unsubscribed": "You're unsubscribed", "newsletter.unsubscribedText": "You won't get any more newsletters from us. You can sign up again any time at the bottom of the shop.",
   "newsletter.unsubscribeFailed": "That link didn't work", "newsletter.unsubscribeFailedText": "The unsubscribe link looks incomplete. Reply to the newsletter and we'll take you off the list by hand.",
 } as const;
@@ -101,6 +102,7 @@ const no: Record<Key, string> = {
   "status.paid": "Betalt – sys nå", "status.shipped": "Sendt", "status.delivered": "Levert", "status.refunded": "Refundert", "status.cancelled": "Kansellert",
   "notFound.title": "Siden finnes ikke", "notFound.text": "Siden du lette etter finnes ikke eller er flyttet.", "notFound.back": "Tilbake til forsiden",
   "error.title": "Noe gikk galt", "error.text": "Det oppstod en uventet feil. Prøv igjen.", "error.retry": "Prøv igjen",
+  "meta.journal": "Journal – Flöra", "journal.title": "Journal", "journal.empty": "Ingenting skrevet ennå.", "footer.journal": "Journal",
   "newsletter.unsubscribeTitle": "Meld deg av – Flöra", "newsletter.unsubscribed": "Du er meldt av", "newsletter.unsubscribedText": "Du får ikke flere nyhetsbrev fra oss. Du kan melde deg på igjen når som helst nederst i butikken.",
   "newsletter.unsubscribeFailed": "Lenken virket ikke", "newsletter.unsubscribeFailedText": "Avmeldingslenken ser ufullstendig ut. Svar på nyhetsbrevet, så tar vi deg av listen manuelt.",
 };

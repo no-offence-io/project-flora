@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { deleteProduct, saveProduct } from "@/app/admin/(app)/actions";
+import { deleteProduct, makeGif, removeGif, saveProduct } from "@/app/admin/(app)/actions";
 import { ImageField } from "@/components/admin/media-field";
 import { Bilingual, Button, Card, Checkbox, Input, Labelled, Muted, Select, Subheading } from "@/components/admin/ui";
 import { getText, type LocalizedString } from "@/lib/admin/localized";
@@ -18,6 +18,8 @@ export type ProductDoc = {
   images?: { _key: string; asset?: { _ref: string }; url?: string }[];
   sizing?: string;
   sizes?: { _key: string; label?: string; stock?: number }[];
+  gif?: string | null;
+  gifSources?: string[];
   vintage?: boolean;
   colors?: { _key: string; name?: LocalizedString; hex?: string; image?: { _ref: string; url: string } | null }[];
   specs?: { _key: string; label?: LocalizedString; value?: LocalizedString; emphasis?: boolean; expandable?: boolean; hideOnMobile?: boolean }[];
@@ -28,6 +30,8 @@ export const PRODUCT_ADMIN_PROJECTION = `{
   ...,
   "images": images[]{ _key, asset, "url": asset->url },
   "sizes": sizes[]{ _key, label, stock },
+  "gif": gif.asset->url,
+  "gifSources": array::compact([images[0].asset->url] + colors[].image.asset->url),
   "colors": colors[]{ _key, name, hex, "image": select(defined(image.asset) => { "_ref": image.asset._ref, "url": image.asset->url }) },
   "specs": specs[]{ _key, label, value, emphasis, expandable, hideOnMobile }
 }`;
@@ -53,7 +57,9 @@ export default function ProductForm({ product }: { product: ProductDoc | null })
           <Subheading>Name & description</Subheading>
           <div className="h-px w-full bg-black/25" />
           <div className="flex flex-col gap-[24px]">
-            <Bilingual name="name" label="Name" en={getText(p?.name, "en")} no={getText(p?.name, "no")} required />
+            <Labelled label="Name" hint="Product names are always in English — the same on the Norwegian site.">
+              <Input name="name.en" defaultValue={getText(p?.name, "en")} required />
+            </Labelled>
             <Labelled label="Web address" hint="Lowercase letters, numbers and dashes, e.g. wrap-skirt. Changing it breaks old links.">
               <Input name="slug" defaultValue={p?.slug?.current ?? ""} required pattern="[a-z0-9-]+" />
             </Labelled>
@@ -127,6 +133,28 @@ export default function ProductForm({ product }: { product: ProductDoc | null })
           <Labelled label="Add photos" hint="JPG or PNG, up to 15 MB each. The first photo is the one shown in the shop.">
             <input type="file" name="newImages" accept="image/*" multiple className="font-gotham text-paragraph file:mr-[12px] file:border file:border-black/20 file:bg-transparent file:px-[12px] file:py-[8px] file:font-gotham file:text-paragraph file:text-black" />
           </Labelled>
+        </Card>
+
+        <Card>
+          <Subheading>Animated GIF</Subheading>
+          <div className="h-px w-full bg-black/25" />
+          <Muted>For newsletters: the main photo and the colour photos cross-fade (with one photo, a slow zoom). Made here from the photos above — save the product first if you just added photos.</Muted>
+          {p?.gif ? (
+            <div className="flex flex-col gap-[12px]">
+              {/* A GIF must bypass the optimiser, which would freeze it to its first frame. */}
+              <Image src={p.gif} alt="" width={240} height={300} unoptimized className="h-auto w-[240px] border-[0.25px] border-black/25" />
+              <div className="flex gap-[12px]">
+                <button type="submit" formAction={makeGif} className="font-gotham text-paragraph text-black underline hover:opacity-70 transition-opacity">Make it again</button>
+                <button type="submit" formAction={removeGif} className="font-gotham text-paragraph text-black/50 underline hover:text-black transition-colors">Remove</button>
+              </div>
+            </div>
+          ) : p ? (
+            <button type="submit" formAction={makeGif} disabled={(p.gifSources ?? []).length === 0} className="flex w-full items-center justify-center bg-black p-[12px] font-gotham text-paragraph text-white disabled:cursor-not-allowed disabled:opacity-50 md:max-w-[320px]">
+              Make a GIF from {(p.gifSources ?? []).length} photo{(p.gifSources ?? []).length === 1 ? "" : "s"}
+            </button>
+          ) : (
+            <Muted>Create the product first.</Muted>
+          )}
         </Card>
 
         <Card>

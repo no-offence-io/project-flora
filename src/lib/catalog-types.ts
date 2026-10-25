@@ -34,6 +34,8 @@ export type Product = {
   sizes: ProductSize[];
   /** One-of-a-kind pieces shown on the Vintage page instead of the shop. */
   vintage: boolean;
+  /** Animated GIF made in the admin, for newsletters. */
+  gif?: string;
   /** Unit price in øre (1/100 NOK), VAT included. Never sent from the client — checkout re-reads it. */
   priceOre: number;
   /** Previous price in øre for sale items. */

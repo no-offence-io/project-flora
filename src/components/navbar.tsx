@@ -6,6 +6,7 @@ import LanguageSwitch from "./language-switch";
 import { getLanguage } from "@/lib/language";
 import { getT } from "@/lib/i18n-server";
 import RolloverText from "./rollover-text";
+import { getLogoSrc } from "@/lib/brand";
 
 export const NAV_LINKS = [
   { key: "nav.shop", href: "/shop" },
@@ -19,6 +20,7 @@ export const NAV_LINKS = [
  * `tone="dark"` is black-on-white for content pages; `tone="light"` is white for photo backgrounds.
  */
 export default async function Navbar({ tone = "dark", className = "" }: { tone?: "dark" | "light"; className?: string }) {
+  const logo = await getLogoSrc();
   const lang = await getLanguage();
   const t = await getT();
   const color = tone === "dark" ? "text-black" : "text-white";
@@ -30,7 +32,7 @@ export default async function Navbar({ tone = "dark", className = "" }: { tone?:
       <div className="flex items-start justify-between p-[24px] md:hidden">
         <Link href="/" aria-label="Flöra home">
           <Image
-            src="/footer/flora-logo.svg"
+            src={logo}
             alt="Flöra"
             width={486.544}
             height={109.193}
@@ -48,7 +50,7 @@ export default async function Navbar({ tone = "dark", className = "" }: { tone?:
       <div className="hidden items-center justify-between px-[42px] py-[12px] md:flex">
         <Link href="/" aria-label="Flöra home">
           <Image
-            src="/footer/flora-logo.svg"
+            src={logo}
             alt="Flöra"
             width={486.544}
             height={109.193}

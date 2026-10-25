@@ -1,7 +1,8 @@
 import { saveSettings } from "../actions";
-import { Bilingual, Button, Card, Checkbox, Heading, Input, Labelled, Muted, Subheading, Textarea } from "@/components/admin/ui";
+import { Bilingual, Button, Card, Checkbox, Heading, Input, Labelled, Muted, Select, Subheading, Textarea } from "@/components/admin/ui";
 import { ImageField } from "@/components/admin/media-field";
 import { getText, type LocalizedString } from "@/lib/admin/localized";
+import { FONTS } from "@/lib/brand-shared";
 import { adminClient, oreToKroner } from "@/lib/admin/sanity";
 
 type Settings = {
@@ -12,13 +13,15 @@ type Settings = {
   sizeGuide?: LocalizedString;
   shippingZones?: { _key: string; name?: string; countries?: string[]; shippingOre?: number; freeShippingFromOre?: number | null }[];
   shipsTo?: string[];
+  brand?: { logo?: Pic; headingFont?: string; bodyFont?: string; headingSizeDesktop?: number; headingSizeMobile?: number; bannerSize?: number; paragraphSize?: number; backgroundColor?: string; textColor?: string };
 };
 type Pic = { _ref: string; url: string } | null;
 const PIC = (f: string) => `"${f}": select(defined(${f}.asset) => { "_ref": ${f}.asset._ref, "url": ${f}.asset->url })`;
 
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
   const { saved } = await searchParams;
-  const s = (await adminClient().fetch<Settings | null>(`*[_id == "siteSettings"][0]{ ..., ${PIC("signUpImage")}, ${PIC("footerImage")} }`)) ?? {};
+  const s = (await adminClient().fetch<Settings | null>(`*[_id == "siteSettings"][0]{ ..., ${PIC("signUpImage")}, ${PIC("footerImage")}, "brand": { ...brand, ${PIC("logo").replace('"logo"', '"logo"').replace("logo.asset", "brand.logo.asset")} } }`)) ?? {};
+  const b = s.brand ?? {};
   const measureSlots = [...(s.measurementFields ?? []), null];
   const zoneSlots = [...(s.shippingZones ?? []), null];
   return (
@@ -36,6 +39,51 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <Bilingual name="announcement" label="Announcement bar (leave empty to hide)" en={getText(s.announcement, "en")} no={getText(s.announcement, "no")} />
           </div>
         </Card>
+        <Card>
+          <Subheading>Brand</Subheading>
+          <div className="h-px w-full bg-black/25" />
+          <Muted>The look of the whole site. Leave a field empty to keep the built-in design (Americana headings, Gotham text, 60/24px headings, 13.35px paragraphs, black on white).</Muted>
+          <ImageField name="brandLogo" label="Logo" hint="White on a transparent background, SVG or PNG. The site darkens it where it sits on white." current={b.logo} />
+          <div className="flex flex-col gap-[24px] md:flex-row">
+            <Labelled label="Heading font" className="flex-1">
+              <Select name="headingFont" defaultValue={b.headingFont ?? ""}>
+                <option value="">Built-in (Americana)</option>
+                {Object.entries(FONTS).map(([key, f]) => (
+                  <option key={key} value={key}>{f.label}</option>
+                ))}
+              </Select>
+            </Labelled>
+            <Labelled label="Text font" className="flex-1">
+              <Select name="bodyFont" defaultValue={b.bodyFont ?? ""}>
+                <option value="">Built-in (Gotham)</option>
+                {Object.entries(FONTS).map(([key, f]) => (
+                  <option key={key} value={key}>{f.label}</option>
+                ))}
+              </Select>
+            </Labelled>
+          </div>
+          <div className="grid grid-cols-2 gap-[12px] md:grid-cols-4 md:gap-[24px]">
+            <Labelled label="Heading, desktop (px)"><Input name="headingSizeDesktop" inputMode="decimal" defaultValue={b.headingSizeDesktop ?? ""} placeholder="60" /></Labelled>
+            <Labelled label="Heading, mobile (px)"><Input name="headingSizeMobile" inputMode="decimal" defaultValue={b.headingSizeMobile ?? ""} placeholder="24" /></Labelled>
+            <Labelled label="Banner title (px)"><Input name="bannerSize" inputMode="decimal" defaultValue={b.bannerSize ?? ""} placeholder="80" /></Labelled>
+            <Labelled label="Paragraph (px)"><Input name="paragraphSize" inputMode="decimal" defaultValue={b.paragraphSize ?? ""} placeholder="13.35" /></Labelled>
+          </div>
+          <div className="flex flex-col gap-[24px] md:flex-row">
+            <Labelled label="Background colour" hint="Hex, e.g. #ffffff" className="flex-1">
+              <div className="flex items-center gap-[12px]">
+                <span aria-hidden className="h-[24px] w-[24px] shrink-0 rounded-full border border-black/20" style={{ backgroundColor: b.backgroundColor ?? "#ffffff" }} />
+                <Input name="backgroundColor" defaultValue={b.backgroundColor ?? ""} placeholder="#ffffff" pattern="#([0-9a-fA-F]{3}){1,2}" />
+              </div>
+            </Labelled>
+            <Labelled label="Text colour" hint="Hex, e.g. #000000" className="flex-1">
+              <div className="flex items-center gap-[12px]">
+                <span aria-hidden className="h-[24px] w-[24px] shrink-0 rounded-full border border-black/20" style={{ backgroundColor: b.textColor ?? "#000000" }} />
+                <Input name="textColor" defaultValue={b.textColor ?? ""} placeholder="#000000" pattern="#([0-9a-fA-F]{3}){1,2}" />
+              </div>
+            </Labelled>
+          </div>
+        </Card>
+
         <Card>
           <Subheading>Sign-up banner</Subheading>
           <div className="h-px w-full bg-black/25" />

@@ -3,11 +3,12 @@ import Link from "next/link";
 import CartLink from "./cart-link";
 import HeroVideo from "./hero-video";
 import { BurgerButton } from "./nav-menu";
+import { getLogoSrc } from "@/lib/brand";
 
 const INTRO =
   "FLÖRA is natural fabrics, honest production, and respect the bodies wearing them. Everything about FLÖRA will be 100% transparent, we won’t hide anything. We are far from perfect, but we are honest. So you will know exactly what you’re getting.";
 
-export default function FrontHeroMobile({
+export default async function FrontHeroMobile({
   parallax = true,
   className = "",
   videoSrc = "/hero/front-hero-720.mp4",
@@ -17,6 +18,7 @@ export default function FrontHeroMobile({
   videoSrc?: string;
   className?: string;
 }) {
+  const logo = await getLogoSrc();
   return (
     <section
       className={`full-bleed relative flex h-screen flex-col items-center justify-between overflow-hidden p-[24px] text-white ${className}`}
@@ -37,7 +39,7 @@ export default function FrontHeroMobile({
       <header className="relative flex w-full items-start justify-between">
         <Link href="/" aria-label="Flöra home">
           <Image
-            src="/footer/flora-logo.svg"
+            src={logo}
             alt="Flöra"
             width={486.544}
             height={109.193}

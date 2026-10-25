@@ -4,6 +4,7 @@ import { sendOrderConfirmation } from "@/lib/notify";
 import { getStripe } from "@/lib/stripe";
 import { recordOrder } from "@/lib/record-order";
 import { getWriteClient } from "@/sanity/lib/write";
+import { notice } from "@/lib/notices";
 
 /**
  * Stripe → us. This is the only place an order is ever created: the success page displays state,
@@ -46,7 +47,13 @@ export async function POST(req: Request) {
       // The order document in Sanity is the record; it is written first and is the unique key.
       // If this throws (say SANITY_TOKEN is missing on the server), the 500 below makes Stripe
       // retry for days, and the retry succeeds once the server is fixed — nothing is lost.
-      const order = await recordOrder(intent);
+      let order;
+      try {
+        order = await recordOrder(intent);
+      } catch (err) {
+        await notice({ kind: "error", source: "payments", title: `A payment came in but the order could not be recorded (${intent.id})`, detail: err instanceof Error ? err.message : String(err), href: "/admin/orders", dedupeKey: `record:${intent.id}` });
+        throw err; // 500 → Stripe retries
+      }
       const { orderNumber, created } = order;
       if (!created) break; // a retry or replay: the order, and its stock, are already recorded
 
@@ -62,12 +69,15 @@ export async function POST(req: Request) {
         if (sent) await getWriteClient().patch(order.docId).set({ confirmationSentAt: new Date().toISOString() }).commit();
       } catch (err) {
         console.error(`[order ${orderNumber}] confirmation email failed`, err);
+        await notice({ kind: "error", source: "email", title: `Confirmation email for ${orderNumber} failed`, detail: err instanceof Error ? err.message : String(err), href: `/admin/orders/${order.docId}`, dedupeKey: `confirm:${orderNumber}` });
       }
+      await notice({ kind: "info", source: "orders", title: `New order ${orderNumber} · ${(order.totals.totalOre / 100).toLocaleString("nb-NO")} kr`, detail: `${order.customer.name} · ${order.lines.map((l) => `${l.quantity} × ${l.name}`).join(", ")}`, href: `/admin/orders/${order.docId}`, dedupeKey: `order:${orderNumber}` });
       break;
     }
     case "payment_intent.payment_failed": {
       const intent = event.data.object;
       console.warn(`[payment failed] ${intent.id}: ${intent.last_payment_error?.message ?? "unknown reason"}`);
+      await notice({ kind: "warning", source: "payments", title: "A payment attempt failed", detail: `${intent.receipt_email ?? intent.metadata.customer_email ?? "unknown customer"}: ${intent.last_payment_error?.message ?? "unknown reason"}`, dedupeKey: `failed:${intent.id}` });
       break;
     }
     default:

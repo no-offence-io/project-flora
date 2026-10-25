@@ -1,50 +1,77 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import { signOut } from "@/auth";
+import { useState } from "react";
+import { GROUPS } from "./nav-links";
 
-const LINKS = [
-  { label: "Dashboard", href: "/admin" },
-  { label: "Orders", href: "/admin/orders" },
-  { label: "Products", href: "/admin/products" },
-  { label: "Codes", href: "/admin/discounts" },
-  { label: "Pages", href: "/admin/pages" },
-  { label: "Media", href: "/admin/media" },
-  { label: "Settings", href: "/admin/settings" },
-  { label: "Setup", href: "/admin/setup" },
-];
-
-/**
- * The shop's navbar, reduced: wordmark left, the section links as the checkout-steps line (current
- * one black, the rest 50% black), and sign-out where the cart link would be.
+/*
+ * The admin's sidebar: the wordmark, the sections in small groups, sign-out at the bottom. On
+ * desktop it is a fixed 220px column; on phones it folds behind a "Menu" line at the top. Same
+ * type as the shop's navbar — Gotham, 13.35px, black for the current page and 50% for the rest.
  */
-export default function AdminNav({ current, email }: { current: string; email: string }) {
+export default function AdminNav({ current, email, unread = 0, logo, signOut }: { current: string; email: string; unread?: number; logo: string; signOut: () => Promise<void> }) {
+  const [open, setOpen] = useState(false);
+  const currentLabel = GROUPS.flatMap((g) => g.links).find((l) => l.href === current)?.label ?? "Dashboard";
+
+  const list = (
+    <nav aria-label="Admin" className="flex flex-col gap-[24px] font-gotham text-paragraph">
+      {GROUPS.map((g) => (
+        <div key={g.title} className="flex flex-col gap-[6px]">
+          <span className="text-[11px] leading-normal tracking-[0.2em] uppercase text-black/50">{g.title}</span>
+          <ul className="m-0 flex list-none flex-col gap-[6px] p-0">
+            {g.links.map((link) => {
+              const active = link.href === current;
+              return (
+                <li key={link.href}>
+                  <Link href={link.href} aria-current={active ? "page" : undefined} onClick={() => setOpen(false)} className={`flex items-center justify-between gap-[12px] hover:opacity-70 transition-opacity ${active ? "text-black" : "text-black/50"}`}>
+                    <span>{link.label}</span>
+                    {link.href === "/admin/notifications" && unread > 0 && <span className="border-[0.5px] border-black px-[4px] py-[1px] text-[11px] text-black">{unread}</span>}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+    </nav>
+  );
+
   return (
-    <header className="flex flex-col gap-[24px] px-[24px] pt-[24px] text-black md:flex-row md:items-center md:justify-between md:px-[42px] md:py-[12px]">
-      <Link href="/admin" aria-label="Flöra admin">
-        <Image src="/footer/flora-logo.svg" alt="Flöra" width={486.544} height={109.193} className="h-[20px] w-[89px] invert" />
-      </Link>
-      <nav aria-label="Admin" className="font-gotham text-paragraph whitespace-nowrap">
-        {LINKS.map((link, i) => (
-          <span key={link.href}>
-            <Link href={link.href} aria-current={link.href === current ? "page" : undefined} className={`hover:opacity-70 transition-opacity ${link.href === current ? "text-black" : "text-black/50"}`}>
-              {link.label}
-            </Link>
-            {i < LINKS.length - 1 && " – "}
-          </span>
-        ))}
-      </nav>
-      <form
-        action={async () => {
-          "use server";
-          await signOut({ redirectTo: "/admin/login" });
-        }}
-        className="flex items-center gap-[12px] font-gotham text-paragraph"
-      >
-        <span className="text-black/50">{email}</span>
-        <button type="submit" className="text-black underline hover:opacity-70 transition-opacity">
-          Sign out
-        </button>
-      </form>
-    </header>
+    <>
+      {/* Phone: one line, tap for the list */}
+      <header className="flex flex-col gap-[12px] px-[24px] pt-[24px] text-black md:hidden">
+        <div className="flex items-center justify-between">
+          <Link href="/admin" aria-label="Flöra admin">
+            <Image src={logo} alt="Flöra" width={486.544} height={109.193} className="h-[20px] w-[89px] invert" />
+          </Link>
+          <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)} className="font-gotham text-paragraph text-black">
+            {open ? "Close" : `Menu · ${currentLabel}`}
+            {!open && unread > 0 && <span className="ml-[6px] border-[0.5px] border-black px-[4px] py-[1px] text-[11px]">{unread}</span>}
+          </button>
+        </div>
+        {open && (
+          <div className="flex flex-col gap-[24px] border-t border-black/25 pt-[24px]">
+            {list}
+            <form action={signOut} className="flex items-center gap-[12px] font-gotham text-paragraph">
+              <span className="text-black/50">{email}</span>
+              <button type="submit" className="text-black underline">Sign out</button>
+            </form>
+          </div>
+        )}
+      </header>
+
+      {/* Desktop: the column */}
+      <aside className="hidden w-[220px] shrink-0 flex-col gap-[42px] border-r border-black/25 px-[24px] py-[24px] text-black md:sticky md:top-0 md:flex md:h-screen md:overflow-y-auto">
+        <Link href="/admin" aria-label="Flöra admin" className="block">
+          <Image src={logo} alt="Flöra" width={486.544} height={109.193} className="h-[20px] w-[89px] invert" />
+        </Link>
+        {list}
+        <form action={signOut} className="mt-auto flex flex-col gap-[6px] font-gotham text-[11px] leading-normal">
+          <span className="truncate text-black/50">{email}</span>
+          <button type="submit" className="w-max text-black underline hover:opacity-70 transition-opacity">Sign out</button>
+        </form>
+      </aside>
+    </>
   );
 }

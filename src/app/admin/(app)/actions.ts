@@ -7,6 +7,7 @@ import { readLocalizedBlocks, readLocalizedString } from "@/lib/admin/localized"
 import { adminClient, kronerToOre } from "@/lib/admin/sanity";
 import { requireAdmin } from "@/lib/admin/session";
 import { readImageField, readVideoField, uploadImage, uploadVideo } from "@/lib/admin/media";
+import { FONT_CHOICES } from "@/lib/brand-shared";
 
 /*
  * Every action starts with requireAdmin(). Server actions are reachable by anyone who can POST to
@@ -62,6 +63,8 @@ export async function sendShippingEmail(formData: FormData) {
     });
   } catch (err) {
     console.error("[admin] shipping email failed", err);
+    const { notice } = await import("@/lib/notices");
+    await notice({ kind: "error", source: "email", title: `Shipping email for ${order.orderNumber ?? id} failed`, detail: err instanceof Error ? err.message : String(err), href: `/admin/orders/${id}` });
     redirect(`/admin/orders/${id}?error=${encodeURIComponent("The email could not be sent. The order is marked shipped; try again in a moment.")}`);
   }
   await adminClient().patch(id).set({ shippingEmailSentAt: new Date().toISOString() }).commit();
@@ -197,6 +200,30 @@ export async function saveSettings(formData: FormData) {
     if (!label.some((v) => v._key === "en" && v.value)) continue;
     measurementFields.push({ _key: String(formData.get(`measureKey_${i}`) ?? "") || `mf${Date.now().toString(36)}${i}`, _type: "measurementField", label, hint: readLocalizedString(formData, `measureHint_${i}`) });
   }
+  const num = (name: string, min: number, max: number) => {
+    const n = Number(String(formData.get(name) ?? "").replace(",", "."));
+    return Number.isFinite(n) && n >= min && n <= max ? n : null;
+  };
+  const hex = (name: string) => {
+    const v = String(formData.get(name) ?? "").trim().toLowerCase();
+    return /^#([0-9a-f]{3}){1,2}$/.test(v) ? v : null;
+  };
+  const fontChoice = (name: string) => {
+    const v = String(formData.get(name) ?? "").trim();
+    return FONT_CHOICES.includes(v) ? v : null;
+  };
+  const logo = await readImageField(formData, "brandLogo", "image");
+  const brand = {
+    logo,
+    headingFont: fontChoice("headingFont"),
+    bodyFont: fontChoice("bodyFont"),
+    headingSizeDesktop: num("headingSizeDesktop", 16, 160),
+    headingSizeMobile: num("headingSizeMobile", 12, 80),
+    bannerSize: num("bannerSize", 16, 200),
+    paragraphSize: num("paragraphSize", 10, 24),
+    backgroundColor: hex("backgroundColor"),
+    textColor: hex("textColor"),
+  };
   const shippingZones: Record<string, unknown>[] = [];
   for (let i = 0; i < (Number(formData.get("zoneCount")) || 0); i++) {
     if (formData.get(`zoneRemove_${i}`) === "on") continue;
@@ -236,6 +263,7 @@ export async function saveSettings(formData: FormData) {
           sizeGuide: readLocalizedString(formData, "sizeGuide", "text"),
           shippingZones,
           shipsTo: String(formData.get("shipsTo") ?? "").split(/[,\n]/).map((c) => c.trim()).filter(Boolean),
+          brand,
         })
         .commit(),
     );
@@ -458,38 +486,52 @@ export async function sendTestEmails() {
   redirect(`/admin/setup?sent=${encodeURIComponent(admin.email)}`);
 }
 
-/** Setup page: a "New collection" newsletter with the shop's real products, to the signed-in admin. */
+/** Setup page: the default lookbook newsletter with the shop's real products, to the signed-in admin. */
 export async function sendSampleNewsletter() {
   const admin = await requireAdmin();
   const notify = await import("@/lib/notify");
   if (!notify.emailConfigured()) redirect(`/admin/setup?error=${encodeURIComponent("RESEND_API_KEY is not set.")}`);
   const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.prosjectflora.com").replace(/\/$/, "");
-  const products = await adminClient().fetch<{ name?: string; priceOre?: number; image?: string; slug?: string }[]>(
-    `*[_type == "product" && visible != false && vintage != true] | order(_createdAt asc)[0...4]{ "name": name[_key == "en"][0].value, priceOre, "image": images[0].asset->url, "slug": slug.current }`,
-  );
+  const ids = await adminClient().fetch<string[]>(`*[_type == "product" && visible != false && vintage != true] | order(_createdAt asc)[0...4]._id`);
   try {
-    await notify.sendNewsletter(
-      { email: admin.email, id: "subscriber-00000000000000000000000000000000", language: "en" },
-      {
-        subject: "The first collection – Flöra",
-        kicker: "New collection",
-        title: "Cut from the cloth, sewn to you",
-        intro:
-          "Four pieces in natural fabrics, made in Norway to the measurements you give us. No sizes, no seasons, no hurry.\n\nEverything about Flöra is transparent. We are far from perfect, but we are honest — so you know exactly what you are getting.",
-        heroImage: `${base}/email/collection-hero.jpg`,
-        features: [
-          { image: `${base}/email/collection-a.jpg`, caption: "The wrap skirt", href: `${base}/shop/${products[0]?.slug ?? ""}` },
-          { image: `${base}/email/collection-b.jpg`, caption: "The Miss Flow top", href: `${base}/shop/${products[1]?.slug ?? ""}` },
-        ],
-        products: products.map((p) => ({ name: p.name ?? "", priceOre: p.priceOre ?? 0, image: p.image, href: `${base}/shop/${p.slug ?? ""}` })),
-        quote: "Natural fabrics, honest production, and respect for the bodies wearing them.",
-        closing: { image: `${base}/email/collection-wide.jpg`, text: "Each piece is made when you order it. Give us four measurements and it is cut for you, not for a size chart." },
-        shopUrl: `${base}/shop`,
-        shopLabel: "Discover the collection",
-      },
-    );
+    const { defaultBlocks } = await import("@/lib/newsletter-blocks");
+    const { renderForLang } = await import("@/lib/admin/newsletter");
+    const html = await renderForLang(defaultBlocks(base, ids), "en", notify.unsubscribeUrlFor("subscriber-00000000000000000000000000000000"));
+    await notify.sendNewsletter({ email: admin.email, subject: "The first collection – Flöra" }, html);
   } catch (err) {
     redirect(`/admin/setup?error=${encodeURIComponent(err instanceof Error ? err.message : "Sending failed")}`);
   }
   redirect(`/admin/setup?newsletter=${encodeURIComponent(admin.email)}`);
+}
+
+/** Product page: build the animated GIF from the product's photos and attach it. Takes a few seconds. */
+export async function makeGif(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!id) throw new Error("Save the product first");
+  const client = adminClient();
+  const photos = await client.fetch<{ main?: string | null; colors?: (string | null)[] | null } | null>(`*[_id == $id][0]{ "main": images[0].asset->url, "colors": colors[].image.asset->url }`, { id });
+  const sources = [photos?.main, ...(photos?.colors ?? [])].filter((u): u is string => Boolean(u));
+  if (!sources.length) redirect(`/admin/products/${id}?error=${encodeURIComponent("Add at least one photo first.")}`);
+  const { makeProductGif } = await import("@/lib/admin/gif");
+  try {
+    const gif = await makeProductGif(sources);
+    const asset = await client.assets.upload("file", gif, { filename: `${id}.gif`, contentType: "image/gif" });
+    await client.patch(id).set({ gif: { _type: "file", asset: { _type: "reference", _ref: asset._id } } }).commit();
+  } catch (err) {
+    console.error("[admin] gif failed", err);
+    const { notice } = await import("@/lib/notices");
+    await notice({ kind: "warning", source: "products", title: "Could not make a product GIF", detail: err instanceof Error ? err.message : String(err), href: `/admin/products/${id}` });
+    redirect(`/admin/products/${id}?error=${encodeURIComponent(err instanceof Error ? err.message : "Could not make the GIF")}`);
+  }
+  revalidatePath(`/admin/products/${id}`);
+  redirect(`/admin/products/${id}?gif=1`);
+}
+
+export async function removeGif(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (id) await adminClient().patch(id).unset(["gif"]).commit();
+  revalidatePath(`/admin/products/${id}`);
+  redirect(`/admin/products/${id}`);
 }

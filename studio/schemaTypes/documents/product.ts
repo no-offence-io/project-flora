@@ -146,6 +146,14 @@ export const product = defineType({
       validation: (rule) => rule.min(1),
     }),
     defineField({
+      name: 'gif',
+      title: 'Animated GIF',
+      description: 'Made in the admin from the photos above (the colour photos cross-fade). Used in newsletters.',
+      type: 'file',
+      group: 'media',
+      options: {accept: 'image/gif'},
+    }),
+    defineField({
       name: 'colors',
       title: 'Colours',
       type: 'array',

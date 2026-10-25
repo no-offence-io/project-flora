@@ -6,6 +6,7 @@ import Navbar from "@/components/navbar";
 import { CartProvider } from "@/components/cart-context";
 import LoadingScreen from "@/components/loading-screen";
 import { SanityLive } from "@/sanity/lib/live";
+import { getLogoSrc } from "@/lib/brand";
 import { getLanguage } from "@/lib/language";
 import { I18nProvider } from "@/components/i18n-provider";
 
@@ -15,7 +16,7 @@ import { I18nProvider } from "@/components/i18n-provider";
  * layouts, so they get the fonts and global styles from the root but none of this.
  */
 export default async function ShopLayout({ children }: { children: ReactNode }) {
-  const lang = await getLanguage();
+  const [lang, logo] = await Promise.all([getLanguage(), getLogoSrc()]);
   return (
     <I18nProvider lang={lang}>
       <CartProvider>
@@ -28,7 +29,7 @@ export default async function ShopLayout({ children }: { children: ReactNode }) 
           <StickyNavbar>
             <Navbar tone="dark" />
           </StickyNavbar>
-          <NavMenuOverlay lang={lang} />
+          <NavMenuOverlay lang={lang} logoSrc={logo} />
         </NavMenuProvider>
       </CartProvider>
       <LoadingScreen />

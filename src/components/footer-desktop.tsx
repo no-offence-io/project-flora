@@ -5,8 +5,10 @@ import { ParallaxLayer } from "./parallax";
 import { getSiteCopy } from "@/lib/catalog";
 import { getT } from "@/lib/i18n-server";
 import RolloverText from "./rollover-text";
+import { getLogoSrc } from "@/lib/brand";
 
 export default async function FooterDesktop({ parallax = true, className = "" }: { parallax?: boolean; className?: string }) {
+  const logo = await getLogoSrc();
   const [t, copy] = await Promise.all([getT(), getSiteCopy()]);
   return (
     <footer
@@ -32,7 +34,7 @@ export default async function FooterDesktop({ parallax = true, className = "" }:
 
       {/* Centered wordmark */}
       <Image
-        src="/footer/flora-logo.svg"
+        src={logo}
         alt="Flöra"
         width={486.544}
         height={109.193}

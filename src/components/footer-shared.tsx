@@ -6,6 +6,7 @@ export const NAV_LINKS = [
   { key: "footer.privacy", href: "/privacy" },
   { key: "footer.shipping", href: "/shipping" },
   { key: "footer.faq", href: "/faq" },
+  { key: "footer.journal", href: "/journal" },
 ] as const;
 
 export const SOCIAL_LINKS = [

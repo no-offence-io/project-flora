@@ -1,23 +1,33 @@
 import type { ReactNode } from "react";
 import { headers } from "next/headers";
+import { signOut } from "@/auth";
 import AdminNav from "@/components/admin/nav";
+import { GROUPS } from "@/components/admin/nav-links";
 import { requireAdmin } from "@/lib/admin/session";
+import { getLogoSrc } from "@/lib/brand";
+import { unreadCount } from "@/lib/notices";
 
 export const metadata = { robots: { index: false, follow: false } };
 
 /** Every page under here is behind requireAdmin(); the login page lives in a sibling group. */
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const admin = await requireAdmin();
-  const path = (await headers()).get("x-admin-path") ?? "";
+  const [path, unread, logo] = await Promise.all([headers().then((h) => h.get("x-admin-path") ?? ""), unreadCount(), getLogoSrc()]);
+  async function doSignOut() {
+    "use server";
+    await signOut({ redirectTo: "/admin/login" });
+  }
   return (
-    <div className="flex min-h-screen flex-col gap-[42px] pb-[60px] md:gap-[60px] md:pb-[120px]">
-      <AdminNav current={sectionOf(path)} email={admin.email} />
-      <main className="flex flex-col gap-[42px] px-[24px] md:px-[42px]">{children}</main>
+    <div className="flex min-h-screen flex-col md:flex-row">
+      <AdminNav current={sectionOf(path)} email={admin.email} unread={unread} logo={logo} signOut={doSignOut} />
+      <main className="flex min-w-0 flex-1 flex-col gap-[42px] px-[24px] py-[42px] pb-[60px] md:px-[42px] md:pb-[120px]">{children}</main>
     </div>
   );
 }
 
+/** The sidebar entry a path belongs to: the longest matching link. */
 function sectionOf(path: string): string {
-  for (const s of ["/admin/orders", "/admin/products", "/admin/discounts", "/admin/pages", "/admin/media", "/admin/settings", "/admin/setup"]) if (path.startsWith(s)) return s;
-  return "/admin";
+  const hrefs = GROUPS.flatMap((g) => g.links.map((l) => l.href)).filter((h) => h !== "/admin");
+  const match = hrefs.filter((h) => path === h || path.startsWith(`${h}/`)).sort((a, b) => b.length - a.length)[0];
+  return match ?? "/admin";
 }

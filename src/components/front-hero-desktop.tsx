@@ -4,6 +4,7 @@ import CartLink from "./cart-link";
 import HeroVideo from "./hero-video";
 import { getT } from "@/lib/i18n-server";
 import RolloverText from "./rollover-text";
+import { getLogoSrc } from "@/lib/brand";
 
 const NAV_LINKS = [
   { key: "nav.shop", href: "/shop" },
@@ -14,11 +15,11 @@ const NAV_LINKS = [
 
 const NAV_TEXT = "flex items-center gap-[42px] font-americana text-big-header-mobile capitalize whitespace-nowrap";
 
-function Logo() {
+function Logo({ src }: { src: string }) {
   return (
     <Link href="/" aria-label="Flöra home">
       <Image
-        src="/footer/flora-logo.svg"
+        src={src}
         alt="Flöra"
         width={486.544}
         height={109.193}
@@ -49,6 +50,7 @@ export default async function FrontHeroDesktop({
   className?: string;
 }) {
   const t = await getT();
+  const logo = await getLogoSrc();
   return (
     <section
       className={`full-bleed relative flex h-screen flex-col overflow-hidden p-[42px] text-white ${className}`}
@@ -76,7 +78,7 @@ export default async function FrontHeroDesktop({
                 </Link>
               ))}
             </nav>
-            <Logo />
+            <Logo src={logo} />
             <div className={`${NAV_TEXT} justify-start`}>
               {NAV_LINKS.slice(2).map((link) => (
                 <Link key={t(link.key)} href={link.href}>
@@ -89,7 +91,7 @@ export default async function FrontHeroDesktop({
         ) : (
           /* Figma layout: wordmark left, links and cart right */
           <header className="flex w-full items-start justify-between">
-            <Logo />
+            <Logo src={logo} />
             <div className="flex items-start gap-[120px]">
               <nav aria-label="Primary" className={NAV_TEXT}>
                 {NAV_LINKS.map((link) => (

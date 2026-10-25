@@ -2,8 +2,11 @@ import {aboutPage} from './documents/about-page'
 import {discount} from './documents/discount'
 import {faqItem} from './documents/faq-item'
 import {homePage} from './documents/home-page'
+import {newsletter} from './documents/newsletter'
+import {notification} from './documents/notification'
 import {order} from './documents/order'
 import {policyPage} from './documents/policy-page'
+import {post} from './documents/post'
 import {product} from './documents/product'
 import {siteSettings} from './documents/site-settings'
 import {subscriber} from './documents/subscriber'
@@ -23,6 +26,9 @@ export const schemaTypes = [
   vintagePage,
   discount,
   subscriber,
+  newsletter,
+  post,
+  notification,
   // objects
   localizedImage,
   simpleBlockContent,

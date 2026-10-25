@@ -39,8 +39,9 @@ export async function recordOrder(intent: Stripe.PaymentIntent): Promise<Recorde
 
   const lines = linesFromMetadata(m);
   const productRows = await client.fetch<{ slug?: string; _id?: string; name?: string; image?: string | null }[]>(
-    `*[_type == "product" && slug.current in $slugs]{ "slug": slug.current, _id, "name": name[_key == $lang][0].value, "image": images[0].asset->url }`,
-    { slugs: lines.map((l) => l.id), lang: language },
+    // Product names are English in every language — the brand's choice.
+    `*[_type == "product" && slug.current in $slugs]{ "slug": slug.current, _id, "name": name[_key == "en"][0].value, "image": images[0].asset->url }`,
+    { slugs: lines.map((l) => l.id) },
   );
   const products: Record<string, { _id: string; name: string; image?: string }> = {};
   for (const r of productRows) if (r.slug && r._id) products[r.slug] = { _id: r._id, name: r.name ?? r.slug, ...(r.image ? { image: r.image } : {}) };

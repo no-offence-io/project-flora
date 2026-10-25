@@ -29,7 +29,11 @@ export async function subscribe(_prev: SignUpState, formData: FormData): Promise
       return { status: "ok" };
     }
     await client.create({ _id: id, _type: "subscriber", email, language, signedUpAt: new Date().toISOString() });
-    sendNewsletterWelcome(email, language).catch((err) => console.error("[newsletter] welcome email failed", err));
+    sendNewsletterWelcome(email, language).catch(async (err) => {
+      console.error("[newsletter] welcome email failed", err);
+      const { notice } = await import("./notices");
+      await notice({ kind: "warning", source: "email", title: `Welcome email to ${email} failed`, detail: err instanceof Error ? err.message : String(err), href: "/admin/subscribers" });
+    });
     return { status: "ok" };
   } catch (err) {
     console.error("[newsletter] sign-up failed", err);

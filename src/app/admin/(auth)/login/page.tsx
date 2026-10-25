@@ -2,6 +2,7 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import { auth, authConfigured, isAdminEmail, signIn } from "@/auth";
 import { Button, Muted } from "@/components/admin/ui";
+import { getLogoSrc } from "@/lib/brand";
 
 export const metadata = { title: "Sign in – Flöra admin", robots: { index: false, follow: false } };
 
@@ -10,13 +11,14 @@ export const metadata = { title: "Sign in – Flöra admin", robots: { index: fa
  * refused account lands back here with `?error=AccessDenied`.
  */
 export default async function AdminLoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const logo = await getLogoSrc();
   const session = authConfigured ? await auth() : null;
   if (isAdminEmail(session?.user?.email)) redirect("/admin");
   const { error } = await searchParams;
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-[42px] px-[24px] py-[60px] text-black">
-      <Image src="/footer/flora-logo.svg" alt="Flöra" width={486.544} height={109.193} className="h-auto w-[172px] invert" style={{ height: "auto" }} />
+      <Image src={logo} alt="Flöra" width={486.544} height={109.193} className="h-auto w-[172px] invert" style={{ height: "auto" }} />
       <div className="flex w-full max-w-[360px] flex-col gap-[24px] md:border-[0.5px] md:border-black/25 md:p-[24px]">
         <div className="flex flex-col gap-[12px]">
           <h1 className="m-0 font-gotham text-paragraph text-black">Admin</h1>

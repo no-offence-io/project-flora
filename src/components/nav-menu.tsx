@@ -75,7 +75,7 @@ export function BurgerButton({ className = "" }: { className?: string }) {
  * Full-screen navigation from Figma "Phone navbar expanded" (3:200) below `md`
  * and "Desktop navbar expanded" (3:146) from `md` up.
  */
-export function NavMenuOverlay({ lang = "en" }: { lang?: Lang }) {
+export function NavMenuOverlay({ lang = "en", logoSrc = "/footer/flora-logo.svg" }: { lang?: Lang; logoSrc?: string }) {
   const t = useT();
   const { isOpen, close } = useNavMenu();
 
@@ -117,7 +117,7 @@ export function NavMenuOverlay({ lang = "en" }: { lang?: Lang }) {
       {/* Wordmark, desktop only */}
       <Link href="/" aria-label="Flöra home" onClick={close} className="relative hidden md:block">
         <Image
-          src="/footer/flora-logo.svg"
+          src={logoSrc}
           alt="Flöra"
           width={486.544}
           height={109.193}
