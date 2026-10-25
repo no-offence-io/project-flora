@@ -59,6 +59,8 @@ export function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     // `api/auth` stays reachable while the shop is hidden; `/admin` is handled at the top of proxy().
-    "/((?!_next/static|_next/image|favicon.ico|\\.well-known|api/webhooks|api/auth|api/revalidate|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|mp4|ico|woff|woff2|otf|ttf)$).*)",
+    // robots, the sitemap and the share image answer for themselves (robots says "disallow all"
+    // while the gate is up), so crawlers never see the placeholder page as those files.
+    "/((?!_next/static|_next/image|favicon.ico|\\.well-known|api/webhooks|api/auth|api/revalidate|robots.txt|sitemap.xml|opengraph-image|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|mp4|ico|woff|woff2|otf|ttf)$).*)",
   ],
 };
