@@ -137,7 +137,7 @@ export default function AdminNav({ current, email, unread = 0, logo, signOut, de
             aria-label="Admin menu"
             aria-hidden={!open}
             inert={!open}
-            className={`admin-night-portal fixed inset-0 z-[80] flex flex-col bg-white text-black transition-[opacity,visibility] md:hidden ${
+            className={`admin-night-sheet fixed inset-0 z-[80] flex flex-col bg-white text-black transition-[opacity,visibility] md:hidden ${
               open ? "visible opacity-100 duration-[350ms]" : "invisible opacity-0 delay-[160ms] duration-[300ms]"
             }`}
           >

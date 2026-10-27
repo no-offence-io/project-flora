@@ -239,3 +239,27 @@ html:has(.admin-night) .admin-veil {
     background: #000000;
   }
 }
+
+/* The admin's phone menu sheet: a fixed layer covering the screen, so Safari colours its bars from
+   its background (and ignores filters). In night mode it gets a real black background and only its
+   contents are inverted; photos and the logo are inverted back as everywhere else. */
+html:has(.admin-night) .admin-night-sheet {
+  background-color: #000000;
+}
+html:has(.admin-night) .admin-night-sheet > * {
+  filter: invert(1) hue-rotate(180deg);
+}
+html:has(.admin-night) .admin-night-sheet :is(img, video, iframe) {
+  filter: invert(1) hue-rotate(180deg);
+}
+@media (prefers-color-scheme: dark) {
+  html:has(.admin-night-auto) .admin-night-sheet {
+    background-color: #000000;
+  }
+  html:has(.admin-night-auto) .admin-night-sheet > * {
+    filter: invert(1) hue-rotate(180deg);
+  }
+  html:has(.admin-night-auto) .admin-night-sheet :is(img, video, iframe) {
+    filter: invert(1) hue-rotate(180deg);
+  }
+}
