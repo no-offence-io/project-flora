@@ -195,33 +195,12 @@ html.theme-dark:not(:has(.coming-soon-gate)) :is(.shop-content, .shop-fixed) :is
   }
 }
 
-/*
- * Page transition: the content fades out and the next page fades in on every navigation in the
- * shop. Only the content takes part — the root snapshot is switched off so the navbar, menu and
- * footer don't flash. Browsers without view transitions simply change page as before.
- */
-:root {
-  view-transition-name: none;
+/* Page transition veil (components/page-transition.tsx): black in dark mode, like the page. */
+html.theme-dark:not(:has(.coming-soon-gate)) .page-veil {
+  background: #000000;
 }
-::view-transition-old(.page-fade) {
-  animation: page-fade-out 220ms ease-in both;
-}
-::view-transition-new(.page-fade) {
-  animation: page-fade-in 420ms 120ms ease-out both;
-}
-@keyframes page-fade-out {
-  to {
-    opacity: 0;
-  }
-}
-@keyframes page-fade-in {
-  from {
-    opacity: 0;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-old(.page-fade),
-  ::view-transition-new(.page-fade) {
-    animation: none;
+@media (prefers-color-scheme: dark) {
+  html.theme-auto:not(:has(.coming-soon-gate)) .page-veil {
+    background: #000000;
   }
 }

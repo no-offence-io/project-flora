@@ -1,4 +1,5 @@
-import { ViewTransition, type ReactNode } from "react";
+import type { ReactNode } from "react";
+import PageTransition from "@/components/page-transition";
 import Footer from "@/components/footer";
 import { NavMenuOverlay, NavMenuProvider } from "@/components/nav-menu";
 import StickyNavbar from "@/components/sticky-navbar";
@@ -26,14 +27,14 @@ export default async function ShopLayout({ children }: { children: ReactNode }) 
         <NavMenuProvider>
           {/* The site is capped at 1600px and centred on wide desktops */}
           <div className="shop-content mx-auto flex w-full max-w-[1600px] flex-1 flex-col bg-white">
-            {/* Route changes are transitions, so this crossfades every page change (see globals.css). */}
-            <ViewTransition default="page-fade">{children}</ViewTransition>
+            {children}
             <Footer />
           </div>
           <StickyNavbar>
             <Navbar tone="dark" />
           </StickyNavbar>
           <NavMenuOverlay lang={lang} logoSrc={logo} theme={theme} />
+          <PageTransition />
         </NavMenuProvider>
       </CartProvider>
       <LoadingScreen />
