@@ -106,17 +106,28 @@ export default function AdminNav({ current, email, unread = 0, logo, signOut, de
             {!open && unread > 0 && <span className="ml-[6px] border-[0.5px] border-black px-[4px] py-[1px] text-[11px]">{unread}</span>}
           </button>
         </div>
-        {open && (
-          <div className="flex flex-col gap-[24px] border-t border-black/25 pt-[24px]">
-            {list}
-            {nightSwitch}
-            {demoSwitch}
-            <form action={signOut} className="flex items-center gap-[12px] font-gotham text-paragraph">
-              <span className="text-black/50">{email}</span>
-              <button type="submit" className="text-black underline">Sign out</button>
-            </form>
+        {/* Always mounted so it can animate: the panel grows open, then each part fades in after
+            the last (opacity only — nothing slides); closing runs it in reverse. */}
+        <div aria-hidden={!open} inert={!open} className={`grid transition-[grid-template-rows] duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr] delay-[180ms]"}`}>
+          <div className="overflow-hidden">
+            <div className="flex flex-col gap-[24px] border-t border-black/25 pt-[24px] pb-[12px]">
+              {[list, nightSwitch, demoSwitch,
+                <form key="out" action={signOut} className="flex items-center gap-[12px] font-gotham text-paragraph">
+                  <span className="text-black/50">{email}</span>
+                  <button type="submit" className="text-black underline">Sign out</button>
+                </form>,
+              ].map((part, i, all) => (
+                <div
+                  key={i}
+                  className={`transition-opacity duration-[450ms] ease-out ${open ? "opacity-100" : "opacity-0"}`}
+                  style={{ transitionDelay: open ? `${120 + i * 70}ms` : `${(all.length - 1 - i) * 40}ms` }}
+                >
+                  {part}
+                </div>
+              ))}
+            </div>
           </div>
-        )}
+        </div>
       </header>
 
       {/* Desktop: the column */}
