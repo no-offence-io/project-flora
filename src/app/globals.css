@@ -87,8 +87,12 @@ body:has(.coming-soon-gate) {
   height: 1.2em;
   white-space: pre;
 }
-:is(a, button):hover .rollover__c {
-  transform: translateY(-1.2em);
+/* Only where there is a real pointer: on touch screens a tap leaves :hover stuck, so the letters
+   would roll and stay rolled. Phones and tablets show plain text. */
+@media (hover: hover) and (pointer: fine) {
+  :is(a, button):hover .rollover__c {
+    transform: translateY(-1.2em);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .rollover__c {
