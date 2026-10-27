@@ -10,26 +10,36 @@ import { GROUPS } from "./nav-links";
  * desktop it is a fixed 220px column; on phones it folds behind a "Menu" line at the top. Same
  * type as the shop's navbar — Gotham, 13.35px, black for the current page and 50% for the rest.
  */
-export default function AdminNav({ current, email, unread = 0, logo, signOut, demo = false, toggleDemo, night: nightInitial = false }: { current: string; email: string; unread?: number; logo: string; signOut: () => Promise<void>; demo?: boolean; toggleDemo: () => Promise<void>; night?: boolean }) {
+/** Outside the component: writing document.cookie is a side effect the React compiler won't allow inline. */
+function saveNightPreference(next: "auto" | "on" | "off") {
+  document.cookie = next === "auto" ? "flora-admin-night=; path=/admin; max-age=0" : `flora-admin-night=${next === "on" ? "1" : "0"}; path=/admin; max-age=31536000; samesite=lax`;
+}
+
+export default function AdminNav({ current, email, unread = 0, logo, signOut, demo = false, toggleDemo, night: nightInitial = "auto" }: { current: string; email: string; unread?: number; logo: string; signOut: () => Promise<void>; demo?: boolean; toggleDemo: () => Promise<void>; night?: "auto" | "on" | "off" }) {
   const [switching, setSwitching] = useState(false);
-  const [night, setNight] = useState(nightInitial);
-  // Night mode is a per-browser preference: a cookie (so the server renders it without a flash)
-  // and a class on the admin wrapper, which globals.css turns into an inversion.
-  const toggleNight = () => {
-    const next = !night;
+  const [night, setNight] = useState<"auto" | "on" | "off">(nightInitial);
+  // Night mode: follows the device by default; "On"/"Off" pin it for this browser. A cookie lets the
+  // server render the right one without a flash; globals.css does the inversion.
+  const chooseNight = (next: "auto" | "on" | "off") => {
     setNight(next);
-    document.cookie = `flora-admin-night=${next ? "1" : "0"}; path=/admin; max-age=31536000; samesite=lax`;
-    document.querySelector("[data-admin-root]")?.classList.toggle("admin-night", next);
+    saveNightPreference(next);
+    const root = document.querySelector("[data-admin-root]");
+    root?.classList.toggle("admin-night", next === "on");
+    root?.classList.toggle("admin-night-auto", next === "auto");
   };
   const nightSwitch = (
     <div className="flex flex-col gap-[6px]">
       <span className="font-gotham text-[11px] leading-normal tracking-[0.2em] uppercase text-black/50">Night mode</span>
-      <button type="button" onClick={toggleNight} role="switch" aria-checked={night} className="flex items-center gap-[8px] font-gotham text-paragraph text-black">
-        <span aria-hidden className={`relative inline-block h-[14px] w-[26px] rounded-full border border-black transition-colors ${night ? "bg-black" : "bg-white"}`}>
-          <span className={`absolute top-[1px] h-[10px] w-[10px] rounded-full transition-all ${night ? "left-[13px] bg-white" : "left-[1px] bg-black"}`} />
-        </span>
-        {night ? "On" : "Off"}
-      </button>
+      <span role="radiogroup" aria-label="Night mode" className="flex font-gotham text-paragraph">
+        {([["auto", "Auto"], ["on", "On"], ["off", "Off"]] as const).map(([value, label], i) => (
+          <span key={value} className="flex">
+            {i > 0 && <span className="text-black/50">&nbsp;–&nbsp;</span>}
+            <button type="button" role="radio" aria-checked={night === value} onClick={() => chooseNight(value)} className={`hover:opacity-70 transition-opacity ${night === value ? "text-black" : "text-black/50"}`}>
+              {label}
+            </button>
+          </span>
+        ))}
+      </span>
     </div>
   );
   const demoSwitch = (

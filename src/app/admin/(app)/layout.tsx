@@ -15,13 +15,15 @@ export const metadata = { robots: { index: false, follow: false } };
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const admin = await requireAdmin();
   const [path, unread, logo, demo, jar] = await Promise.all([headers().then((h) => h.get("x-admin-path") ?? ""), unreadCount(), getLogoSrc(), isDemoOn(), cookies()]);
-  const night = jar.get("flora-admin-night")?.value === "1";
+  // "1" on, "0" off, anything else follows the device setting.
+  const nightPref = jar.get("flora-admin-night")?.value;
+  const night: "on" | "off" | "auto" = nightPref === "1" ? "on" : nightPref === "0" ? "off" : "auto";
   async function doSignOut() {
     "use server";
     await signOut({ redirectTo: "/admin/login" });
   }
   return (
-    <div data-admin-root className={`flex min-h-screen flex-col md:flex-row ${night ? "admin-night" : ""}`}>
+    <div data-admin-root className={`flex min-h-screen flex-col md:flex-row ${night === "on" ? "admin-night" : night === "auto" ? "admin-night-auto" : ""}`}>
       <AdminNav current={sectionOf(path)} email={admin.email} unread={unread} logo={logo} signOut={doSignOut} demo={demo} toggleDemo={toggleDemoMode} night={night} />
       <main className="flex min-w-0 flex-1 flex-col gap-[42px] overflow-x-hidden px-[24px] py-[42px] pb-[60px] md:px-[42px] md:pb-[120px]">
         {demo && (
