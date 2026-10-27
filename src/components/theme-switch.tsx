@@ -8,6 +8,19 @@ function saveTheme(next: Theme) {
   const html = document.documentElement;
   html.classList.remove("theme-auto", "theme-light", "theme-dark");
   html.classList.add(`theme-${next}`);
+  // The browser's own bars: a pinned choice sets one colour; Auto restores the light/dark pair.
+  document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.remove());
+  const add = (color: string, media?: string) => {
+    const m = document.createElement("meta");
+    m.name = "theme-color";
+    m.content = color;
+    if (media) m.media = media;
+    document.head.appendChild(m);
+  };
+  if (next === "auto") {
+    add("#ffffff", "(prefers-color-scheme: light)");
+    add("#000000", "(prefers-color-scheme: dark)");
+  } else add(next === "dark" ? "#000000" : "#ffffff");
 }
 
 /**

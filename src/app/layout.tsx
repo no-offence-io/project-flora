@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { Geist, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
@@ -35,6 +35,22 @@ export const metadata: Metadata = {
   description: "Flöra — natural fabrics, honest production, made to your measurements in Norway.",
   openGraph: { siteName: "Flöra", type: "website", locale: "en_GB", alternateLocale: ["nb_NO"] },
 };
+
+/**
+ * The colour browsers use for their own bars (Safari's status bar and toolbar, Chrome on Android).
+ * Follows the visitor's Light/Dark/Auto choice; the admin sets its own in its layout.
+ */
+export async function generateViewport(): Promise<Viewport> {
+  const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
+  if (theme === "dark") return { themeColor: "#000000", colorScheme: "dark" };
+  if (theme === "light") return { themeColor: "#ffffff", colorScheme: "light" };
+  return {
+    themeColor: [
+      { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+      { media: "(prefers-color-scheme: dark)", color: "#000000" },
+    ],
+  };
+}
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Settings → Brand can swap fonts, sizes and colours; it does so by overriding the variables the

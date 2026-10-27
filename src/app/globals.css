@@ -173,11 +173,17 @@ html.theme-dark:not(:has(.coming-soon-gate)):has(.shop-content) body {
   background: #000000;
   color-scheme: dark;
 }
-html.theme-dark:not(:has(.coming-soon-gate)) :is(.shop-content, .shop-fixed),
-html.theme-dark:not(:has(.coming-soon-gate)) .shop-content [data-keep-colors] {
+html.theme-dark:not(:has(.coming-soon-gate)) .shop-content,
+html.theme-dark:not(:has(.coming-soon-gate)) .shop-content [data-keep-colors],
+html.theme-dark:not(:has(.coming-soon-gate)) .shop-fixed > * {
   filter: invert(1) hue-rotate(180deg);
 }
-html.theme-dark:not(:has(.coming-soon-gate)) :is(.shop-content, .shop-fixed) :is(img, video, iframe, [style*="background-color"]):not(:where([data-keep-colors] *)) {
+/* Fixed layers (sticky navbar, loading screen) get a real black background and only their contents
+   are inverted: Safari colours its own bars from a fixed layer's background and ignores filters. */
+html.theme-dark:not(:has(.coming-soon-gate)) .shop-fixed {
+  background-color: #000000;
+}
+html.theme-dark:not(:has(.coming-soon-gate)) :is(.shop-content, .shop-fixed > *) :is(img, video, iframe, [style*="background-color"]):not(:where([data-keep-colors] *)) {
   filter: invert(1) hue-rotate(180deg);
 }
 @media (prefers-color-scheme: dark) {
@@ -186,11 +192,15 @@ html.theme-dark:not(:has(.coming-soon-gate)) :is(.shop-content, .shop-fixed) :is
     background: #000000;
     color-scheme: dark;
   }
-  html.theme-auto:not(:has(.coming-soon-gate)) :is(.shop-content, .shop-fixed),
-  html.theme-auto:not(:has(.coming-soon-gate)) .shop-content [data-keep-colors] {
+  html.theme-auto:not(:has(.coming-soon-gate)) .shop-content,
+  html.theme-auto:not(:has(.coming-soon-gate)) .shop-content [data-keep-colors],
+  html.theme-auto:not(:has(.coming-soon-gate)) .shop-fixed > * {
     filter: invert(1) hue-rotate(180deg);
   }
-  html.theme-auto:not(:has(.coming-soon-gate)) :is(.shop-content, .shop-fixed) :is(img, video, iframe, [style*="background-color"]):not(:where([data-keep-colors] *)) {
+  html.theme-auto:not(:has(.coming-soon-gate)) .shop-fixed {
+    background-color: #000000;
+  }
+  html.theme-auto:not(:has(.coming-soon-gate)) :is(.shop-content, .shop-fixed > *) :is(img, video, iframe, [style*="background-color"]):not(:where([data-keep-colors] *)) {
     filter: invert(1) hue-rotate(180deg);
   }
 }
