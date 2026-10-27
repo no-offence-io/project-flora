@@ -13,7 +13,7 @@ export default async function FooterMobile({ parallax = true, className = "" }: 
   return (
     <footer
       data-keep-colors
-      className={`full-bleed relative flex h-screen flex-col items-center justify-end gap-[10px] overflow-hidden p-[24px] text-white ${className}`}
+      className={`full-bleed relative flex h-svh flex-col items-center justify-end gap-[10px] overflow-hidden p-[24px] text-white ${className}`}
     >
       {/* Background: the photo is scaled to 313% of the footer width and shifted so the
           figure sits behind the wordmark, matching the Figma crop at 393px. */}
