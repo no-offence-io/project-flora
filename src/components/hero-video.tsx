@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { preload } from "react-dom";
 import { useParallax } from "./parallax";
 
 /**
@@ -25,6 +27,14 @@ export default function HeroVideo({
   className?: string;
 }) {
   const ref = useParallax<HTMLVideoElement>(speed, undefined, parallax);
+  // Ask for the file as early as the page starts, and reveal the video with a fade once it has a
+  // frame to show, rather than letting it pop in over the dark backdrop.
+  preload(src, { as: "video", fetchPriority: "high" });
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const video = ref.current;
+    if (video && video.readyState >= 2) setReady(true);
+  }, [ref, src]);
 
   return (
     <video
@@ -35,8 +45,9 @@ export default function HeroVideo({
       loop
       playsInline
       preload="auto"
+      onLoadedData={() => setReady(true)}
       aria-hidden
-      className={`absolute left-0 w-full object-cover ${
+      className={`absolute left-0 w-full object-cover transition-opacity duration-[900ms] ease-out ${ready ? "opacity-100" : "opacity-0"} ${
         parallax ? "-top-[15%] h-[130%] will-change-transform" : "inset-0 h-full"
       } ${className}`}
     />

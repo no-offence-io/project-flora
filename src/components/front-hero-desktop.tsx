@@ -57,7 +57,8 @@ export default async function FrontHeroDesktop({
       className={`full-bleed relative flex h-screen flex-col overflow-hidden p-[42px] text-white ${className}`}
     >
       {/* Background video with parallax (photo as poster) under the vertical darkening gradient */}
-      <div aria-hidden className="absolute inset-0">
+      {/* Dark under the video, so it fades in from black and the white text is readable before it does */}
+      <div aria-hidden className="absolute inset-0 bg-black">
         <HeroVideo src={videoSrc} parallax={parallax} />
         <div
           className="absolute inset-0"
