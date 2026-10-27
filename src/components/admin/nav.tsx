@@ -10,8 +10,28 @@ import { GROUPS } from "./nav-links";
  * desktop it is a fixed 220px column; on phones it folds behind a "Menu" line at the top. Same
  * type as the shop's navbar — Gotham, 13.35px, black for the current page and 50% for the rest.
  */
-export default function AdminNav({ current, email, unread = 0, logo, signOut, demo = false, toggleDemo }: { current: string; email: string; unread?: number; logo: string; signOut: () => Promise<void>; demo?: boolean; toggleDemo: () => Promise<void> }) {
+export default function AdminNav({ current, email, unread = 0, logo, signOut, demo = false, toggleDemo, night: nightInitial = false }: { current: string; email: string; unread?: number; logo: string; signOut: () => Promise<void>; demo?: boolean; toggleDemo: () => Promise<void>; night?: boolean }) {
   const [switching, setSwitching] = useState(false);
+  const [night, setNight] = useState(nightInitial);
+  // Night mode is a per-browser preference: a cookie (so the server renders it without a flash)
+  // and a class on the admin wrapper, which globals.css turns into an inversion.
+  const toggleNight = () => {
+    const next = !night;
+    setNight(next);
+    document.cookie = `flora-admin-night=${next ? "1" : "0"}; path=/admin; max-age=31536000; samesite=lax`;
+    document.querySelector("[data-admin-root]")?.classList.toggle("admin-night", next);
+  };
+  const nightSwitch = (
+    <div className="flex flex-col gap-[6px]">
+      <span className="font-gotham text-[11px] leading-normal tracking-[0.2em] uppercase text-black/50">Night mode</span>
+      <button type="button" onClick={toggleNight} role="switch" aria-checked={night} className="flex items-center gap-[8px] font-gotham text-paragraph text-black">
+        <span aria-hidden className={`relative inline-block h-[14px] w-[26px] rounded-full border border-black transition-colors ${night ? "bg-black" : "bg-white"}`}>
+          <span className={`absolute top-[1px] h-[10px] w-[10px] rounded-full transition-all ${night ? "left-[13px] bg-white" : "left-[1px] bg-black"}`} />
+        </span>
+        {night ? "On" : "Off"}
+      </button>
+    </div>
+  );
   const demoSwitch = (
     <form action={toggleDemo} onSubmit={() => setSwitching(true)} className="flex flex-col gap-[6px]">
       <span className="font-gotham text-[11px] leading-normal tracking-[0.2em] uppercase text-black/50">Test mode</span>
@@ -65,6 +85,7 @@ export default function AdminNav({ current, email, unread = 0, logo, signOut, de
         {open && (
           <div className="flex flex-col gap-[24px] border-t border-black/25 pt-[24px]">
             {list}
+            {nightSwitch}
             {demoSwitch}
             <form action={signOut} className="flex items-center gap-[12px] font-gotham text-paragraph">
               <span className="text-black/50">{email}</span>
@@ -80,8 +101,11 @@ export default function AdminNav({ current, email, unread = 0, logo, signOut, de
           <Image src={logo} alt="Flöra" width={486.544} height={109.193} className="h-[20px] w-[89px] invert" />
         </Link>
         {list}
-        {demoSwitch}
-        <form action={signOut} className="mt-auto flex flex-col gap-[6px] font-gotham text-[11px] leading-normal">
+        <div className="mt-auto flex flex-col gap-[24px]">
+          {nightSwitch}
+          {demoSwitch}
+        </div>
+        <form action={signOut} className=" flex flex-col gap-[6px] font-gotham text-[11px] leading-normal">
           <span className="truncate text-black/50">{email}</span>
           <button type="submit" className="w-max text-black underline hover:opacity-70 transition-opacity">Sign out</button>
         </form>
