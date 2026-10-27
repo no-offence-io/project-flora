@@ -12,6 +12,7 @@ export default async function FooterDesktop({ parallax = true, className = "" }:
   const [t, copy] = await Promise.all([getT(), getSiteCopy()]);
   return (
     <footer
+      data-keep-colors
       className={`full-bleed relative flex h-screen flex-col items-center justify-end gap-[10px] overflow-hidden px-[42px] py-[24px] text-white ${className}`}
     >
       {/* Background image, drifting with parallax, under the dark overlays */}

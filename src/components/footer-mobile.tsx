@@ -12,6 +12,7 @@ export default async function FooterMobile({ parallax = true, className = "" }: 
   const [t, copy] = await Promise.all([getT(), getSiteCopy()]);
   return (
     <footer
+      data-keep-colors
       className={`full-bleed relative flex h-screen flex-col items-center justify-end gap-[10px] overflow-hidden p-[24px] text-white ${className}`}
     >
       {/* Background: the photo is scaled to 313% of the footer width and shifted so the

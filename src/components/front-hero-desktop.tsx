@@ -53,6 +53,7 @@ export default async function FrontHeroDesktop({
   const logo = await getLogoSrc();
   return (
     <section
+      data-keep-colors
       className={`full-bleed relative flex h-screen flex-col overflow-hidden p-[42px] text-white ${className}`}
     >
       {/* Background video with parallax (photo as poster) under the vertical darkening gradient */}

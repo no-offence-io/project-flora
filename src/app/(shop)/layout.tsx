@@ -8,6 +8,8 @@ import LoadingScreen from "@/components/loading-screen";
 import { SanityLive } from "@/sanity/lib/live";
 import { getLogoSrc } from "@/lib/brand";
 import { getLanguage } from "@/lib/language";
+import { cookies } from "next/headers";
+import { parseTheme, THEME_COOKIE } from "@/lib/theme-shared";
 import { I18nProvider } from "@/components/i18n-provider";
 
 /**
@@ -16,20 +18,21 @@ import { I18nProvider } from "@/components/i18n-provider";
  * layouts, so they get the fonts and global styles from the root but none of this.
  */
 export default async function ShopLayout({ children }: { children: ReactNode }) {
-  const [lang, logo] = await Promise.all([getLanguage(), getLogoSrc()]);
+  const [lang, logo, jar] = await Promise.all([getLanguage(), getLogoSrc(), cookies()]);
+  const theme = parseTheme(jar.get(THEME_COOKIE)?.value);
   return (
     <I18nProvider lang={lang}>
       <CartProvider>
         <NavMenuProvider>
           {/* The site is capped at 1600px and centred on wide desktops */}
-          <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col">
+          <div className="shop-content mx-auto flex w-full max-w-[1600px] flex-1 flex-col bg-white">
             {children}
             <Footer />
           </div>
           <StickyNavbar>
             <Navbar tone="dark" />
           </StickyNavbar>
-          <NavMenuOverlay lang={lang} logoSrc={logo} />
+          <NavMenuOverlay lang={lang} logoSrc={logo} theme={theme} />
         </NavMenuProvider>
       </CartProvider>
       <LoadingScreen />

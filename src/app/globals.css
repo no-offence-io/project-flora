@@ -159,3 +159,38 @@ html:has(.admin-night) .admin-night-portal :is(img, video, iframe) {
     box-shadow: inset 0 0 0 1px #000000;
   }
 }
+
+/*
+ * Shop dark mode, the same idea as the admin's: the shop's content and its fixed bars are inverted,
+ * photos, video, iframes (the payment fields) and colour swatches are inverted back, and sections
+ * that sit on a photograph (hero, sign-up banner, footer — `data-keep-colors`) are left exactly as
+ * they are. The menu overlay is a photo too, so it is outside all of this. The coming-soon gate is
+ * left light: a fixed layer inside a filtered wrapper would lose its place on the screen.
+ * `theme-dark` is the visitor's pinned choice; `theme-auto` follows the device.
+ */
+html.theme-dark:not(:has(.coming-soon-gate)):has(.shop-content),
+html.theme-dark:not(:has(.coming-soon-gate)):has(.shop-content) body {
+  background: #000000;
+  color-scheme: dark;
+}
+html.theme-dark:not(:has(.coming-soon-gate)) :is(.shop-content, .shop-fixed),
+html.theme-dark:not(:has(.coming-soon-gate)) .shop-content [data-keep-colors] {
+  filter: invert(1) hue-rotate(180deg);
+}
+html.theme-dark:not(:has(.coming-soon-gate)) :is(.shop-content, .shop-fixed) :is(img, video, iframe, [style*="background-color"]):not(:where([data-keep-colors] *)) {
+  filter: invert(1) hue-rotate(180deg);
+}
+@media (prefers-color-scheme: dark) {
+  html.theme-auto:not(:has(.coming-soon-gate)):has(.shop-content),
+  html.theme-auto:not(:has(.coming-soon-gate)):has(.shop-content) body {
+    background: #000000;
+    color-scheme: dark;
+  }
+  html.theme-auto:not(:has(.coming-soon-gate)) :is(.shop-content, .shop-fixed),
+  html.theme-auto:not(:has(.coming-soon-gate)) .shop-content [data-keep-colors] {
+    filter: invert(1) hue-rotate(180deg);
+  }
+  html.theme-auto:not(:has(.coming-soon-gate)) :is(.shop-content, .shop-fixed) :is(img, video, iframe, [style*="background-color"]):not(:where([data-keep-colors] *)) {
+    filter: invert(1) hue-rotate(180deg);
+  }
+}

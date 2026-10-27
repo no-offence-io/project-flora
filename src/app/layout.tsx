@@ -4,6 +4,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import { brandStyle, getBrand } from "@/lib/brand";
+import { cookies } from "next/headers";
+import { parseTheme, THEME_COOKIE } from "@/lib/theme-shared";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,10 +40,11 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Settings → Brand can swap fonts, sizes and colours; it does so by overriding the variables the
   // stylesheet already uses, so nothing else has to know.
   const { style, fontHref } = brandStyle(await getBrand());
+  const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${gotham.variable} ${americana.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${gotham.variable} ${americana.variable} h-full antialiased theme-${theme}`}
       style={style as React.CSSProperties}
     >
       {fontHref && (

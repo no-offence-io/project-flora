@@ -156,7 +156,7 @@ export default function LoadingScreen() {
   const clipId = "loading-screen-wave-clip";
 
   return (
-    <div ref={overlayRef} className="fixed inset-0 z-[100] flex items-center justify-center bg-white">
+    <div ref={overlayRef} className="shop-fixed fixed inset-0 z-[100] flex items-center justify-center bg-white">
       <svg width={96} height={101} viewBox="0 0 36 38" style={{ overflow: "visible" }} aria-label="Flöra">
         <defs>
           <clipPath id={clipId} clipPathUnits="userSpaceOnUse">

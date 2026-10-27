@@ -53,7 +53,7 @@ export default function StickyNavbar({ threshold = 12, children }: { threshold?:
   return (
     <div
       aria-hidden={!visible}
-      className={`fixed inset-x-0 top-0 z-40 bg-white transition-transform duration-300 ease-out ${
+      className={`shop-fixed fixed inset-x-0 top-0 z-40 bg-white transition-transform duration-300 ease-out ${
         visible ? "translate-y-0" : "pointer-events-none -translate-y-full"
       }`}
     >
