@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { GROUPS } from "./nav-links";
 
 /*
@@ -10,6 +11,8 @@ import { GROUPS } from "./nav-links";
  * desktop it is a fixed 220px column; on phones it folds behind a "Menu" line at the top. Same
  * type as the shop's navbar — Gotham, 13.35px, black for the current page and 50% for the rest.
  */
+const subscribeNever = () => () => {};
+
 /** Outside the component: writing document.cookie is a side effect the React compiler won't allow inline. */
 function saveNightPreference(next: "auto" | "on" | "off") {
   document.cookie = next === "auto" ? "flora-admin-night=; path=/admin; max-age=0" : `flora-admin-night=${next === "on" ? "1" : "0"}; path=/admin; max-age=31536000; samesite=lax`;
@@ -68,6 +71,20 @@ export default function AdminNav({ current, email, unread = 0, logo, signOut, de
     </form>
   );
   const [open, setOpen] = useState(false);
+  // The sheet is portalled, which needs the browser's document: true after hydration only.
+  const mounted = useSyncExternalStore(subscribeNever, () => true, () => false);
+  // While the sheet is open the page behind it doesn't scroll, and Escape closes it.
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previous;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
   const currentLabel = GROUPS.flatMap((g) => g.links).find((l) => l.href === current)?.label ?? "Dashboard";
 
   const list = (
@@ -106,29 +123,53 @@ export default function AdminNav({ current, email, unread = 0, logo, signOut, de
             {!open && unread > 0 && <span className="ml-[6px] border-[0.5px] border-black px-[4px] py-[1px] text-[11px]">{unread}</span>}
           </button>
         </div>
-        {/* Always mounted so it can animate: the panel grows open, then each part fades in after
-            the last (opacity only — nothing slides); closing runs it in reverse. */}
-        <div aria-hidden={!open} inert={!open} className={`grid transition-[grid-template-rows] duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr] delay-[180ms]"}`}>
-          <div className="overflow-hidden">
-            <div className="flex flex-col gap-[24px] border-t border-black/25 pt-[24px] pb-[12px]">
-              {[list, nightSwitch, demoSwitch,
-                <form key="out" action={signOut} className="flex items-center gap-[12px] font-gotham text-paragraph">
-                  <span className="text-black/50">{email}</span>
-                  <button type="submit" className="text-black underline">Sign out</button>
-                </form>,
-              ].map((part, i, all) => (
-                <div
-                  key={i}
-                  className={`transition-opacity duration-[450ms] ease-out ${open ? "opacity-100" : "opacity-0"}`}
-                  style={{ transitionDelay: open ? `${120 + i * 70}ms` : `${(all.length - 1 - i) * 40}ms` }}
-                >
-                  {part}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
       </header>
+
+      {/* Phone menu: a full-screen sheet over the page, scrolling on its own. Portalled to <body> —
+          inside the admin wrapper, night mode's filter would pin "fixed" to the wrapper instead of
+          the screen — and inverted for night mode by its own class. Fades in, then each part in
+          turn (opacity only, nothing slides); closing runs it in reverse. */}
+      {mounted &&
+        createPortal(
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Admin menu"
+            aria-hidden={!open}
+            inert={!open}
+            className={`admin-night-portal fixed inset-0 z-[80] flex flex-col bg-white text-black transition-[opacity,visibility] md:hidden ${
+              open ? "visible opacity-100 duration-[350ms]" : "invisible opacity-0 delay-[160ms] duration-[300ms]"
+            }`}
+          >
+            <div className="flex shrink-0 items-center justify-between px-[24px] pt-[24px] pb-[12px]">
+              <Link href="/admin" aria-label="Flöra admin" onClick={() => setOpen(false)}>
+                <Image src={logo} alt="Flöra" width={486.544} height={109.193} className="h-[20px] w-[89px] invert" />
+              </Link>
+              <button type="button" onClick={() => setOpen(false)} className="font-gotham text-paragraph text-black">
+                Close
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-[24px] pt-[12px] pb-[42px]">
+              <div className="flex flex-col gap-[24px] border-t border-black/25 pt-[24px]">
+                {[list, nightSwitch, demoSwitch,
+                  <form key="out" action={signOut} className="flex items-center gap-[12px] font-gotham text-paragraph">
+                    <span className="truncate text-black/50">{email}</span>
+                    <button type="submit" className="text-black underline">Sign out</button>
+                  </form>,
+                ].map((part, i, all) => (
+                  <div
+                    key={i}
+                    className={`transition-opacity duration-[450ms] ease-out ${open ? "opacity-100" : "opacity-0"}`}
+                    style={{ transitionDelay: open ? `${120 + i * 70}ms` : `${(all.length - 1 - i) * 40}ms` }}
+                  >
+                    {part}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
 
       {/* Desktop: the column */}
       <aside className="hidden w-[220px] shrink-0 flex-col gap-[42px] border-r border-black/25 px-[24px] py-[24px] text-black md:sticky md:top-0 md:flex md:h-screen md:overflow-y-auto">
