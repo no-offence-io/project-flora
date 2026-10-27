@@ -16,7 +16,7 @@ const IN_MS = 450;
  * so those snap the veil up and fade it away on the new page. Next's <Link> skips its own
  * navigation when the click was already handled, but still runs its onClick (the menu closes).
  */
-export default function PageTransition() {
+export default function PageTransition({ area = "shop" }: { area?: "shop" | "admin" }) {
   const router = useRouter();
   const pathname = usePathname();
   const [phase, setPhase] = useState<"idle" | "out" | "covered" | "in">("idle");
@@ -31,7 +31,11 @@ export default function PageTransition() {
       if (!a || a.target === "_blank" || a.hasAttribute("download")) return;
       const url = new URL(a.href, window.location.href);
       if (url.origin !== window.location.origin) return;
-      if (url.pathname.startsWith("/admin") || url.pathname.startsWith("/api")) return;
+      if (url.pathname.startsWith("/api")) return;
+      // Each area fades within itself; crossing between shop and admin is an ordinary page load.
+      const inAdmin = url.pathname.startsWith("/admin");
+      if ((area === "admin") !== inAdmin) return;
+      if (url.pathname.endsWith("/export")) return; // file downloads
       // Same page (only the hash or the query changes): let it happen normally.
       if (url.pathname === window.location.pathname) return;
       if (reduced) return;
@@ -55,7 +59,7 @@ export default function PageTransition() {
       document.removeEventListener("click", onClick, true);
       window.removeEventListener("popstate", onPop);
     };
-  }, [router]);
+  }, [router, area]);
 
   // The new page has rendered: give it a frame, then reveal it.
   useEffect(() => {
@@ -76,7 +80,7 @@ export default function PageTransition() {
   return (
     <div
       aria-hidden
-      className="page-veil pointer-events-none fixed inset-0 z-[90] bg-white"
+      className={`page-veil pointer-events-none fixed inset-0 z-[90] bg-white ${area === "admin" ? "admin-veil" : ""}`}
       style={{
         opacity: visible ? 1 : 0,
         transition: `opacity ${phase === "out" ? OUT_MS : phase === "covered" ? 0 : IN_MS}ms ${phase === "out" ? "ease-in" : "ease-out"}`,

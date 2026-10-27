@@ -8,6 +8,7 @@ import { getLogoSrc } from "@/lib/brand";
 import { unreadCount } from "@/lib/notices";
 import { isDemoOn } from "@/lib/admin/demo";
 import { toggleDemoMode } from "./actions";
+import PageTransition from "@/components/page-transition";
 
 export const metadata = { robots: { index: false, follow: false } };
 
@@ -31,6 +32,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     await signOut({ redirectTo: "/admin/login" });
   }
   return (
+    <>
     <div data-admin-root className={`flex min-h-screen flex-col md:flex-row ${night === "on" ? "admin-night" : night === "auto" ? "admin-night-auto" : ""}`}>
       <AdminNav current={sectionOf(path)} email={admin.email} unread={unread} logo={logo} signOut={doSignOut} demo={demo} toggleDemo={toggleDemoMode} night={night} />
       <main className="flex min-w-0 flex-1 flex-col gap-[42px] overflow-x-hidden px-[24px] py-[42px] pb-[60px] md:px-[42px] md:pb-[120px]">
@@ -42,6 +44,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         {children}
       </main>
     </div>
+    {/* Outside the wrapper: night mode's filter there would pin "fixed" to the wrapper, not the screen. */}
+    <PageTransition area="admin" />
+    </>
   );
 }
 
