@@ -1,42 +1,35 @@
 import { redirect } from "next/navigation";
-import { auth, authConfigured } from "@/auth";
+import { BUTTON, FIELD, Heading } from "@/components/account-ui";
+import RolloverText from "@/components/rollover-text";
+import { getSizingSettings } from "@/lib/catalog";
+import { getCustomer } from "@/lib/customer";
+import { saveMeasurements } from "@/lib/customer-actions";
+import { getT } from "@/lib/i18n-server";
 
-export const metadata = { title: "My measurements – Flöra" };
-
-const FIELD = "w-full border border-black/20 bg-transparent p-[12px] font-gotham text-paragraph text-black outline-none placeholder:text-black focus:border-black/60";
-
-const MEASUREMENTS = [
-  { id: "waist", label: "B - Waist (cm)" },
-  { id: "highHips", label: "G - High hips (cm)" },
-  { id: "hips", label: "Hips (cm)" },
-  { id: "bust", label: "Bust (cm)" },
-  { id: "height", label: "Height (cm)" },
-];
-
-/** The checkout form's fields, used for the measurements that fill in at checkout. Not saved anywhere yet. */
-export default async function MeasurementsPage() {
-  if (!authConfigured || !(await auth())?.user) redirect("/account/login");
+export default async function MeasurementsPage({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
+  const [customer, t, sizing, { saved }] = await Promise.all([getCustomer(), getT(), getSizingSettings(), searchParams]);
+  if (!customer) redirect("/account/login?next=/account/measurements");
+  const value = (label: string) => customer.measurements?.find((m) => m.label === label)?.value ?? "";
   return (
     <div className="flex flex-col gap-[24px] md:max-w-[521px]">
-      <h1 className="m-0 font-americana text-big-header-mobile capitalize text-black md:text-big-header-desktop">My measurements</h1>
-      <p className="m-0 font-gotham text-paragraph text-black/70">Measure over light clothing, tape snug but not tight. We use these to suggest a size and fill them in at checkout.</p>
-      <form className="flex flex-col gap-[24px]">
-        <div className="grid gap-[24px] md:grid-cols-2">
-          {MEASUREMENTS.map((m) => (
-            <label key={m.id} htmlFor={m.id} className="block min-w-0">
-              <span className="sr-only">{m.label}</span>
-              <input id={m.id} name={m.id} inputMode="decimal" placeholder={m.label} className={`${FIELD} truncate`} />
+      <Heading>{t("account.measurements")}</Heading>
+      <p className="m-0 font-gotham text-paragraph text-black/70">{t("account.measurementsIntro")}</p>
+      {saved && <p className="m-0 font-gotham text-paragraph text-black/50">{t("account.saved")}</p>}
+      <form action={saveMeasurements} className="flex flex-col gap-[24px]">
+        <div className="grid grid-cols-2 gap-[12px]">
+          {sizing.fields.map((f) => (
+            <label key={f.label} className="flex min-w-0 flex-col gap-[6px] font-gotham text-[11px] leading-normal text-black">
+              {f.label}
+              <input type="hidden" name="label" value={f.label} />
+              <span className="relative block">
+                <input name="value" inputMode="decimal" defaultValue={value(f.label)} placeholder="0" className={`${FIELD} pr-[36px]`} />
+                <span className="pointer-events-none absolute top-1/2 right-[12px] -translate-y-1/2 text-paragraph text-black/50">cm</span>
+              </span>
+              {f.hint && <span className="text-black/50">{f.hint}</span>}
             </label>
           ))}
         </div>
-        <label htmlFor="size-note" className="block">
-          <span className="sr-only">Note</span>
-          <textarea id="size-note" name="note" placeholder="Anything else about fit (optional)" rows={3} className={`${FIELD} resize-none`} />
-        </label>
-        <button type="button" className="flex w-full items-center justify-center bg-black p-[12px] font-gotham text-paragraph text-white hover:opacity-80 transition-opacity">
-          Save measurements
-        </button>
-        <p className="m-0 font-gotham text-paragraph text-black/50">Preview: saving isn&apos;t connected yet.</p>
+        <button type="submit" className={BUTTON}><RolloverText text={t("account.save")} /></button>
       </form>
     </div>
   );

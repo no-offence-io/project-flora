@@ -122,6 +122,35 @@ export type Newsletter = {
   sentCount?: number;
 };
 
+export type Customer = {
+  _id: string;
+  _type: "customer";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  phonePrefix?: string;
+  phone?: string;
+  street?: string;
+  apartment?: string;
+  postcode?: string;
+  city?: string;
+  country?: string;
+  measurements?: Array<{
+    label?: string;
+    value?: string;
+    _type: "measurement";
+    _key: string;
+  }>;
+  stripeCustomerId?: string;
+  sessionVersion?: number;
+  language?: string;
+  createdAt?: string;
+  lastSignInAt?: string;
+};
+
 export type Subscriber = {
   _id: string;
   _type: "subscriber";
@@ -539,6 +568,7 @@ export type AllSanitySchemaTypes =
   | Slug
   | InternationalizedArrayString
   | Newsletter
+  | Customer
   | Subscriber
   | Discount
   | VintagePage

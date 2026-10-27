@@ -49,6 +49,12 @@ const T = {
     newsletterShop: "Shop the collection",
     newsletterWhy: "You get this because you signed up at",
     unsubscribe: "Unsubscribe",
+    signInSubject: "Your sign-in link – Flöra",
+    signIn: "Sign in",
+    signInText: "Tap the button to sign in to your Flöra account. The link works once and for 30 minutes. If you didn't ask for it, ignore this email — nothing happens without the click.",
+    welcomeAccountSubject: "Your Flöra account",
+    welcomeAccount: "Your details are saved",
+    welcomeAccountText: "We saved your address and measurements for next time. Sign in to see your orders and change your details.",
     testSubject: "Test email – Flöra",
     test: "It works",
     testText: "This is a test email from the Flöra admin. If you can read this, email is set up.",
@@ -79,6 +85,12 @@ const T = {
     newsletterShop: "Se kolleksjonen",
     newsletterWhy: "Du får denne fordi du meldte deg på hos",
     unsubscribe: "Meld deg av",
+    signInSubject: "Innloggingslenken din – Flöra",
+    signIn: "Logg inn",
+    signInText: "Trykk på knappen for å logge inn på Flöra-kontoen din. Lenken virker én gang og i 30 minutter. Ba du ikke om den, kan du se bort fra denne e-posten — ingenting skjer uten at du trykker.",
+    welcomeAccountSubject: "Flöra-kontoen din",
+    welcomeAccount: "Opplysningene dine er lagret",
+    welcomeAccountText: "Vi har lagret adressen og målene dine til neste gang. Logg inn for å se ordrene dine og endre opplysningene.",
     testSubject: "Test-e-post – Flöra",
     test: "Det virker",
     testText: "Dette er en test-e-post fra Flöra-administrasjonen. Kan du lese dette, er e-post satt opp.",
@@ -204,6 +216,17 @@ export async function sendNewsletterWelcome(email: string, language: Lang): Prom
   const t = T[language];
   const html = layout(t.welcome, p(t.welcomeText) + button(`${siteUrl()}/shop`, t.visit));
   return sendMail({ to: [email], subject: t.welcomeSubject, html });
+}
+
+export async function sendSignInLink(email: string, language: Lang, url: string): Promise<boolean> {
+  const t = T[language];
+  return sendMail({ to: [email], subject: t.signInSubject, html: layout(t.signIn, p(t.signInText) + button(url, t.signIn)) });
+}
+
+/** After an order where the customer ticked "save my details": what was saved, and a way in. */
+export async function sendAccountWelcome(email: string, language: Lang, url: string): Promise<boolean> {
+  const t = T[language];
+  return sendMail({ to: [email], subject: t.welcomeAccountSubject, html: layout(t.welcomeAccount, p(t.welcomeAccountText) + button(url, t.signIn)) });
 }
 
 /** From the admin's setup page: proves the key, the sender and the look in one go. */

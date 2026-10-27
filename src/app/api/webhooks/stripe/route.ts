@@ -71,6 +71,30 @@ export async function POST(req: Request) {
         console.error(`[order ${orderNumber}] confirmation email failed`, err);
         await notice({ kind: "error", source: "email", title: `Confirmation email for ${orderNumber} failed`, detail: err instanceof Error ? err.message : String(err), href: `/admin/orders/${order.docId}`, dedupeKey: `confirm:${orderNumber}` });
       }
+      // "Save my details" or a signed-in customer: keep the address (and measurements) on the account.
+      try {
+        const m = intent.metadata;
+        const email = order.customer.email;
+        if (email && (m.register === "1" || m.account)) {
+          const { upsertCustomer, customerIdFor, makeSignInToken } = await import("@/lib/customer");
+          const firstMeasured = order.lines.find((l) => l.measurements.length);
+          const existing = await getWriteClient().getDocument<{ measurements?: unknown[] }>(customerIdFor(email));
+          await upsertCustomer(email, {
+            firstName: m.customer_first, lastName: m.customer_last, phonePrefix: m.customer_prefix, phone: m.customer_phone_only,
+            street: m.customer_street, apartment: m.customer_apartment, postcode: m.customer_postcode, city: m.customer_city, country: m.customer_country,
+            language: order.language,
+            ...(firstMeasured && !(existing?.measurements ?? []).length ? { measurements: firstMeasured.measurements.map((x, i) => ({ ...x, _key: `m${i}`, _type: "measurement" })) as never } : {}),
+          });
+          if (m.register === "1" && !existing) {
+            const { sendAccountWelcome } = await import("@/lib/notify");
+            const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.prosjectflora.com").replace(/\/$/, "");
+            await sendAccountWelcome(email, order.language, `${base}/account/verify?token=${encodeURIComponent(makeSignInToken(email))}&next=/account`);
+          }
+        }
+      } catch (err) {
+        console.error(`[order ${orderNumber}] saving account details failed`, err);
+        await notice({ kind: "warning", source: "accounts", title: `Couldn't save the customer's details for ${orderNumber}`, detail: err instanceof Error ? err.message : String(err), href: `/admin/orders/${order.docId}` });
+      }
       await notice({ kind: "info", source: "orders", title: `New order ${orderNumber} · ${(order.totals.totalOre / 100).toLocaleString("nb-NO")} kr`, detail: `${order.customer.name} · ${order.lines.map((l) => `${l.quantity} × ${l.name}`).join(", ")}`, href: `/admin/orders/${order.docId}`, dedupeKey: `order:${orderNumber}` });
       break;
     }

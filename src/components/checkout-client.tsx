@@ -27,7 +27,7 @@ import RolloverText from "./rollover-text";
 
 type Quote = Pick<
   IntentResponse,
-  "clientSecret" | "paymentIntentId" | "totals"
+  "clientSecret" | "paymentIntentId" | "totals" | "customerSessionClientSecret"
 > & {
   /** The cart this quote priced; totals for any other cart are stale and shown as pending. */
   cartKey: string;
@@ -154,6 +154,7 @@ function readCustomer(form: HTMLFormElement): Customer {
     phonePrefix: getCountryCode(text("phone-prefix"))?.dial ?? "+47",
     phone: text("phone"),
     note: optional("note"),
+    ...(data.get("register") === "on" ? { register: true } : {}),
   };
 }
 
@@ -162,7 +163,9 @@ function readCustomer(form: HTMLFormElement): Customer {
  * PaymentIntent), shows the server's totals, and mounts Stripe's buttons and card fields against
  * that intent. Every amount on screen and every amount charged comes from the same server quote.
  */
-export default function CheckoutClient({ formId, countries }: { formId: string; countries: string[] }) {
+export type CheckoutAccount = { email: string; firstName?: string; lastName?: string; phonePrefix?: string; phone?: string; street?: string; apartment?: string; postcode?: string; city?: string; country?: string };
+
+export default function CheckoutClient({ formId, countries, account }: { formId: string; countries: string[]; account: CheckoutAccount | null }) {
   const { items } = useCart();
   const t = useT();
   const stripePromise = useMemo(() => getStripePromise(), []);
@@ -224,6 +227,7 @@ export default function CheckoutClient({ formId, countries }: { formId: string; 
         clientSecret: body.clientSecret,
         paymentIntentId: body.paymentIntentId,
         totals: body.totals,
+        customerSessionClientSecret: body.customerSessionClientSecret,
         cartKey: cartKeyOf(items),
       };
       setQuote(next);
@@ -292,6 +296,9 @@ export default function CheckoutClient({ formId, countries }: { formId: string; 
   // cannot be confirmed…". `excludedPaymentMethodTypes` keeps the groups on automatic methods while
   // still shaping what each one renders.
   const totalOre = quote?.totals.totalOre ?? 0;
+  // Fixed at the first quote: Stripe takes it when the card fields are created, not afterwards.
+  const [customerSession, setCustomerSession] = useState<string | undefined>(undefined);
+  if (quote?.customerSessionClientSecret && !customerSession) setCustomerSession(quote.customerSessionClientSecret);
   const cardGroup = useMemo<StripeElementsOptions>(
     () => ({
       mode: "payment",
@@ -299,9 +306,11 @@ export default function CheckoutClient({ formId, countries }: { formId: string; 
       currency: "nok",
       // Klarna has its own button in the row above; without this it also returns as a tab here.
       excludedPaymentMethodTypes: ["klarna"],
+      // Signed-in customers: Stripe's form shows their saved cards and offers to save this one.
+      ...(customerSession ? { customerSessionClientSecret: customerSession } : {}),
       appearance,
     }),
-    [totalOre, appearance],
+    [totalOre, appearance, customerSession],
   );
   // A second group for Apple Pay and Google Pay: same money and methods as cardGroup, but rounded,
   // since those two buttons must not share an Elements instance with the square card tabs below.
@@ -345,7 +354,7 @@ export default function CheckoutClient({ formId, countries }: { formId: string; 
 
   return (
     <div className="flex flex-col gap-[60px] md:flex-row md:items-stretch md:gap-[42px]">
-      <CheckoutForm id={formId} countries={countries} className="md:min-w-0 md:flex-1" />
+      <CheckoutForm id={formId} countries={countries} account={account} className="md:min-w-0 md:flex-1" />
       <OrderSummary
         totals={totals}
         discount={

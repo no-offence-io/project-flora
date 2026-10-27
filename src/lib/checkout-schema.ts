@@ -31,6 +31,8 @@ export const customerSchema = z.strictObject({
   phonePrefix: z.string().regex(/^\+\d{1,5}$/),
   phone: z.string().trim().min(4).max(30),
   note: z.string().trim().max(1000).optional(),
+  /** Guest ticked "save my details": an account is made for this email after payment. */
+  register: z.boolean().optional(),
 });
 
 export const intentRequestSchema = z.strictObject({
@@ -57,4 +59,6 @@ export type IntentResponse = {
   lines: QuotedLine[];
   /** Why the code the customer typed was not applied, if it wasn't. */
   discountError?: string;
+  /** For a signed-in customer: lets Stripe's form show and save their cards. Created per intent. */
+  customerSessionClientSecret?: string;
 };

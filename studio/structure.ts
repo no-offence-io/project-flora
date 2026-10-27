@@ -5,7 +5,7 @@ import type {StructureResolver} from 'sanity/structure'
 export const SINGLETONS = ['homePage', 'siteSettings', 'aboutPage', 'vintagePage']
 
 /** Types no one should create by hand: orders come from the Stripe webhook. */
-export const NOT_CREATABLE = [...SINGLETONS, 'order', 'subscriber', 'notification']
+export const NOT_CREATABLE = [...SINGLETONS, 'order', 'subscriber', 'notification', 'customer']
 
 export const structure: StructureResolver = (S) =>
   S.list()
@@ -25,6 +25,7 @@ export const structure: StructureResolver = (S) =>
       S.listItem().title('Discount codes').icon(TagIcon).child(S.documentTypeList('discount').title('Discount codes')),
       S.listItem().title('Newsletters').icon(EnvelopeIcon).child(S.documentTypeList('newsletter').title('Newsletters').defaultOrdering([{field: '_createdAt', direction: 'desc'}])),
       S.listItem().title('Journal').icon(DocumentIcon).child(S.documentTypeList('post').title('Journal posts').defaultOrdering([{field: 'date', direction: 'desc'}])),
+      S.listItem().title('Customers').icon(UserIcon).child(S.documentTypeList('customer').title('Customers').defaultOrdering([{field: 'createdAt', direction: 'desc'}])),
       S.listItem().title('Subscribers').icon(UserIcon).child(S.documentTypeList('subscriber').title('Newsletter subscribers').defaultOrdering([{field: 'signedUpAt', direction: 'desc'}])),
       S.divider(),
 

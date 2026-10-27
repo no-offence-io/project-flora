@@ -1,34 +1,27 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 import Navbar from "@/components/navbar";
-import { auth, authConfigured } from "@/auth";
+import AccountNav from "@/components/account-nav";
+import { getCustomer } from "@/lib/customer";
+import { getT } from "@/lib/i18n-server";
 
-const LINKS = [
-  { label: "Overview", href: "/account" },
-  { label: "My measurements", href: "/account/measurements" },
-  { label: "Orders", href: "/account/orders" },
-];
+export const dynamic = "force-dynamic";
 
-/** Customer account pages: the shop's navbar, a steps-style sub-navigation, and the content. */
+/** My page: the shop's navbar, the account's own line of links once signed in, and the content. */
 export default async function AccountLayout({ children }: { children: ReactNode }) {
-  const session = authConfigured ? await auth() : null;
+  const [customer, t] = await Promise.all([getCustomer(), getT()]);
+  const links = [
+    { label: t("account.overview"), href: "/account" },
+    { label: t("account.orders"), href: "/account/orders" },
+    { label: t("account.details"), href: "/account/details" },
+    { label: t("account.measurements"), href: "/account/measurements" },
+    { label: t("account.cards"), href: "/account/cards" },
+  ];
   return (
     <div className="flex flex-col gap-[60px] pb-[60px] md:gap-[120px] md:pb-[120px]">
       <div className="flex flex-col gap-[24px] md:gap-[42px]">
         <Navbar tone="dark" />
         <div className="flex flex-col gap-[42px] px-[24px] pb-[24px] md:px-[42px] md:pb-[42px]">
-          {session?.user && (
-            <p className="m-0 font-gotham text-paragraph text-black">
-              {LINKS.map((l, i) => (
-                <span key={l.href}>
-                  <Link href={l.href} className="hover:opacity-70 transition-opacity">
-                    {l.label}
-                  </Link>
-                  {i < LINKS.length - 1 && " – "}
-                </span>
-              ))}
-            </p>
-          )}
+          {customer && <AccountNav links={links} />}
           {children}
         </div>
       </div>

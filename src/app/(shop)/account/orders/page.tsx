@@ -1,35 +1,40 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { auth, authConfigured } from "@/auth";
+import { Heading, Status } from "@/components/account-ui";
+import { getCustomer } from "@/lib/customer";
+import { ordersFor } from "@/lib/customer-orders";
+import { getT } from "@/lib/i18n-server";
+import type { Key } from "@/lib/i18n";
+import { formatNok } from "@/lib/money";
 
-export const metadata = { title: "Your orders – Flöra" };
+const statusKey = (s: string) => (["paid", "shipped", "delivered", "refunded", "cancelled"].includes(s) ? (`status.${s}` as Key) : null);
 
-/** Order history. Will list the signed-in customer's orders by email once accounts are stored. */
-export default async function AccountOrdersPage() {
-  if (!authConfigured || !(await auth())?.user) redirect("/account/login");
-  const sample = [
-    { number: "FL-EXAMPLE1", date: "14 Oct 2026", status: "Shipped", total: "1 379 kr", items: "Miss Flow Top × 1", tracking: "RR123456789NO" },
-    { number: "FL-EXAMPLE2", date: "2 Sep 2026", status: "Delivered", total: "979 kr", items: "Wrap Skirt × 1", tracking: "" },
-  ];
+export default async function OrdersPage() {
+  const [customer, t] = await Promise.all([getCustomer(), getT()]);
+  if (!customer) redirect("/account/login?next=/account/orders");
+  const orders = await ordersFor(customer.email);
   return (
-    <div className="flex flex-col gap-[24px]">
-      <h1 className="m-0 font-americana text-big-header-mobile capitalize text-black md:text-big-header-desktop">Your orders</h1>
-      <p className="m-0 font-gotham text-paragraph text-black/50">Preview with example orders.</p>
-      <ul className="m-0 flex list-none flex-col gap-[12px] p-0 font-gotham text-paragraph text-black md:max-w-[640px]">
-        {sample.map((o) => (
-          <li key={o.number} className="flex flex-col gap-[12px] border-[0.25px] border-black/25 p-[12px]">
-            <div className="flex items-center justify-between gap-[12px]">
-              <span>{o.number}</span>
-              <span className="border-[0.5px] border-black px-[4px] py-[1px]">{o.status}</span>
-            </div>
-            <ul className="m-0 flex list-none flex-col gap-[5px] p-0 text-[11px] leading-normal">
-              <li>Ordered: <span className="text-black/50">{o.date}</span></li>
-              <li>Items: <span className="text-black/50">{o.items}</span></li>
-              {o.tracking && <li>Tracking: <span className="text-black/50">{o.tracking}</span></li>}
-            </ul>
-            <div className="flex justify-between">
-              <span>Total</span>
-              <span>{o.total}</span>
-            </div>
+    <div className="flex flex-col gap-[24px] md:max-w-[640px]">
+      <Heading>{t("account.orders")}</Heading>
+      {orders.length === 0 && <p className="m-0 font-gotham text-paragraph text-black/50">{t("account.noOrders")}</p>}
+      <ul className="m-0 flex list-none flex-col gap-[12px] p-0 font-gotham text-paragraph text-black">
+        {orders.map((o) => (
+          <li key={o._id}>
+            <Link href={`/account/orders/${o.orderNumber}`} className="flex flex-col gap-[12px] border-[0.25px] border-black/25 p-[12px]">
+              <span className="flex items-center justify-between gap-[12px]">
+                <span>{o.orderNumber}</span>
+                <Status>{statusKey(o.status) ? t(statusKey(o.status)!) : o.status}</Status>
+              </span>
+              <span className="flex flex-col gap-[5px] text-[11px] leading-normal">
+                <span>{t("account.ordered")}: <span className="text-black/50">{new Date(o.orderedAt).toLocaleDateString("nb-NO")}</span></span>
+                <span className="text-black/50">{o.items.map((i) => `${i.name}${i.size ? ` – ${i.size}` : ""} × ${i.quantity}`).join(", ")}</span>
+                {o.trackingNumber && <span>{t("account.tracking")}: <span className="text-black/50">{o.trackingNumber}</span></span>}
+              </span>
+              <span className="flex justify-between">
+                <span>{t("account.total")}</span>
+                <span>{formatNok(o.totalOre)}</span>
+              </span>
+            </Link>
           </li>
         ))}
       </ul>

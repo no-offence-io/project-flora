@@ -1,4 +1,5 @@
 import {aboutPage} from './documents/about-page'
+import {customer} from './documents/customer'
 import {discount} from './documents/discount'
 import {faqItem} from './documents/faq-item'
 import {homePage} from './documents/home-page'
@@ -26,6 +27,7 @@ export const schemaTypes = [
   vintagePage,
   discount,
   subscriber,
+  customer,
   newsletter,
   post,
   notification,

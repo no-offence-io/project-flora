@@ -3,6 +3,7 @@ import CheckoutClient from "@/components/checkout-client";
 import CheckoutSteps from "@/components/checkout-steps";
 import Navbar from "@/components/navbar";
 import { getShipsTo } from "@/lib/catalog";
+import { getCustomer } from "@/lib/customer";
 import { getT } from "@/lib/i18n-server";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -13,7 +14,11 @@ export async function generateMetadata(): Promise<Metadata> {
 const FORM_ID = "billing-details";
 
 export default async function CheckoutPage() {
-  const [t, countries] = await Promise.all([getT(), getShipsTo()]);
+  const [t, countries, customer] = await Promise.all([getT(), getShipsTo(), getCustomer()]);
+  // Only what the form needs leaves the server — never the Stripe id or session details.
+  const account = customer
+    ? { email: customer.email, firstName: customer.firstName, lastName: customer.lastName, phonePrefix: customer.phonePrefix, phone: customer.phone, street: customer.street, apartment: customer.apartment, postcode: customer.postcode, city: customer.city, country: customer.country }
+    : null;
   return (
     <div className="flex flex-col gap-[60px] pb-[60px] md:gap-[120px] md:pb-[120px]">
       <div className="flex flex-col gap-[24px] md:gap-[42px]">
@@ -28,7 +33,7 @@ export default async function CheckoutPage() {
             </h1>
           </div>
 
-          <CheckoutClient formId={FORM_ID} countries={countries} />
+          <CheckoutClient formId={FORM_ID} countries={countries} account={account} />
         </div>
       </div>
     </div>

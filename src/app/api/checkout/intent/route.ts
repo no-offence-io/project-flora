@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { intentRequestSchema, type IntentResponse } from "@/lib/checkout-schema";
+import { getCustomer } from "@/lib/customer";
 import { getLanguage } from "@/lib/language";
+import { getWriteClient } from "@/sanity/lib/write";
 import { METADATA_SITE, quoteCart, quoteToMetadata } from "@/lib/orders";
 import { assertStripeEnvironment, getStripe, StripeConfigError } from "@/lib/stripe";
 
@@ -40,7 +42,19 @@ export async function POST(req: Request) {
   // Price as charged, sizes and measurements travel on the intent, so the order record never has
   // to re-derive them later — and the customer's language, so their emails match the site they saw.
   const metadata = quoteToMetadata(quote, { lang: await getLanguage(), country });
+  // Who is paying comes from the signed session cookie, never from the request body.
+  const account = await getCustomer();
   if (customer) {
+    metadata.customer_street = customer.street.slice(0, 200);
+    if (customer.apartment) metadata.customer_apartment = customer.apartment.slice(0, 200);
+    metadata.customer_postcode = customer.postcode;
+    metadata.customer_city = customer.city;
+    metadata.customer_country = customer.country;
+    metadata.customer_first = customer.firstName;
+    metadata.customer_last = customer.lastName;
+    metadata.customer_prefix = customer.phonePrefix;
+    metadata.customer_phone_only = customer.phone;
+    if (customer.register && !account) metadata.register = "1";
     metadata.customer_email = customer.email;
     metadata.customer_name = `${customer.firstName} ${customer.lastName}`;
     metadata.customer_phone = `${customer.phonePrefix} ${customer.phone}`;
@@ -58,11 +72,34 @@ export async function POST(req: Request) {
     const stripe = getStripe();
     const receipt = customer ? { receipt_email: customer.email } : {};
 
+    // A signed-in customer gets a Stripe customer record (made once, id kept on their account), so
+    // Stripe can save and show their cards. Card details stay entirely inside Stripe.
+    let stripeCustomer: string | undefined;
+    if (account) {
+      stripeCustomer = account.stripeCustomerId;
+      if (stripeCustomer) {
+        const found = await stripe.customers.retrieve(stripeCustomer).catch(() => null);
+        if (!found || ("deleted" in found && found.deleted)) stripeCustomer = undefined;
+      }
+      if (!stripeCustomer) {
+        stripeCustomer = (await stripe.customers.create({ email: account.email, metadata: { site: METADATA_SITE, account: account._id } })).id;
+        await getWriteClient().patch(account._id).set({ stripeCustomerId: stripeCustomer }).commit();
+      }
+      metadata.account = account._id;
+    }
+    const customerParam = stripeCustomer ? { customer: stripeCustomer } : {};
+
     let intent: Stripe.PaymentIntent | null = null;
     if (paymentIntentId) {
       const existing = await stripe.paymentIntents.retrieve(paymentIntentId).catch(() => null);
       if (existing && existing.metadata.site === METADATA_SITE && UPDATABLE.includes(existing.status)) {
-        intent = await stripe.paymentIntents.update(existing.id, { amount: totals.totalOre, metadata, ...receipt });
+        intent = await stripe.paymentIntents.update(existing.id, {
+          amount: totals.totalOre,
+          metadata,
+          ...receipt,
+          // An intent can gain a customer (signed in mid-checkout) but never change to another one.
+          ...(stripeCustomer && !existing.customer ? customerParam : {}),
+        });
       }
     }
     if (!intent) {
@@ -72,11 +109,35 @@ export async function POST(req: Request) {
         automatic_payment_methods: { enabled: true },
         metadata,
         ...receipt,
+        ...customerParam,
       });
     }
     if (!intent.client_secret) throw new Error("PaymentIntent has no client secret");
 
-    const response: IntentResponse = { clientSecret: intent.client_secret, paymentIntentId: intent.id, totals, lines, ...(quote.discountError ? { discountError: quote.discountError } : {}) };
+    // Lets Stripe's form list this customer's saved cards and offer "save for next time".
+    let customerSessionClientSecret: string | undefined;
+    const intentCustomer = typeof intent.customer === "string" ? intent.customer : intent.customer?.id;
+    if (stripeCustomer && intentCustomer === stripeCustomer) {
+      const session = await stripe.customerSessions.create({
+        customer: stripeCustomer,
+        components: {
+          payment_element: {
+            enabled: true,
+            features: { payment_method_redisplay: "enabled", payment_method_save: "enabled", payment_method_save_usage: "on_session", payment_method_remove: "enabled" },
+          },
+        },
+      });
+      customerSessionClientSecret = session.client_secret;
+    }
+
+    const response: IntentResponse = {
+      clientSecret: intent.client_secret,
+      paymentIntentId: intent.id,
+      totals,
+      lines,
+      ...(quote.discountError ? { discountError: quote.discountError } : {}),
+      ...(customerSessionClientSecret ? { customerSessionClientSecret } : {}),
+    };
     return NextResponse.json(response);
   } catch (err) {
     console.error("[checkout/intent]", err);
