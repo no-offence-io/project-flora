@@ -107,7 +107,8 @@ export function NavMenuOverlay({ lang = "en", logoSrc = "/footer/flora-logo.svg"
   const stagger = (i: number) => ({
     transitionDelay: isOpen ? `${180 + i * 70}ms` : `${(count - 1 - i) * 40}ms`,
   });
-  const piece = `transition-[opacity,transform] duration-[600ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${isOpen ? "translate-y-0 opacity-100" : "translate-y-[28px] opacity-0"}`;
+  // Opacity only: the links stay exactly where they are while they fade in and out.
+  const piece = `transition-opacity duration-[600ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${isOpen ? "opacity-100" : "opacity-0"}`;
 
   return (
     <div
