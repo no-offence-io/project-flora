@@ -50,15 +50,50 @@ const APPEARANCE: StripeElementsOptions["appearance"] = {
 };
 
 /**
- * Same as APPEARANCE, but with a corner radius. Only the express row's Stripe-drawn buttons
- * (Apple Pay, Google Pay, Klarna) use this — a button's corner radius comes from the appearance
- * of the Elements group it lives in, and this group must stay separate from the one behind the
- * actual card tabs below, which keep the site's square corners.
+ * The same in dark mode. Stripe draws its fields in frames the page's inversion leaves alone, so
+ * they are asked for Stripe's own dark style instead: black fields, white text, white focus.
  */
-const EXPRESS_APPEARANCE: StripeElementsOptions["appearance"] = {
-  ...APPEARANCE,
-  variables: { ...APPEARANCE.variables, borderRadius: "8px" },
+const DARK_APPEARANCE: StripeElementsOptions["appearance"] = {
+  theme: "night",
+  variables: {
+    colorPrimary: "#ffffff",
+    colorText: "#ffffff",
+    colorBackground: "#000000",
+    colorTextPlaceholder: "rgba(255,255,255,0.5)",
+    borderRadius: "0px",
+    fontSizeBase: "13.35px",
+  },
+  rules: {
+    ".Input": { border: "1px solid rgba(255,255,255,0.2)", boxShadow: "none" },
+    ".Input:focus": { border: "1px solid rgba(255,255,255,0.6)", boxShadow: "none" },
+    ".Tab": { border: "1px solid rgba(255,255,255,0.2)", boxShadow: "none", backgroundColor: "#000000" },
+    ".Tab--selected": { border: "1px solid #ffffff", boxShadow: "none" },
+  },
 };
+
+const withRadius = (a: StripeElementsOptions["appearance"]) => ({ ...a, variables: { ...a?.variables, borderRadius: "8px" } });
+
+/**
+ * Whether the shop is showing dark right now: a pinned "Dark", or "Auto" on a device in dark mode
+ * (see the theme classes on <html> and globals.css). Follows changes to either while on the page.
+ */
+function useDarkShop(): boolean {
+  const [dark, setDark] = useState(false);
+  useEffect(() => {
+    const html = document.documentElement;
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
+    const read = () => setDark(html.classList.contains("theme-dark") || (html.classList.contains("theme-auto") && mql.matches));
+    read();
+    const observer = new MutationObserver(read);
+    observer.observe(html, { attributes: true, attributeFilter: ["class"] });
+    mql.addEventListener("change", read);
+    return () => {
+      observer.disconnect();
+      mql.removeEventListener("change", read);
+    };
+  }, []);
+  return dark;
+}
 
 /**
  * The three express buttons are Stripe-drawn, so each carries its brand's own styling exactly as
@@ -131,6 +166,8 @@ export default function CheckoutClient({ formId, countries }: { formId: string; 
   const { items } = useCart();
   const t = useT();
   const stripePromise = useMemo(() => getStripePromise(), []);
+  const dark = useDarkShop();
+  const appearance = dark ? DARK_APPEARANCE : APPEARANCE;
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -262,9 +299,9 @@ export default function CheckoutClient({ formId, countries }: { formId: string; 
       currency: "nok",
       // Klarna has its own button in the row above; without this it also returns as a tab here.
       excludedPaymentMethodTypes: ["klarna"],
-      appearance: APPEARANCE,
+      appearance,
     }),
-    [totalOre],
+    [totalOre, appearance],
   );
   // A second group for Apple Pay and Google Pay: same money and methods as cardGroup, but rounded,
   // since those two buttons must not share an Elements instance with the square card tabs below.
@@ -274,9 +311,9 @@ export default function CheckoutClient({ formId, countries }: { formId: string; 
       amount: totalOre,
       currency: "nok",
       excludedPaymentMethodTypes: ["klarna"],
-      appearance: EXPRESS_APPEARANCE,
+      appearance: withRadius(appearance),
     }),
-    [totalOre],
+    [totalOre, appearance],
   );
   // Klarna's own group excludes nothing; its button is already restricted to Klarna by KLARNA_BUTTON.
   const klarnaGroup = useMemo<StripeElementsOptions>(
@@ -284,9 +321,9 @@ export default function CheckoutClient({ formId, countries }: { formId: string; 
       mode: "payment",
       amount: totalOre,
       currency: "nok",
-      appearance: EXPRESS_APPEARANCE,
+      appearance: withRadius(appearance),
     }),
-    [totalOre],
+    [totalOre, appearance],
   );
 
   if (items.length === 0) {
