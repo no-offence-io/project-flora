@@ -13,6 +13,20 @@ import { GROUPS } from "./nav-links";
 /** Outside the component: writing document.cookie is a side effect the React compiler won't allow inline. */
 function saveNightPreference(next: "auto" | "on" | "off") {
   document.cookie = next === "auto" ? "flora-admin-night=; path=/admin; max-age=0" : `flora-admin-night=${next === "on" ? "1" : "0"}; path=/admin; max-age=31536000; samesite=lax`;
+  // The browser's own bars: follow the device on Auto, otherwise the pinned colour.
+  document.querySelectorAll('meta[name="theme-color"]').forEach((m) => {
+    if (!m.hasAttribute("data-media")) {
+      m.setAttribute("data-media", m.getAttribute("media") ?? "");
+      m.setAttribute("data-content", m.getAttribute("content") ?? "");
+    }
+    if (next === "auto") {
+      m.setAttribute("media", m.getAttribute("data-media") ?? "");
+      m.setAttribute("content", m.getAttribute("data-content") ?? "");
+    } else {
+      m.removeAttribute("media");
+      m.setAttribute("content", next === "on" ? "#000000" : "#ffffff");
+    }
+  });
 }
 
 export default function AdminNav({ current, email, unread = 0, logo, signOut, demo = false, toggleDemo, night: nightInitial = "auto" }: { current: string; email: string; unread?: number; logo: string; signOut: () => Promise<void>; demo?: boolean; toggleDemo: () => Promise<void>; night?: "auto" | "on" | "off" }) {

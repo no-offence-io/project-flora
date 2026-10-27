@@ -11,6 +11,14 @@ import { toggleDemoMode } from "./actions";
 
 export const metadata = { robots: { index: false, follow: false } };
 
+/** The browser's own bars follow the device setting; a pinned choice is set by the sidebar switch. */
+export const viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+  ],
+};
+
 /** Every page under here is behind requireAdmin(); the login page lives in a sibling group. */
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const admin = await requireAdmin();
