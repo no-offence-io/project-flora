@@ -16,6 +16,7 @@ export const siteSettings = defineType({
     {name: 'brand', title: 'Brand'},
   ],
   fields: [
+    defineField({name: 'demoMode', title: 'Admin test mode', type: 'boolean', readOnly: true, hidden: true}),
     defineField({name: 'siteName', title: 'Site name', type: 'string', group: 'general', initialValue: 'Flöra'}),
     defineField({
       name: 'announcement',

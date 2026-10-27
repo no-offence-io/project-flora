@@ -41,7 +41,7 @@ export async function sendNewsletterToAll(doc: NewsletterDoc): Promise<number> {
   if (!subject.en) throw new Error("A subject line is needed before sending");
   const products = await productsForNewsletter(productIdsIn(blocks));
   const subscribers = await adminClient().fetch<{ _id: string; email: string; language?: string }[]>(
-    `*[_type == "subscriber" && !defined(unsubscribedAt) && defined(email)]{ _id, email, language }`,
+    `*[_type == "subscriber" && !defined(unsubscribedAt) && defined(email) && demo != true]{ _id, email, language }`,
   );
   let sent = 0;
   const failed: string[] = [];

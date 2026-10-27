@@ -11,6 +11,7 @@ export const newsletter = defineType({
   type: 'document',
   icon: EnvelopeIcon,
   fields: [
+    defineField({name: 'demo', title: 'Test-mode data', type: 'boolean', readOnly: true, hidden: true}),
     defineField({name: 'title', title: 'Title (for the list)', type: 'string', readOnly: true}),
     defineField({name: 'subjectEn', title: 'Subject line, English', type: 'string'}),
     defineField({name: 'subjectNo', title: 'Subject line, Norsk', type: 'string'}),

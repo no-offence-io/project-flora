@@ -5,7 +5,7 @@ import { requireAdmin } from "@/lib/admin/session";
 export async function GET() {
   await requireAdmin();
   const subs = await adminClient().fetch<{ email: string; language?: string; signedUpAt?: string }[]>(
-    `*[_type == "subscriber" && !defined(unsubscribedAt) && defined(email)] | order(signedUpAt desc){ email, language, signedUpAt }`,
+    `*[_type == "subscriber" && !defined(unsubscribedAt) && defined(email) && demo != true] | order(signedUpAt desc){ email, language, signedUpAt }`,
   );
   const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
   const csv = ["email,language,signed_up", ...subs.map((s) => [esc(s.email), esc(s.language ?? "en"), esc(s.signedUpAt ?? "")].join(","))].join("\n");

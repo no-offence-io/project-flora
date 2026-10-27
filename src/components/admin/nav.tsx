@@ -10,7 +10,19 @@ import { GROUPS } from "./nav-links";
  * desktop it is a fixed 220px column; on phones it folds behind a "Menu" line at the top. Same
  * type as the shop's navbar — Gotham, 13.35px, black for the current page and 50% for the rest.
  */
-export default function AdminNav({ current, email, unread = 0, logo, signOut }: { current: string; email: string; unread?: number; logo: string; signOut: () => Promise<void> }) {
+export default function AdminNav({ current, email, unread = 0, logo, signOut, demo = false, toggleDemo }: { current: string; email: string; unread?: number; logo: string; signOut: () => Promise<void>; demo?: boolean; toggleDemo: () => Promise<void> }) {
+  const [switching, setSwitching] = useState(false);
+  const demoSwitch = (
+    <form action={toggleDemo} onSubmit={() => setSwitching(true)} className="flex flex-col gap-[6px]">
+      <span className="font-gotham text-[11px] leading-normal tracking-[0.2em] uppercase text-black/50">Test mode</span>
+      <button type="submit" disabled={switching} role="switch" aria-checked={demo} className="flex items-center gap-[8px] font-gotham text-paragraph text-black disabled:opacity-50">
+        <span aria-hidden className={`relative inline-block h-[14px] w-[26px] rounded-full border border-black transition-colors ${demo ? "bg-black" : "bg-white"}`}>
+          <span className={`absolute top-[1px] h-[10px] w-[10px] rounded-full transition-all ${demo ? "left-[13px] bg-white" : "left-[1px] bg-black"}`} />
+        </span>
+        {switching ? (demo ? "Removing…" : "Filling…") : demo ? "On — sample data" : "Off"}
+      </button>
+    </form>
+  );
   const [open, setOpen] = useState(false);
   const currentLabel = GROUPS.flatMap((g) => g.links).find((l) => l.href === current)?.label ?? "Dashboard";
 
@@ -53,6 +65,7 @@ export default function AdminNav({ current, email, unread = 0, logo, signOut }: 
         {open && (
           <div className="flex flex-col gap-[24px] border-t border-black/25 pt-[24px]">
             {list}
+            {demoSwitch}
             <form action={signOut} className="flex items-center gap-[12px] font-gotham text-paragraph">
               <span className="text-black/50">{email}</span>
               <button type="submit" className="text-black underline">Sign out</button>
@@ -67,6 +80,7 @@ export default function AdminNav({ current, email, unread = 0, logo, signOut }: 
           <Image src={logo} alt="Flöra" width={486.544} height={109.193} className="h-[20px] w-[89px] invert" />
         </Link>
         {list}
+        {demoSwitch}
         <form action={signOut} className="mt-auto flex flex-col gap-[6px] font-gotham text-[11px] leading-normal">
           <span className="truncate text-black/50">{email}</span>
           <button type="submit" className="w-max text-black underline hover:opacity-70 transition-opacity">Sign out</button>

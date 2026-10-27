@@ -8,6 +8,7 @@ export const subscriber = defineType({
   type: 'document',
   icon: UserIcon,
   fields: [
+    defineField({name: 'demo', title: 'Test-mode data', type: 'boolean', readOnly: true, hidden: true}),
     defineField({name: 'email', title: 'Email', type: 'string', readOnly: true, validation: (rule) => rule.required()}),
     defineField({name: 'language', title: 'Language', type: 'string', readOnly: true}),
     defineField({name: 'signedUpAt', title: 'Signed up', type: 'datetime', readOnly: true}),

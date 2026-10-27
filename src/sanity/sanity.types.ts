@@ -56,6 +56,7 @@ export type Notification = {
   _createdAt: string;
   _updatedAt: string;
   _rev: string;
+  demo?: boolean;
   kind?: "error" | "warning" | "info";
   title?: string;
   detail?: string;
@@ -110,6 +111,7 @@ export type Newsletter = {
   _createdAt: string;
   _updatedAt: string;
   _rev: string;
+  demo?: boolean;
   title?: string;
   subjectEn?: string;
   subjectNo?: string;
@@ -126,6 +128,7 @@ export type Subscriber = {
   _createdAt: string;
   _updatedAt: string;
   _rev: string;
+  demo?: boolean;
   email?: string;
   language?: string;
   signedUpAt?: string;
@@ -205,6 +208,7 @@ export type SiteSettings = {
   _createdAt: string;
   _updatedAt: string;
   _rev: string;
+  demoMode?: boolean;
   siteName?: string;
   announcement?: InternationalizedArrayString;
   signUpTitle?: InternationalizedArrayString;
@@ -317,6 +321,7 @@ export type Order = {
   _createdAt: string;
   _updatedAt: string;
   _rev: string;
+  demo?: boolean;
   orderNumber?: string;
   status?: "paid" | "shipped" | "delivered" | "refunded" | "cancelled";
   trackingNumber?: string;

@@ -1,11 +1,11 @@
 import { Heading, Muted, Row, Tag } from "@/components/admin/ui";
 import { adminClient, kr } from "@/lib/admin/sanity";
 
-type OrderRow = { _id: string; orderNumber?: string; status?: string; totalOre?: number; orderedAt?: string; name?: string; email?: string };
+type OrderRow = { demo?: boolean; _id: string; orderNumber?: string; status?: string; totalOre?: number; orderedAt?: string; name?: string; email?: string };
 
 export default async function OrdersPage() {
   const orders = await adminClient().fetch<OrderRow[]>(
-    `*[_type == "order"] | order(orderedAt desc)[0...200]{_id, orderNumber, status, totalOre, orderedAt, "name": customer.name, "email": customer.email}`,
+    `*[_type == "order"] | order(orderedAt desc)[0...200]{_id, demo, orderNumber, status, totalOre, orderedAt, "name": customer.name, "email": customer.email}`,
   );
   return (
     <>
@@ -24,6 +24,7 @@ export default async function OrdersPage() {
                 {o.name} <span className="text-black/50">{o.email}</span>
               </span>
               <span className="text-[11px] text-black/50">{o.orderedAt ? new Date(o.orderedAt).toLocaleDateString("nb-NO") : ""}</span>
+              {o.demo && <Tag tone="muted">test</Tag>}
               <Tag tone={o.status === "paid" ? "default" : "muted"}>{o.status}</Tag>
               <span className="w-[90px] text-right">{kr(o.totalOre)}</span>
             </Row>

@@ -45,8 +45,14 @@ export async function sendShippingEmail(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id.startsWith("order-")) throw new Error("Invalid order");
   const trackingNumber = String(formData.get("trackingNumber") ?? "").trim().slice(0, 100);
-  const order = await adminClient().fetch<{ orderNumber?: string; language?: string; customer?: { email?: string } } | null>(`*[_id == $id][0]{ orderNumber, language, customer }`, { id });
+  const order = await adminClient().fetch<{ orderNumber?: string; language?: string; demo?: boolean; customer?: { email?: string } } | null>(`*[_id == $id][0]{ orderNumber, language, demo, customer }`, { id });
   if (!order) throw new Error("Order not found");
+  if (order.demo) {
+    // Test-mode order: behave as if sent, without emailing a made-up address.
+    await adminClient().patch(id).set({ trackingNumber, status: "shipped", shippingEmailSentAt: new Date().toISOString() }).commit();
+    revalidatePath(`/admin/orders/${id}`);
+    redirect(`/admin/orders/${id}?sent=1`);
+  }
 
   const { emailConfigured, sendShippingNotification, trackingUrlFor } = await import("@/lib/notify");
   if (!emailConfigured()) redirect(`/admin/orders/${id}?error=${encodeURIComponent("Email isn't connected yet — see Setup.")}`);
@@ -534,4 +540,14 @@ export async function removeGif(formData: FormData) {
   if (id) await adminClient().patch(id).unset(["gif"]).commit();
   revalidatePath(`/admin/products/${id}`);
   redirect(`/admin/products/${id}`);
+}
+
+/** Sidebar switch: fill the admin with made-up data, or remove it again. */
+export async function toggleDemoMode() {
+  await requireAdmin();
+  const { clearDemo, isDemoOn, seedDemo } = await import("@/lib/admin/demo");
+  if (await isDemoOn()) await clearDemo();
+  else await seedDemo();
+  revalidatePath("/admin", "layout");
+  redirect("/admin");
 }

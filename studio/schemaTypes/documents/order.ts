@@ -17,6 +17,7 @@ export const order = defineType({
     {name: 'payment', title: 'Payment'},
   ],
   fields: [
+    defineField({name: 'demo', title: 'Test-mode data', type: 'boolean', readOnly: true, hidden: true}),
     defineField({name: 'orderNumber', title: 'Order number', type: 'string', readOnly: true, group: 'fulfilment'}),
     defineField({
       name: 'status',

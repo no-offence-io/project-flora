@@ -8,6 +8,7 @@ export const notification = defineType({
   type: 'document',
   icon: BellIcon,
   fields: [
+    defineField({name: 'demo', title: 'Test-mode data', type: 'boolean', readOnly: true, hidden: true}),
     defineField({name: 'kind', title: 'Kind', type: 'string', options: {list: ['error', 'warning', 'info']}, readOnly: true}),
     defineField({name: 'title', title: 'Title', type: 'string', readOnly: true}),
     defineField({name: 'detail', title: 'Detail', type: 'text', rows: 3, readOnly: true}),

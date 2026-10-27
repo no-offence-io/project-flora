@@ -261,6 +261,13 @@
           "type": "string"
         }
       },
+      "demo": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "boolean"
+        },
+        "optional": true
+      },
       "kind": {
         "type": "objectAttribute",
         "value": {
@@ -548,6 +555,13 @@
           "type": "string"
         }
       },
+      "demo": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "boolean"
+        },
+        "optional": true
+      },
       "title": {
         "type": "objectAttribute",
         "value": {
@@ -650,6 +664,13 @@
         "value": {
           "type": "string"
         }
+      },
+      "demo": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "boolean"
+        },
+        "optional": true
       },
       "email": {
         "type": "objectAttribute",
@@ -1135,6 +1156,13 @@
         "value": {
           "type": "string"
         }
+      },
+      "demoMode": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "boolean"
+        },
+        "optional": true
       },
       "siteName": {
         "type": "objectAttribute",
@@ -1836,6 +1864,13 @@
         "value": {
           "type": "string"
         }
+      },
+      "demo": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "boolean"
+        },
+        "optional": true
       },
       "orderNumber": {
         "type": "objectAttribute",
