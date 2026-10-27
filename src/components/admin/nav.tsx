@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { GROUPS } from "./nav-links";
+import { leadsElsewhere, PAGE_COVERED } from "../page-transition";
 
 /*
  * The admin's sidebar: the wordmark, the sections in small groups, sign-out at the bottom. On
@@ -71,6 +72,21 @@ export default function AdminNav({ current, email, unread = 0, logo, signOut, de
     </form>
   );
   const [open, setOpen] = useState(false);
+  // As in the shop menu: a link to another page keeps the sheet up through the fade-out and closes
+  // it instantly once the screen is covered.
+  const [instant, setInstant] = useState(false);
+  useEffect(() => {
+    const onCovered = () => {
+      setInstant(true);
+      setOpen(false);
+      window.setTimeout(() => setInstant(false), 50);
+    };
+    window.addEventListener(PAGE_COVERED, onCovered);
+    return () => window.removeEventListener(PAGE_COVERED, onCovered);
+  }, []);
+  const onLink = (href: string) => () => {
+    if (!leadsElsewhere(href)) setOpen(false);
+  };
   // The sheet is portalled, which needs the browser's document: true after hydration only.
   const mounted = useSyncExternalStore(subscribeNever, () => true, () => false);
   // While the sheet is open the page behind it doesn't scroll, and Escape closes it.
@@ -97,7 +113,7 @@ export default function AdminNav({ current, email, unread = 0, logo, signOut, de
               const active = link.href === current;
               return (
                 <li key={link.href}>
-                  <Link href={link.href} aria-current={active ? "page" : undefined} onClick={() => setOpen(false)} className={`flex items-center justify-between gap-[12px] hover:opacity-70 transition-opacity ${active ? "text-black" : "text-black/50"}`}>
+                  <Link href={link.href} aria-current={active ? "page" : undefined} onClick={onLink(link.href)} className={`flex items-center justify-between gap-[12px] hover:opacity-70 transition-opacity ${active ? "text-black" : "text-black/50"}`}>
                     <span>{link.label}</span>
                     {link.href === "/admin/notifications" && unread > 0 && <span className="border-[0.5px] border-black px-[4px] py-[1px] text-[11px] text-black">{unread}</span>}
                   </Link>
@@ -139,10 +155,10 @@ export default function AdminNav({ current, email, unread = 0, logo, signOut, de
             inert={!open}
             className={`admin-night-sheet fixed inset-0 z-[80] flex flex-col bg-white text-black transition-[opacity,visibility] md:hidden ${
               open ? "visible opacity-100 duration-[350ms]" : "invisible opacity-0 delay-[160ms] duration-[300ms]"
-            }`}
+            } ${instant ? "!transition-none !delay-0" : ""}`}
           >
             <div className="flex shrink-0 items-center justify-between px-[24px] pt-[24px] pb-[12px]">
-              <Link href="/admin" aria-label="Flöra admin" onClick={() => setOpen(false)}>
+              <Link href="/admin" aria-label="Flöra admin" onClick={onLink("/admin")}>
                 <Image src={logo} alt="Flöra" width={486.544} height={109.193} className="h-[20px] w-[89px] invert" />
               </Link>
               <button type="button" onClick={() => setOpen(false)} className="font-gotham text-paragraph text-black">
@@ -159,7 +175,7 @@ export default function AdminNav({ current, email, unread = 0, logo, signOut, de
                 ].map((part, i, all) => (
                   <div
                     key={i}
-                    className={`transition-opacity duration-[450ms] ease-out ${open ? "opacity-100" : "opacity-0"}`}
+                    className={`transition-opacity duration-[450ms] ease-out ${open ? "opacity-100" : "opacity-0"} ${instant ? "!transition-none" : ""}`}
                     style={{ transitionDelay: open ? `${120 + i * 70}ms` : `${(all.length - 1 - i) * 40}ms` }}
                   >
                     {part}

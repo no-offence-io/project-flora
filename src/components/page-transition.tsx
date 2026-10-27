@@ -4,6 +4,16 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 const OUT_MS = 280;
+/** Fired when the veil fully covers the screen, just before the next page is requested. */
+export const PAGE_COVERED = "flora:page-covered";
+
+/** True when `href` leads to another page (so the fade will run and the menu can wait for it). */
+export function leadsElsewhere(href: string): boolean {
+  if (typeof window === "undefined") return false;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
+  const url = new URL(href, window.location.href);
+  return url.origin === window.location.origin && url.pathname !== window.location.pathname;
+}
 const IN_MS = 450;
 
 /**
@@ -45,6 +55,8 @@ export default function PageTransition({ area = "shop" }: { area?: "shop" | "adm
       setPhase("out");
       window.setTimeout(() => {
         setPhase("covered");
+        // Menus that stayed open during the fade close now, out of sight under the veil.
+        window.dispatchEvent(new Event(PAGE_COVERED));
         router.push(href);
       }, OUT_MS);
       window.clearTimeout(failSafe.current);

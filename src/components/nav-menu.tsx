@@ -18,6 +18,7 @@ import { SOCIAL_LINKS } from "./footer-shared";
 import { useT } from "@/components/i18n-provider";
 import RolloverText from "./rollover-text";
 import ThemeSwitch from "./theme-switch";
+import { leadsElsewhere, PAGE_COVERED } from "./page-transition";
 import type { Theme } from "@/lib/theme-shared";
 
 const MENU_LINKS = [
@@ -81,6 +82,21 @@ export function BurgerButton({ className = "" }: { className?: string }) {
 export function NavMenuOverlay({ lang = "en", logoSrc = "/footer/flora-logo.svg", theme = "auto" }: { lang?: Lang; logoSrc?: string; theme?: Theme }) {
   const t = useT();
   const { isOpen, close } = useNavMenu();
+  // A link to another page leaves the menu up while the page fades out; it closes instantly once
+  // the screen is covered, so nothing disappears before the fade. Same-page links close as usual.
+  const [instant, setInstant] = useState(false);
+  useEffect(() => {
+    const onCovered = () => {
+      setInstant(true);
+      close();
+      window.setTimeout(() => setInstant(false), 50);
+    };
+    window.addEventListener(PAGE_COVERED, onCovered);
+    return () => window.removeEventListener(PAGE_COVERED, onCovered);
+  }, [close]);
+  const onLink = (href: string) => () => {
+    if (!leadsElsewhere(href)) close();
+  };
   // Always mounted, so the photo loads with the page and opening is a fade, never a pop-in.
   const [photoLoaded, setPhotoLoaded] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -119,7 +135,7 @@ export function NavMenuOverlay({ lang = "en", logoSrc = "/footer/flora-logo.svg"
       inert={!isOpen}
       className={`fixed inset-0 z-50 overflow-hidden p-[24px] text-white transition-[opacity,visibility] md:p-[42px] ${
         isOpen ? "visible opacity-100 duration-[450ms]" : "invisible opacity-0 delay-[220ms] duration-[400ms]"
-      }`}
+      } ${instant ? "!transition-none !delay-0" : ""}`}
     >
       {/* Background photo with the dark overlay: 49% on mobile, 30% on desktop */}
       <div aria-hidden className="absolute inset-0">
@@ -137,7 +153,7 @@ export function NavMenuOverlay({ lang = "en", logoSrc = "/footer/flora-logo.svg"
       </div>
 
       {/* Wordmark, desktop only */}
-      <Link href="/" aria-label="Flöra home" onClick={close} className="relative hidden md:block">
+      <Link href="/" aria-label="Flöra home" onClick={onLink("/")} className="relative hidden md:block">
         <Image
           src={logoSrc}
           alt="Flöra"
@@ -165,7 +181,7 @@ export function NavMenuOverlay({ lang = "en", logoSrc = "/footer/flora-logo.svg"
         className="absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-[24px] font-americana text-big-header-mobile capitalize whitespace-nowrap md:flex-row md:gap-[60px] md:text-big-header-desktop"
       >
         {MENU_LINKS.map((link, i) => (
-          <Link key={link.key} href={link.href} onClick={close} className={`block ${piece}`} style={stagger(i)}>
+          <Link key={link.key} href={link.href} onClick={onLink(link.href)} className={`block ${piece} ${instant ? "!transition-none" : ""}`} style={stagger(i)}>
             <RolloverText text={t(link.key)} capitalize />
           </Link>
         ))}
