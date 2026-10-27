@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { deleteNewsletter, duplicateNewsletter, listImages, previewNewsletter, saveNewsletter, sendNewsletterAll, sendNewsletterTest, uploadPickerImage } from "@/app/admin/(app)/newsletters/actions";
 import { FIELD } from "@/components/admin/ui";
 import { BLOCK_LABELS, newBlock, type Block, type BlockKind, type L } from "@/lib/newsletter-blocks";
@@ -586,8 +587,9 @@ function ImagePicker({ onPick, onClose }: { onPick: (url: string) => void; onClo
     if (r.ok) onPick(r.url);
     else setError(r.error);
   };
-  return (
-    <div role="dialog" aria-modal="true" aria-label="Choose a photo" className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-[12px] md:items-center md:p-[42px]" onClick={onClose}>
+  // Portalled to <body>: inside the admin wrapper, night mode's filter would pin "fixed" to the wrapper instead of the screen.
+  return createPortal(
+    <div role="dialog" aria-modal="true" aria-label="Choose a photo" className="admin-night-portal fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-[12px] md:items-center md:p-[42px]" onClick={onClose}>
       <div onClick={(e) => e.stopPropagation()} className="flex max-h-[85vh] w-full max-w-[860px] flex-col gap-[12px] overflow-hidden bg-white p-[24px] font-gotham text-paragraph text-black">
         <div className="flex items-center justify-between gap-[12px]">
           <h2 className="m-0 font-gotham text-paragraph">Choose a photo</h2>
@@ -615,6 +617,7 @@ function ImagePicker({ onPick, onClose }: { onPick: (url: string) => void; onClo
           </ul>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

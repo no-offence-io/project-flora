@@ -110,49 +110,50 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 
 /*
- * Admin night mode: the whole page inverted, black for white and white for black. The filter sits
- * on <html> (not the wrapper) so fixed-position sheets still anchor to the viewport. Photos, video,
- * the newsletter preview and colour swatches are inverted back, so they keep their real colours.
- * The canvas behind the page (overscroll, the strips under the status bar and the browser's bottom
- * bar) is painted from <html>'s background *without* the filter, so that one is set black directly,
- * while <body> stays white and is inverted like everything else.
+ * Admin night mode: the admin inverted, black for white and white for black. The filter is on the
+ * admin's own wrapper, never on <html> — Safari runs a root filter over the page canvas too, which
+ * turned the black canvas (status bar strip, overscroll, under the bottom bar) back to white. The
+ * canvas is simply painted black. Photos, video, the newsletter preview and colour swatches are
+ * inverted back so they keep their real colours. The photo picker is portalled outside the wrapper
+ * (a filtered ancestor would trap its fixed positioning), so it carries its own inversion.
+ * Buttons that are filled black become outlined (written pre-inversion: white fill, black border).
  * `.admin-night` is "On"; `.admin-night-auto` (the default) follows the device's dark setting.
  */
-html:has(.admin-night) {
-  filter: invert(1) hue-rotate(180deg);
+html:has(.admin-night),
+html:has(.admin-night) body {
   background: #000000;
   color-scheme: dark;
 }
-html:has(.admin-night) body {
+.admin-night,
+html:has(.admin-night) .admin-night-portal {
+  filter: invert(1) hue-rotate(180deg);
   background: #ffffff;
 }
-html:has(.admin-night) .admin-night :is(img, video, iframe, [style*="background-color"]) {
+.admin-night :is(img, video, iframe, [style*="background-color"]),
+html:has(.admin-night) .admin-night-portal :is(img, video, iframe) {
   filter: invert(1) hue-rotate(180deg);
 }
-@media (prefers-color-scheme: dark) {
-  html:has(.admin-night-auto) {
-    filter: invert(1) hue-rotate(180deg);
-    background: #000000;
-    color-scheme: dark;
-  }
-  html:has(.admin-night-auto) body {
-    background: #ffffff;
-  }
-  html:has(.admin-night-auto) .admin-night-auto :is(img, video, iframe, [style*="background-color"]) {
-    filter: invert(1) hue-rotate(180deg);
-  }
-}
-
-/* Night mode buttons: outlined in white rather than filled white (written pre-inversion: a white
-   fill with a black border, which the filter turns into black with a white border). */
-html:has(.admin-night) .admin-night :is(button, a).bg-black,
-html:has(.admin-night) .admin-night :is(button, a).bg-black:disabled {
+.admin-night :is(button, a).bg-black {
   background-color: #ffffff;
   color: #000000;
   box-shadow: inset 0 0 0 1px #000000;
 }
 @media (prefers-color-scheme: dark) {
-  html:has(.admin-night-auto) .admin-night-auto :is(button, a).bg-black {
+  html:has(.admin-night-auto),
+  html:has(.admin-night-auto) body {
+    background: #000000;
+    color-scheme: dark;
+  }
+  .admin-night-auto,
+  html:has(.admin-night-auto) .admin-night-portal {
+    filter: invert(1) hue-rotate(180deg);
+    background: #ffffff;
+  }
+  .admin-night-auto :is(img, video, iframe, [style*="background-color"]),
+  html:has(.admin-night-auto) .admin-night-portal :is(img, video, iframe) {
+    filter: invert(1) hue-rotate(180deg);
+  }
+  .admin-night-auto :is(button, a).bg-black {
     background-color: #ffffff;
     color: #000000;
     box-shadow: inset 0 0 0 1px #000000;
