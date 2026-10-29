@@ -59,6 +59,8 @@ export default function ValuesScrolly({
     return () => observer.disconnect();
   }, [values.length]);
 
+  const fade = (active: boolean) => (active ? "md:translate-y-0 md:opacity-100" : "md:opacity-40 md:motion-safe:translate-y-[12px]");
+
   return (
     <section className={`w-full ${className}`}>
       <div className="flex flex-col gap-[24px] px-[24px] md:px-[42px]">
@@ -96,22 +98,18 @@ export default function ValuesScrolly({
               ref={(el) => {
                 blockRefs.current[i] = el;
               }}
-              className="flex flex-col justify-center gap-[24px] px-[24px] pb-[60px] md:h-screen md:px-0 md:pb-0"
+              className="flex flex-col justify-center gap-[24px] px-[24px] pb-[60px] md:relative md:h-screen md:px-0 md:pb-0"
             >
               {/* Mobile keeps each value's image with its own text instead of pinning it */}
               <div className="relative aspect-[4/5] w-full overflow-hidden bg-[#f7f7f7] md:hidden">
                 <Image src={value.image.src} alt={value.image.alt} fill sizes="100vw" className="object-cover" />
               </div>
 
-              <div
-                className={`flex flex-col gap-[12px] transition-[opacity,transform] duration-500 ease-out ${
-                  activeIndex === i
-                    ? "md:translate-y-0 md:opacity-100"
-                    : "md:opacity-40 md:motion-safe:translate-y-[12px]"
-                }`}
-              >
-                <h3 className="m-0 font-americana text-big-header-mobile capitalize text-black">{value.title}</h3>
-                <p className="m-0 max-w-[521px] font-gotham text-paragraph text-black/70">{value.description}</p>
+              {/* Desktop: the title sits at the top left of the block, clear of the navbar, while the
+                  text stays centred beside the photo. Phones keep title and text together. */}
+              <div className="flex flex-col gap-[12px] md:contents">
+                <h3 className={`m-0 font-americana text-big-header-mobile capitalize text-black transition-[opacity,transform] duration-500 ease-out md:absolute md:left-0 md:top-[60px] ${fade(activeIndex === i)}`}>{value.title}</h3>
+                <p className={`m-0 max-w-[521px] font-gotham text-paragraph text-black/70 transition-[opacity,transform] duration-500 ease-out ${fade(activeIndex === i)}`}>{value.description}</p>
               </div>
             </div>
           ))}
