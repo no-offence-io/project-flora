@@ -20,7 +20,7 @@ export default function ProductDetails({ product, sizing, soldOutLabel, classNam
             {isSoldOut(product) && <span className="text-black/50">{soldOutLabel}</span>}
           </p>
         </div>
-        <p className="w-[312px] max-w-full font-gotham text-paragraph text-black/70">{product.description}</p>
+        <p className="w-[312px] max-w-full whitespace-pre-line font-gotham text-paragraph text-black/70">{product.description}</p>
       </div>
 
       <div className="flex flex-col gap-[42px] md:gap-[24px]">
