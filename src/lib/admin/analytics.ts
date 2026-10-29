@@ -81,6 +81,20 @@ async function batchRunReports(propertyId: string, requests: ReportRequest[]): P
   return data.reports;
 }
 
+/** Visitors on the site in the last 30 minutes, from the realtime API — the way to check that counting works. */
+export async function getActiveNow(propertyId: string): Promise<number> {
+  const token = await accessToken();
+  const res = await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${encodeURIComponent(propertyId)}:runRealtimeReport`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ metrics: [{ name: "activeUsers" }] }),
+    cache: "no-store",
+  });
+  const data = (await res.json()) as Report & { error?: { message?: string } };
+  if (!res.ok) throw new Error(data.error?.message ?? "Google Analytics returned an error");
+  return Number(data.rows?.[0]?.metricValues?.[0]?.value ?? 0) || 0;
+}
+
 const dim = (r: Row, i: number) => r.dimensionValues?.[i]?.value ?? "";
 const num = (r: Row, i: number) => Number(r.metricValues?.[i]?.value ?? 0) || 0;
 

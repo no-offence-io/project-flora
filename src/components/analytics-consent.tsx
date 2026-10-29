@@ -20,6 +20,10 @@ const subscribe = (l: () => void) => {
   listeners.add(l);
   return () => void listeners.delete(l);
 };
+// The coming-soon gate rewrites every address to the placeholder, so the URL says nothing; the
+// placeholder itself does. Hidden on the server too, so the box never flashes before hydration.
+const readGated = () => document.querySelector(".coming-soon-gate") !== null;
+const serverGated = () => true;
 function writeConsent(value: "yes" | "no") {
   document.cookie = `${COOKIE}=${value}; path=/; max-age=${180 * 86400}; samesite=lax`;
   listeners.forEach((l) => l());
@@ -55,14 +59,15 @@ export default function AnalyticsConsent({ measurementId }: { measurementId: str
   const t = useT();
   const pathname = usePathname();
   const consent = useSyncExternalStore(subscribe, readConsent, serverConsent);
+  const gated = useSyncExternalStore(subscribe, readGated, serverGated);
 
   useEffect(() => {
-    if (!measurementId || consent !== "yes") return;
+    if (!measurementId || consent !== "yes" || gated) return;
     loadGtag(measurementId);
     window.gtag?.("event", "page_view", { page_path: pathname, page_location: location.href, page_title: document.title });
-  }, [measurementId, consent, pathname]);
+  }, [measurementId, consent, gated, pathname]);
 
-  if (!measurementId || consent !== "unset" || pathname === "/coming-soon") return null;
+  if (!measurementId || consent !== "unset" || gated) return null;
   return (
     <div role="region" aria-label={t("consent.text")} className="shop-fixed fixed inset-x-0 bottom-0 z-[75]">
       <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-[12px] border-t border-black/25 bg-white px-[24px] py-[18px] font-gotham text-paragraph text-black md:flex-row md:items-center md:justify-between md:px-[42px]">

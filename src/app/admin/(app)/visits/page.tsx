@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Card, Heading, Muted, Subheading, TextLink } from "@/components/admin/ui";
-import { analyticsConfigured, getVisits, serviceAccountEmail, type Visits } from "@/lib/admin/analytics";
+import { analyticsConfigured, getActiveNow, getVisits, serviceAccountEmail, type Visits } from "@/lib/admin/analytics";
 import { adminClient } from "@/lib/admin/sanity";
 
 const PERIODS = [7, 30, 90] as const;
@@ -75,10 +75,11 @@ export default async function VisitsPage({ searchParams }: { searchParams: Promi
   const propertyId = settings?.gaPropertyId?.trim();
 
   let visits: Visits | null = null;
+  let activeNow: number | null = null;
   let error: string | null = null;
   if (analyticsConfigured() && propertyId) {
     try {
-      visits = await getVisits(propertyId, days);
+      [visits, activeNow] = await Promise.all([getVisits(propertyId, days), getActiveNow(propertyId).catch(() => null)]);
     } catch (err) {
       error = err instanceof Error ? err.message : String(err);
     }
@@ -98,6 +99,13 @@ export default async function VisitsPage({ searchParams }: { searchParams: Promi
           </nav>
         </div>
         <Muted>From Google Analytics. Only visitors who said yes to cookies are counted, so treat these as the shape of things, not an exact headcount.</Muted>
+        {activeNow !== null && (
+          <p className="m-0 flex items-center gap-[8px] font-gotham text-paragraph text-black">
+            <span aria-hidden className={`inline-block h-[8px] w-[8px] rounded-full ${activeNow > 0 ? "bg-[#2c8a3e]" : "bg-black/25"}`} />
+            {activeNow > 0 ? `${n.format(activeNow)} on the site right now` : "Nobody on the site right now"}
+            <span className="text-[11px] text-black/50">· last 30 minutes, live; the figures below take Google a few hours</span>
+          </p>
+        )}
       </div>
 
       {!settings?.gaMeasurementId ? (
