@@ -129,7 +129,7 @@ export default function AdminNav({ current, email, unread = 0, logo, signOut, de
   return (
     <>
       {/* Phone: one line, tap for the list */}
-      <header className="flex flex-col gap-[12px] border-b border-black/20 bg-[#f1f1ef] px-[24px] py-[18px] text-black md:hidden">
+      <header className="admin-panel flex flex-col gap-[12px] border-b border-white/20 px-[24px] py-[18px] md:hidden">
         <div className="flex items-center justify-between">
           <Link href="/admin" aria-label="Flöra admin">
             <Image src={logo} alt="Flöra" width={486.544} height={109.193} className="h-[20px] w-[89px] invert" />
@@ -188,7 +188,7 @@ export default function AdminNav({ current, email, unread = 0, logo, signOut, de
         )}
 
       {/* Desktop: the column */}
-      <aside className="hidden w-[220px] shrink-0 flex-col gap-[42px] border-r border-black/20 bg-[#f1f1ef] px-[24px] py-[24px] text-black md:sticky md:top-0 md:flex md:h-screen md:overflow-y-auto">
+      <aside className="admin-panel hidden w-[220px] shrink-0 flex-col gap-[42px] border-r border-white/20 px-[24px] py-[24px] text-black md:sticky md:top-0 md:flex md:h-screen md:overflow-y-auto">
         <Link href="/admin" aria-label="Flöra admin" className="block">
           <Image src={logo} alt="Flöra" width={486.544} height={109.193} className="h-[20px] w-[89px] invert" />
         </Link>

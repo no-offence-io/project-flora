@@ -15,7 +15,7 @@ export const metadata = { robots: { index: false, follow: false } };
 /** The browser's own bars follow the device setting; a pinned choice is set by the sidebar switch. */
 export const viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f1f1ef" },
+    { media: "(prefers-color-scheme: light)", color: "#000000" },
     { media: "(prefers-color-scheme: dark)", color: "#000000" },
   ],
 };

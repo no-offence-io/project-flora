@@ -269,3 +269,26 @@ html:has(.admin-night) .admin-night-sheet :is(img, video, iframe) {
     filter: invert(1) hue-rotate(180deg);
   }
 }
+
+/*
+ * The admin's sidebar (and the phone header) is black with white text. Its links and switches are
+ * the same elements the white phone sheet uses, so the swap is done here, not in the markup: every
+ * black becomes white and the reverse. In night mode the page inverts; the panel is inverted once
+ * more so it stays black there too, and the logo (white on transparent) is left as it is.
+ */
+.admin-panel {
+  background: #000000;
+  color: #ffffff;
+}
+.admin-panel .text-black { color: #ffffff; }
+.admin-panel .text-black\/50 { color: rgba(255, 255, 255, 0.5); }
+.admin-panel .border-black { border-color: #ffffff; }
+.admin-panel .bg-black { background-color: #ffffff; }
+.admin-panel .bg-white { background-color: #000000; }
+.admin-panel img.invert { filter: none; }
+.admin-night .admin-panel { filter: invert(1) hue-rotate(180deg); }
+.admin-night .admin-panel img { filter: none; }
+@media (prefers-color-scheme: dark) {
+  .admin-night-auto .admin-panel { filter: invert(1) hue-rotate(180deg); }
+  .admin-night-auto .admin-panel img { filter: none; }
+}
