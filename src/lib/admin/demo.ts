@@ -27,6 +27,17 @@ const PLACES: [string, string, string][] = [
 ];
 const NOTES = ["", "", "", "Gift — please no price in the parcel", "Slightly longer sleeves if possible", "", "Leave by the door", ""];
 
+const ORIGINS: { label: string; landing: string; referrer?: string; campaign?: string }[] = [
+  { label: "Source: Instagram", landing: "/", campaign: "link_in_bio" },
+  { label: "Source: Instagram", landing: "/shop" },
+  { label: "Social: Instagram", landing: "/", referrer: "l.instagram.com" },
+  { label: "Direct", landing: "/" },
+  { label: "Organic: Google", landing: "/shop", referrer: "www.google.com" },
+  { label: "Source: Newsletter", landing: "/shop", campaign: "new-collection" },
+  { label: "Referral: pinterest.com", landing: "/vintage", referrer: "pinterest.com" },
+];
+const BRANDS = ["visa", "visa", "mastercard", "amex"];
+
 /** Deterministic pseudo-random, so the demo looks the same every time it is switched on. */
 function rng(seed: number) {
   let s = seed >>> 0;
@@ -48,13 +59,19 @@ export async function seedDemo(): Promise<void> {
   const docs: Record<string, unknown>[] = [];
 
   // Orders: 34 over the last 45 days, more recent ones still to be packed.
+  const people: [string, string, string[]][] = [];
   for (let i = 0; i < 34; i++) {
     const daysAgo = Math.floor(r() * 45 * (i < 6 ? 0.08 : 1));
     const orderedAt = new Date(now - daysAgo * 86400000 - Math.floor(r() * 86400000)).toISOString();
     const pi = `pi_demo${createHash("sha1").update(String(i)).digest("hex").slice(0, 16)}`;
-    const first = pick(FIRST);
-    const last = pick(LAST);
-    const [street, postcode, city] = pick(PLACES);
+    // Every fourth order is a returning customer, so their customer page has a history.
+    const returning = i % 4 === 3 && people.length > 3 ? people[i - 3] : null;
+    const first = returning?.[0] ?? pick(FIRST);
+    const last = returning?.[1] ?? pick(LAST);
+    const [street, postcode, city] = returning?.[2] ?? pick(PLACES);
+    people.push([first, last, [street, postcode, city]]);
+    const manual = i === 9 || i === 21 ? "pr" : undefined;
+    const origin = pick(ORIGINS);
     const lineCount = r() < 0.7 ? 1 : 2;
     const items = Array.from({ length: lineCount }, (_, k) => {
       const p = pick(products);
@@ -67,7 +84,7 @@ export async function seedDemo(): Promise<void> {
         product: { _type: "reference", _ref: p._id, _weak: true },
         name: p.name ?? "Piece",
         quantity: qty,
-        unitPriceOre: p.priceOre ?? 89000,
+        unitPriceOre: manual ? 0 : (p.priceOre ?? 89000),
         ...(sized ? { size: pick(p.sizes!).label } : {}),
         ...(measured
           ? {
@@ -83,13 +100,14 @@ export async function seedDemo(): Promise<void> {
     });
     const subtotalOre = items.reduce((t, it) => t + it.unitPriceOre * it.quantity, 0);
     const discountOre = r() < 0.15 ? Math.round(subtotalOre * 0.1) : 0;
-    const shippingOre = subtotalOre - discountOre >= 150000 ? 0 : 8900;
+    const shippingOre = manual || subtotalOre - discountOre >= 150000 ? 0 : 8900;
     const totalOre = subtotalOre - discountOre + shippingOre;
-    const status = daysAgo < 3 ? "paid" : daysAgo < 8 ? pick(["paid", "shipped", "shipped"]) : pick(["shipped", "delivered", "delivered", "delivered", "refunded"]);
+    const status = daysAgo < 3 ? "paid" : daysAgo < 8 ? pick(["paid", "shipped", "shipped"]) : pick(["shipped", "delivered", "delivered", "delivered", "delivered", "returned", "refunded", "cancelled"]);
     docs.push({
       _id: `order-demo-${i}`,
       _type: "order",
       demo: true,
+      ...(manual ? { manual } : {}),
       orderNumber: orderReference(pi),
       status,
       orderedAt,
@@ -110,8 +128,9 @@ export async function seedDemo(): Promise<void> {
       vatIncludedOre: Math.round((totalOre * 0.25) / 1.25),
       totalOre,
       currency: "nok",
-      paymentProvider: r() < 0.2 ? "klarna" : "stripe",
-      stripePaymentIntentId: pi,
+      paymentProvider: manual ? "none" : r() < 0.2 ? "klarna" : "stripe",
+      ...(manual ? {} : { stripePaymentIntentId: pi, paymentCard: { brand: pick(BRANDS), last4: String(1000 + Math.floor(r() * 8999)) } }),
+      origin: manual ? { label: "PR / gift" } : { ...origin, device: r() < 0.72 ? "Mobile" : r() < 0.5 ? "Tablet" : "Desktop", pageViews: 2 + Math.floor(r() * 14) },
     });
   }
 

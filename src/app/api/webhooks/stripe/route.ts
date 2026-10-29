@@ -42,7 +42,7 @@ export async function POST(req: Request) {
   switch (event.type) {
     case "payment_intent.succeeded": {
       // Re-read, don't trust event.data.object: see the note on idempotency above.
-      const intent = await getStripe().paymentIntents.retrieve(event.data.object.id);
+      const intent = await getStripe().paymentIntents.retrieve(event.data.object.id, { expand: ["payment_method"] });
 
       // The order document in Sanity is the record; it is written first and is the unique key.
       // If this throws (say SANITY_TOKEN is missing on the server), the 500 below makes Stripe

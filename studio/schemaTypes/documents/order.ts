@@ -2,9 +2,10 @@ import {BasketIcon} from '../../icons'
 import {defineArrayMember, defineField, defineType} from 'sanity'
 
 /**
- * One paid order. Created only by the Stripe webhook, never by hand: every field but the
- * fulfilment ones is read-only here, and the Studio structure offers no "new order" action. The
- * Stripe PaymentIntent id is the record's identity, which is what makes a webhook retry harmless.
+ * One order. Paid ones are created by the Stripe webhook, and the PaymentIntent id is their
+ * identity, which is what makes a webhook retry harmless. Ida can also add one by hand in the
+ * dashboard (a PR gift, a sale at a market): those carry `manual` and no PaymentIntent. Every field
+ * but the fulfilment ones is read-only here.
  */
 export const order = defineType({
   name: 'order',
@@ -18,6 +19,14 @@ export const order = defineType({
   ],
   fields: [
     defineField({name: 'demo', title: 'Test-mode data', type: 'boolean', readOnly: true, hidden: true}),
+    defineField({
+      name: 'manual',
+      title: 'Added by hand',
+      type: 'string',
+      readOnly: true,
+      group: 'fulfilment',
+      options: {list: [{title: 'PR / gift', value: 'pr'}, {title: 'Sale outside the shop', value: 'sale'}]},
+    }),
     defineField({name: 'orderNumber', title: 'Order number', type: 'string', readOnly: true, group: 'fulfilment'}),
     defineField({
       name: 'status',
@@ -28,7 +37,8 @@ export const order = defineType({
         list: [
           {title: 'Paid — to be packed', value: 'paid'},
           {title: 'Shipped', value: 'shipped'},
-          {title: 'Delivered', value: 'delivered'},
+          {title: 'Delivered (completed)', value: 'delivered'},
+          {title: 'Returned', value: 'returned'},
           {title: 'Refunded', value: 'refunded'},
           {title: 'Cancelled', value: 'cancelled'},
         ],
@@ -101,6 +111,29 @@ export const order = defineType({
     defineField({name: 'shippingOre', title: 'Shipping (øre)', type: 'number', readOnly: true, group: 'payment'}),
     defineField({name: 'vatIncludedOre', title: 'Of which VAT (øre)', type: 'number', readOnly: true, group: 'payment'}),
     defineField({name: 'totalOre', title: 'Total (øre)', type: 'number', readOnly: true, group: 'payment'}),
+    defineField({
+      name: 'paymentCard',
+      title: 'Card',
+      type: 'object',
+      readOnly: true,
+      group: 'payment',
+      fields: [defineField({name: 'brand', type: 'string'}), defineField({name: 'last4', title: 'Last four digits', type: 'string'})],
+    }),
+    defineField({
+      name: 'origin',
+      title: 'Where the customer came from',
+      type: 'object',
+      readOnly: true,
+      group: 'customer',
+      fields: [
+        defineField({name: 'label', type: 'string'}),
+        defineField({name: 'device', type: 'string'}),
+        defineField({name: 'pageViews', title: 'Pages viewed', type: 'number'}),
+        defineField({name: 'landing', title: 'First page', type: 'string'}),
+        defineField({name: 'referrer', type: 'string'}),
+        defineField({name: 'campaign', type: 'string'}),
+      ],
+    }),
     defineField({name: 'currency', type: 'string', readOnly: true, group: 'payment', initialValue: 'nok'}),
     defineField({name: 'paymentProvider', title: 'Paid with', type: 'string', readOnly: true, group: 'payment'}),
     defineField({
@@ -110,7 +143,7 @@ export const order = defineType({
       type: 'string',
       readOnly: true,
       group: 'payment',
-      validation: (rule) => rule.required(),
+      validation: (rule) => rule.custom((value, ctx) => (value || (ctx.document as {manual?: string} | undefined)?.manual ? true : 'Required')),
     }),
   ],
   preview: {

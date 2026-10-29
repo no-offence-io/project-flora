@@ -7,7 +7,7 @@ import { getT } from "@/lib/i18n-server";
 import type { Key } from "@/lib/i18n";
 import { formatNok } from "@/lib/money";
 
-const statusKey = (s: string) => (["paid", "shipped", "delivered", "refunded", "cancelled"].includes(s) ? (`status.${s}` as Key) : null);
+const statusKey = (s: string) => (["paid", "shipped", "delivered", "returned", "refunded", "cancelled"].includes(s) ? (`status.${s}` as Key) : null);
 
 export default async function OrdersPage() {
   const [customer, t] = await Promise.all([getCustomer(), getT()]);

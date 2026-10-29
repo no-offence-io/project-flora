@@ -137,7 +137,8 @@ html:has(.admin-night) .admin-night-portal {
 html:has(.admin-night) .admin-night-portal :is(img, video, iframe) {
   filter: invert(1) hue-rotate(180deg);
 }
-.admin-night :is(button, a).bg-black {
+.admin-night :is(button, a).bg-black,
+html:has(.admin-night) .admin-night-portal :is(button, a).bg-black {
   background-color: #ffffff;
   color: #000000;
   box-shadow: inset 0 0 0 1px #000000;
@@ -157,7 +158,8 @@ html:has(.admin-night) .admin-night-portal :is(img, video, iframe) {
   html:has(.admin-night-auto) .admin-night-portal :is(img, video, iframe) {
     filter: invert(1) hue-rotate(180deg);
   }
-  .admin-night-auto :is(button, a).bg-black {
+  .admin-night-auto :is(button, a).bg-black,
+  html:has(.admin-night-auto) .admin-night-portal :is(button, a).bg-black {
     background-color: #ffffff;
     color: #000000;
     box-shadow: inset 0 0 0 1px #000000;

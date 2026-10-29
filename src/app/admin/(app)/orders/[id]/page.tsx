@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
 import { saveOrder, sendShippingEmail } from "../../actions";
-import { Button, Card, Heading, Input, Labelled, Muted, Row, Select, Subheading, Textarea, TextLink } from "@/components/admin/ui";
+import { Button, Card, Heading, Input, Labelled, Muted, Row, Select, StatusPill, Subheading, Tag, Textarea, TextLink } from "@/components/admin/ui";
 import { adminClient, kr } from "@/lib/admin/sanity";
 import { emailConfigured } from "@/lib/notify";
+import { COUNTS_AS_SALE, ORDER_STATUSES, paidWith, STATUS_LABEL } from "@/lib/order-status";
 
 type Order = {
   _id: string;
@@ -23,15 +24,13 @@ type Order = {
   vatIncludedOre?: number;
   totalOre?: number;
   stripePaymentIntentId?: string;
+  manual?: string;
+  paymentProvider?: string;
+  paymentCard?: { brand?: string; last4?: string };
+  origin?: { label?: string; device?: string; pageViews?: number; landing?: string; referrer?: string; campaign?: string };
 };
 
-const STATUSES = [
-  ["paid", "Paid – to be made"],
-  ["shipped", "Shipped"],
-  ["delivered", "Delivered"],
-  ["refunded", "Refunded"],
-  ["cancelled", "Cancelled"],
-];
+const HINT: Record<string, string> = { paid: "to be made", shipped: "on its way", delivered: "arrived" };
 
 const when = (iso?: string) => (iso ? new Date(iso).toLocaleString("nb-NO", { dateStyle: "short", timeStyle: "short" }) : "");
 
@@ -41,12 +40,23 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
   const o = await adminClient().fetch<Order | null>(`*[_type == "order" && _id == $id][0]`, { id });
   if (!o) notFound();
   const mailReady = emailConfigured();
+  const email = o.customer?.email?.toLowerCase();
+  const history = email
+    ? await adminClient().fetch<{ status?: string; totalOre?: number }[]>(`*[_type == "order" && lower(customer.email) == $email]{ status, totalOre }`, { email })
+    : [];
+  const sales = history.filter((h) => COUNTS_AS_SALE.includes((h.status ?? "paid") as never));
+  const revenue = sales.reduce((s, h) => s + (h.totalOre ?? 0), 0);
 
   return (
     <>
       <div className="flex flex-col gap-[12px]">
         <TextLink href="/admin/orders">← Orders</TextLink>
-        <Heading>{o.orderNumber}</Heading>
+        <div className="flex flex-wrap items-center gap-[12px]">
+          <Heading>{o.orderNumber}</Heading>
+          <StatusPill status={o.status} />
+          {o.manual === "pr" && <Tag tone="muted">PR / gift</Tag>}
+          {o.manual === "sale" && <Tag tone="muted">added by hand</Tag>}
+        </div>
         <Muted>
           {o.orderedAt ? new Date(o.orderedAt).toLocaleString("nb-NO", { dateStyle: "long", timeStyle: "short" }) : ""}
           {o.language ? ` · customer reads ${o.language === "no" ? "Norsk" : "English"}` : ""}
@@ -59,6 +69,13 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
           </p>
         )}
       </div>
+
+      {o.customer?.note && (
+        <section className="flex flex-col gap-[12px] border-2 border-black p-[24px] font-gotham text-black">
+          <span className="text-[11px] uppercase tracking-[0.2em]">{o.manual ? "Note" : "Note from the customer"}</span>
+          <p className="m-0 whitespace-pre-wrap text-[18px] leading-[1.45] md:text-[20px]">{o.customer.note}</p>
+        </section>
+      )}
 
       <div className="grid gap-[42px] md:grid-cols-2">
         <div className="flex flex-col gap-[42px]">
@@ -111,21 +128,57 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
             <Subheading>Customer</Subheading>
             <div className="h-px w-full bg-black/25" />
             <ul className="m-0 flex list-none flex-col gap-[5px] p-0 text-[11px] leading-normal">
-              <li>{o.customer?.name}</li>
-              <li className="text-black/50">{o.customer?.email}</li>
-              <li className="text-black/50">{o.customer?.phone}</li>
-              <li className="text-black/50">{o.customer?.address}</li>
-              {o.customer?.note && <li>Note: <span className="text-black/50">{o.customer.note}</span></li>}
+              <li>
+                {email ? (
+                  <TextLink href={`/admin/customers/${encodeURIComponent(email)}`}>{o.customer?.name || email}</TextLink>
+                ) : (
+                  o.customer?.name
+                )}
+              </li>
+              {o.customer?.email && <li><a href={`mailto:${o.customer.email}`} className="text-black/50 underline">{o.customer.email}</a></li>}
+              {o.customer?.phone && <li><a href={`tel:${o.customer.phone.replace(/\s/g, "")}`} className="text-black/50 underline">{o.customer.phone}</a></li>}
+              <li className="whitespace-pre-line text-black/50">{o.customer?.address?.split(", ").join("\n")}</li>
+              <li className="pt-[6px]">Paid with: <span className="text-black/50">{paidWith(o)}</span></li>
             </ul>
             <ul className="m-0 flex list-none flex-col gap-[5px] p-0 text-[11px] leading-normal text-black/50">
               <li>Confirmation email: {o.confirmationSentAt ? `sent ${when(o.confirmationSentAt)}` : "not sent"}</li>
               <li>Shipping email: {o.shippingEmailSentAt ? `sent ${when(o.shippingEmailSentAt)}` : "not sent"}</li>
             </ul>
           </Card>
+
+          {email && (
+            <Card>
+              <Subheading>Customer history</Subheading>
+              <div className="h-px w-full bg-black/25" />
+              <dl className="m-0 grid grid-cols-3 gap-[12px]">
+                <div className="flex flex-col gap-[3px]"><dt className="text-[11px] text-black/50">Orders</dt><dd className="m-0">{history.length}</dd></div>
+                <div className="flex flex-col gap-[3px]"><dt className="text-[11px] text-black/50">Spent</dt><dd className="m-0">{kr(revenue)}</dd></div>
+                <div className="flex flex-col gap-[3px]"><dt className="text-[11px] text-black/50">Average</dt><dd className="m-0">{kr(sales.length ? Math.round(revenue / sales.length) : 0)}</dd></div>
+              </dl>
+              <TextLink href={`/admin/customers/${encodeURIComponent(email)}`} className="text-[11px]">See all their orders and details →</TextLink>
+            </Card>
+          )}
+
+          <Card>
+            <Subheading>Came from</Subheading>
+            <div className="h-px w-full bg-black/25" />
+            {o.origin?.label ? (
+              <dl className="m-0 grid grid-cols-2 gap-[12px] text-[11px] leading-normal md:grid-cols-3">
+                <div className="flex flex-col gap-[3px]"><dt className="text-black/50">Origin</dt><dd className="m-0">{o.origin.label}</dd></div>
+                {o.origin.device && <div className="flex flex-col gap-[3px]"><dt className="text-black/50">Device</dt><dd className="m-0">{o.origin.device}</dd></div>}
+                {o.origin.pageViews ? <div className="flex flex-col gap-[3px]"><dt className="text-black/50">Pages viewed</dt><dd className="m-0">{o.origin.pageViews}</dd></div> : null}
+                {o.origin.landing && <div className="flex flex-col gap-[3px]"><dt className="text-black/50">First page</dt><dd className="m-0 break-all">{o.origin.landing}</dd></div>}
+                {o.origin.referrer && <div className="flex flex-col gap-[3px]"><dt className="text-black/50">Referring site</dt><dd className="m-0 break-all">{o.origin.referrer}</dd></div>}
+                {o.origin.campaign && <div className="flex flex-col gap-[3px]"><dt className="text-black/50">Campaign</dt><dd className="m-0">{o.origin.campaign}</dd></div>}
+              </dl>
+            ) : (
+              <Muted className="text-[11px]">Not known — this order was placed before the shop started noting it.</Muted>
+            )}
+          </Card>
         </div>
 
         <div className="flex flex-col gap-[42px]">
-          <Card>
+          <Card className="scroll-mt-[24px]" id="send">
             <Subheading>Send</Subheading>
             <div className="h-px w-full bg-black/25" />
             <form action={sendShippingEmail} className="flex flex-col gap-[24px]">
@@ -151,8 +204,8 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
               <input type="hidden" name="trackingNumber" value={o.trackingNumber ?? ""} />
               <Labelled label="Status">
                 <Select name="status" defaultValue={o.status ?? "paid"}>
-                  {STATUSES.map(([v, l]) => (
-                    <option key={v} value={v}>{l}</option>
+                  {ORDER_STATUSES.map((v) => (
+                    <option key={v} value={v}>{STATUS_LABEL[v]}{HINT[v] ? ` – ${HINT[v]}` : ""}</option>
                   ))}
                 </Select>
               </Labelled>

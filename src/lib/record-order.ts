@@ -106,6 +106,8 @@ export async function recordOrder(intent: Stripe.PaymentIntent): Promise<Recorde
     totalOre,
     currency: intent.currency,
     paymentProvider: paymentProviderOf(intent),
+    ...paymentCardOf(intent),
+    ...originOf(m.visit),
     stripePaymentIntentId: intent.id,
   });
   for (const l of lines) {
@@ -123,6 +125,25 @@ export async function recordOrder(intent: Stripe.PaymentIntent): Promise<Recorde
     // A duplicate id means another delivery beat us to it, stock decrements included.
     if (err instanceof Error && /already exists/i.test(err.message)) return { ...base, created: false };
     throw err;
+  }
+}
+
+/** "Visa ending in 2560", when the webhook expanded the payment method. Only brand and last four — never more. */
+function paymentCardOf(intent: Stripe.PaymentIntent): { paymentCard?: { brand: string; last4: string } } {
+  const pm = intent.payment_method;
+  if (pm && typeof pm === "object" && pm.card) return { paymentCard: { brand: pm.card.brand, last4: pm.card.last4 } };
+  return {};
+}
+
+/** The visit the checkout described (see visit-shared.ts), in the order's own words. */
+type Origin = { label: string; device?: string; pageViews?: number; landing?: string; referrer?: string; campaign?: string };
+function originOf(raw: string | undefined): { origin?: Origin } {
+  if (!raw) return {};
+  try {
+    const v = JSON.parse(raw) as { l?: string; d?: string; v?: number; p?: string; r?: string; c?: string };
+    return { origin: { label: String(v.l ?? "Direct"), ...(v.d ? { device: String(v.d) } : {}), ...(v.v ? { pageViews: Number(v.v) } : {}), ...(v.p ? { landing: String(v.p) } : {}), ...(v.r ? { referrer: String(v.r) } : {}), ...(v.c ? { campaign: String(v.c) } : {}) } };
+  } catch {
+    return {};
   }
 }
 

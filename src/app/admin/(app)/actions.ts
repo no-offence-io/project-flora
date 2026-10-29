@@ -8,13 +8,13 @@ import { adminClient, kronerToOre } from "@/lib/admin/sanity";
 import { requireAdmin } from "@/lib/admin/session";
 import { readImageField, readVideoField, uploadImage, uploadVideo } from "@/lib/admin/media";
 import { FONT_CHOICES } from "@/lib/brand-shared";
+import { ORDER_STATUSES } from "@/lib/order-status";
 
 /*
  * Every action starts with requireAdmin(). Server actions are reachable by anyone who can POST to
  * the site, so the page being behind a login proves nothing about the action.
  */
 
-const ORDER_STATUSES = ["paid", "shipped", "delivered", "refunded", "cancelled"] as const;
 
 export async function saveOrder(formData: FormData) {
   await requireAdmin();

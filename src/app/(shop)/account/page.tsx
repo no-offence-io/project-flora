@@ -15,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("meta.account"), robots: { index: false } };
 }
 
-const statusKey = (s: string) => (["paid", "shipped", "delivered", "refunded", "cancelled"].includes(s) ? (`status.${s}` as Key) : null);
+const statusKey = (s: string) => (["paid", "shipped", "delivered", "returned", "refunded", "cancelled"].includes(s) ? (`status.${s}` as Key) : null);
 
 export default async function AccountPage({ searchParams }: { searchParams: Promise<{ confirm?: string }> }) {
   const [customer, t, { confirm }] = await Promise.all([getCustomer(), getT(), searchParams]);

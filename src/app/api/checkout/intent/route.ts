@@ -5,6 +5,7 @@ import { getCustomer } from "@/lib/customer";
 import { getLanguage } from "@/lib/language";
 import { getWriteClient } from "@/sanity/lib/write";
 import { METADATA_SITE, quoteCart, quoteToMetadata } from "@/lib/orders";
+import { deviceFrom, originLabel } from "@/lib/visit-shared";
 import { assertStripeEnvironment, getStripe, StripeConfigError } from "@/lib/stripe";
 
 /** A PaymentIntent can only have its amount changed before the customer has confirmed it. */
@@ -32,7 +33,7 @@ export async function POST(req: Request) {
     console.warn("[checkout/intent] rejected:", issues);
     return NextResponse.json({ error: "Invalid request", issues }, { status: 400 });
   }
-  const { items, customer, paymentIntentId, discountCode } = parsed.data;
+  const { items, customer, paymentIntentId, discountCode, visit } = parsed.data;
   const country = customer?.country ?? parsed.data.country;
 
   const quote = await quoteCart(items, { country, discountCode });
@@ -63,6 +64,15 @@ export async function POST(req: Request) {
       .join(", ")
       .slice(0, 500);
     if (customer.note) metadata.customer_note = customer.note.slice(0, 500);
+    // Where they came from, for the dashboard. The label is decided here, not by the browser.
+    metadata.visit = JSON.stringify({
+      l: originLabel(visit),
+      d: deviceFrom(req.headers.get("user-agent")),
+      ...(visit?.views ? { v: visit.views } : {}),
+      ...(visit?.landing ? { p: visit.landing } : {}),
+      ...(visit?.referrer ? { r: visit.referrer } : {}),
+      ...(visit?.campaign ? { c: visit.campaign } : {}),
+    }).slice(0, 500);
   }
 
   try {

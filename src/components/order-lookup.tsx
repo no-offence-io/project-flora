@@ -13,7 +13,7 @@ const FIELD = "w-full border border-black/20 bg-transparent p-[12px] font-gotham
 export default function OrderLookup() {
   const [state, action, pending] = useActionState<LookupState, FormData>(lookupOrder, { status: "idle" });
   const t = useT();
-  const statusLabel = (s: string) => (["paid", "shipped", "delivered", "refunded", "cancelled"].includes(s) ? t(`status.${s}` as Key) : s);
+  const statusLabel = (s: string) => (["paid", "shipped", "delivered", "returned", "refunded", "cancelled"].includes(s) ? t(`status.${s}` as Key) : s);
 
   return (
     <div className="flex flex-col gap-[42px] font-gotham text-paragraph text-black md:flex-row md:items-start">

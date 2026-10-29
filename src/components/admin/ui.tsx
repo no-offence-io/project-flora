@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import Chevron from "@/components/chevron";
+import { isStatus, STATUS_LABEL, STATUS_TONE } from "@/lib/order-status";
 
 /*
  * Admin primitives. Every class string here is lifted from the shop's own components — the checkout
@@ -25,8 +26,8 @@ export function Muted({ children, className = "" }: { children: ReactNode; class
 }
 
 /** The order-summary card: hairline border and 24px padding on desktop, flush on mobile. */
-export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <section className={`flex flex-col gap-[12px] bg-white font-gotham text-paragraph text-black md:border-[0.5px] md:border-black/25 md:p-[24px] ${className}`}>{children}</section>;
+export function Card({ children, className = "", id }: { children: ReactNode; className?: string; id?: string }) {
+  return <section id={id} className={`flex flex-col gap-[12px] bg-white font-gotham text-paragraph text-black md:border-[0.5px] md:border-black/25 md:p-[24px] ${className}`}>{children}</section>;
 }
 
 /** The cart's bordered row. */
@@ -142,4 +143,10 @@ export function Bilingual({
 /** The little bordered tag from the order summary ("1 Items"), used for statuses. */
 export function Tag({ children, tone = "default" }: { children: ReactNode; tone?: "default" | "muted" }) {
   return <span className={`border-[0.5px] px-[4px] py-[1px] font-gotham text-paragraph ${tone === "muted" ? "border-black/50 text-black/50" : "border-black text-black"}`}>{children}</span>;
+}
+
+/** An order's status as a soft coloured pill: green to make, blue completed, and so on. */
+export function StatusPill({ status }: { status?: string }) {
+  const s = isStatus(status) ? status : "paid";
+  return <span className={`inline-block whitespace-nowrap px-[8px] py-[3px] font-gotham text-[11px] leading-normal ${STATUS_TONE[s]}`}>{STATUS_LABEL[s]}</span>;
 }

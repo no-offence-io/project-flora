@@ -24,6 +24,7 @@ import type { Customer, IntentResponse } from "@/lib/checkout-schema";
 import { getStripePromise } from "@/lib/stripe-client";
 import { useT } from "@/components/i18n-provider";
 import RolloverText from "./rollover-text";
+import { readVisit } from "@/components/visit-tracker";
 
 type Quote = Pick<
   IntentResponse,
@@ -193,7 +194,7 @@ export default function CheckoutClient({ formId, countries, account }: { formId:
             ...(item.size ? { size: item.size } : {}),
             ...(item.measurements.length ? { measurements: item.measurements } : {}),
           })),
-          ...(withCustomer ? { customer: withCustomer } : {}),
+          ...(withCustomer ? { customer: withCustomer, ...(readVisit() ? { visit: readVisit() } : {}) } : {}),
           ...(!withCustomer && country ? { country } : {}),
           ...(discountCode ? { discountCode } : {}),
           ...(intentIdRef.current

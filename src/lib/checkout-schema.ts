@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Totals } from "./money";
+import { visitSchema } from "./visit-shared";
 
 /**
  * What the browser is allowed to tell the checkout API. Every object is strict: a request carrying
@@ -45,6 +46,8 @@ export const intentRequestSchema = z.strictObject({
   customer: customerSchema.optional(),
   /** Reuse an existing PaymentIntent rather than creating a fresh one on every cart change. */
   paymentIntentId: z.string().regex(/^pi_[A-Za-z0-9]+$/).optional(),
+  /** How the visitor arrived (utm tags, referring site, pages seen). Shown to the shop owner only. */
+  visit: visitSchema.optional(),
 });
 
 export type IntentRequest = z.infer<typeof intentRequestSchema>;

@@ -12,6 +12,7 @@ import { getLanguage } from "@/lib/language";
 import { cookies } from "next/headers";
 import { parseTheme, THEME_COOKIE } from "@/lib/theme-shared";
 import { I18nProvider } from "@/components/i18n-provider";
+import VisitTracker from "@/components/visit-tracker";
 
 /**
  * The shop's chrome: cart, menu, sticky navbar, footer and the intro animation. Everything a
@@ -35,6 +36,7 @@ export default async function ShopLayout({ children }: { children: ReactNode }) 
           </StickyNavbar>
           <NavMenuOverlay lang={lang} logoSrc={logo} theme={theme} />
           <PageTransition />
+          <VisitTracker />
         </NavMenuProvider>
       </CartProvider>
       <LoadingScreen />
