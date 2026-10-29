@@ -6,7 +6,7 @@ import { FONTS } from "@/lib/brand-shared";
 import { adminClient, oreToKroner } from "@/lib/admin/sanity";
 
 type Settings = {
-  siteName?: string; gaMeasurementId?: string; announcement?: LocalizedString; signUpTitle?: LocalizedString; signUpText?: LocalizedString; signUpButton?: LocalizedString;
+  siteName?: string; gaMeasurementId?: string; gaPropertyId?: string; announcement?: LocalizedString; signUpTitle?: LocalizedString; signUpText?: LocalizedString; signUpButton?: LocalizedString;
   footerText?: LocalizedString; instagram?: string; contactEmail?: string; shippingOre?: number; freeShippingFromOre?: number;
   signUpImage?: Pic; footerImage?: Pic;
   measurementFields?: { _key: string; label?: LocalizedString; hint?: LocalizedString }[];
@@ -44,6 +44,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <Bilingual name="announcement" label="Announcement bar (leave empty to hide)" en={getText(s.announcement, "en")} no={getText(s.announcement, "no")} />
             <Labelled label="Google Analytics measurement ID" hint="Looks like G-AB12CD34EF — in Analytics under Administrator → Datastrømmer. Visitors are asked before anything loads. Leave empty to turn analytics off.">
               <Input name="gaMeasurementId" defaultValue={s.gaMeasurementId ?? ""} placeholder="G-…" autoComplete="off" />
+            </Labelled>
+            <Labelled label="Google Analytics property ID" hint="Nine digits — in Analytics under Administrator → Områdedetaljer. What the Visits page reads.">
+              <Input name="gaPropertyId" defaultValue={s.gaPropertyId ?? ""} placeholder="123456789" inputMode="numeric" autoComplete="off" />
             </Labelled>
           </div>
         </Card>

@@ -1,4 +1,5 @@
 import { sendSampleNewsletter, sendTestEmails } from "../actions";
+import { analyticsConfigured, serviceAccountEmail } from "@/lib/admin/analytics";
 import { Button, Card, Heading, Muted, Subheading, Tag } from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/admin/session";
 import { emailConfigured } from "@/lib/notify";
@@ -33,6 +34,16 @@ export default async function SetupPage({ searchParams }: { searchParams: Promis
         "In Vercel (project → Settings → Environment Variables) add RESEND_API_KEY with that key, and redeploy.",
         "To send from the shop's own address: Resend → Domains → add prosjectflora.com, put the DNS records it shows into one.com, then set EMAIL_FROM to \"Flöra <hello@prosjectflora.com>\".",
         "Optional: EMAIL_NOTIFY = the address that should get a copy of every order.",
+      ],
+    },
+    {
+      title: "Google Analytics in the dashboard",
+      ok: analyticsConfigured(),
+      status: analyticsConfigured() ? `Connected — reading as ${serviceAccountEmail()}` : "The shop counts visitors, but the Visits page can't read the numbers yet",
+      how: [
+        "The measurement ID (G-…) and property ID are under Settings & brand; the shop asks visitors for consent before anything loads.",
+        "Reading the numbers needs the service account flora-dashboard@floora-511706.iam.gserviceaccount.com: in Analytics → Administrator → Tilgangsadministrasjon for området, add it with the Viewer role.",
+        "Make its key file (Martin: gcloud iam service-accounts keys create), base64 it, and add it in Vercel as GA_SERVICE_ACCOUNT_B64 (sensitive). Redeploy.",
       ],
     },
     {

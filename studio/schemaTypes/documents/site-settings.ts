@@ -27,6 +27,14 @@ export const siteSettings = defineType({
       validation: (rule) => rule.regex(/^G-[A-Z0-9]{4,16}$/, {name: 'measurement ID (G-…)'}),
     }),
     defineField({
+      name: 'gaPropertyId',
+      title: 'Google Analytics property ID',
+      description: 'Nine digits, from Administrator → Property details. What the dashboard\'s Visits page reads.',
+      type: 'string',
+      group: 'general',
+      validation: (rule) => rule.regex(/^\d{6,12}$/, {name: 'property ID (digits only)'}),
+    }),
+    defineField({
       name: 'announcement',
       title: 'Announcement bar',
       description: 'Short line shown at the top of every page. Leave empty to hide.',

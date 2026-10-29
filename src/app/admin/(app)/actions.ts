@@ -197,6 +197,8 @@ export async function saveSettings(formData: FormData) {
   await requireAdmin();
   const gaMeasurementId = String(formData.get("gaMeasurementId") ?? "").trim().toUpperCase() || null;
   if (gaMeasurementId && !/^G-[A-Z0-9]{4,16}$/.test(gaMeasurementId)) redirect("/admin/settings?error=" + encodeURIComponent("The Google Analytics ID should look like G-AB12CD34EF. Nothing was saved."));
+  const gaPropertyId = String(formData.get("gaPropertyId") ?? "").replace(/\s/g, "") || null;
+  if (gaPropertyId && !/^\d{6,12}$/.test(gaPropertyId)) redirect("/admin/settings?error=" + encodeURIComponent("The Analytics property ID is digits only, e.g. 561377221. Nothing was saved."));
   const shippingOre = kronerToOre(formData.get("shipping"));
   const freeFrom = kronerToOre(formData.get("freeShippingFrom"));
   const [signUpImage, footerImage] = await Promise.all([readImageField(formData, "signUpImage"), readImageField(formData, "footerImage")]);
@@ -257,6 +259,7 @@ export async function saveSettings(formData: FormData) {
         .set({
           siteName: String(formData.get("siteName") ?? "Flöra").trim(),
           gaMeasurementId,
+          gaPropertyId,
           announcement: readLocalizedString(formData, "announcement"),
           signUpTitle: readLocalizedString(formData, "signUpTitle"),
           signUpText: readLocalizedString(formData, "signUpText", "text"),
