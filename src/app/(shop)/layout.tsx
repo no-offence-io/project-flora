@@ -7,12 +7,13 @@ import Navbar from "@/components/navbar";
 import { CartProvider } from "@/components/cart-context";
 import LoadingScreen from "@/components/loading-screen";
 import { SanityLive } from "@/sanity/lib/live";
-import { getLogoSrc } from "@/lib/brand";
+import { getAnalyticsId, getLogoSrc } from "@/lib/brand";
 import { getLanguage } from "@/lib/language";
 import { cookies } from "next/headers";
 import { parseTheme, THEME_COOKIE } from "@/lib/theme-shared";
 import { I18nProvider } from "@/components/i18n-provider";
 import VisitTracker from "@/components/visit-tracker";
+import AnalyticsConsent from "@/components/analytics-consent";
 
 /**
  * The shop's chrome: cart, menu, sticky navbar, footer and the intro animation. Everything a
@@ -20,7 +21,7 @@ import VisitTracker from "@/components/visit-tracker";
  * layouts, so they get the fonts and global styles from the root but none of this.
  */
 export default async function ShopLayout({ children }: { children: ReactNode }) {
-  const [lang, logo, jar] = await Promise.all([getLanguage(), getLogoSrc(), cookies()]);
+  const [lang, logo, jar, analyticsId] = await Promise.all([getLanguage(), getLogoSrc(), cookies(), getAnalyticsId()]);
   const theme = parseTheme(jar.get(THEME_COOKIE)?.value);
   return (
     <I18nProvider lang={lang}>
@@ -37,6 +38,7 @@ export default async function ShopLayout({ children }: { children: ReactNode }) 
           <NavMenuOverlay lang={lang} logoSrc={logo} theme={theme} />
           <PageTransition />
           <VisitTracker />
+          <AnalyticsConsent measurementId={analyticsId} />
         </NavMenuProvider>
       </CartProvider>
       <LoadingScreen />

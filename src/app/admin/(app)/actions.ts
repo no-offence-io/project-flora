@@ -195,6 +195,8 @@ export async function deleteProduct(formData: FormData) {
 
 export async function saveSettings(formData: FormData) {
   await requireAdmin();
+  const gaMeasurementId = String(formData.get("gaMeasurementId") ?? "").trim().toUpperCase() || null;
+  if (gaMeasurementId && !/^G-[A-Z0-9]{4,16}$/.test(gaMeasurementId)) redirect("/admin/settings?error=" + encodeURIComponent("The Google Analytics ID should look like G-AB12CD34EF. Nothing was saved."));
   const shippingOre = kronerToOre(formData.get("shipping"));
   const freeFrom = kronerToOre(formData.get("freeShippingFrom"));
   const [signUpImage, footerImage] = await Promise.all([readImageField(formData, "signUpImage"), readImageField(formData, "footerImage")]);
@@ -254,6 +256,7 @@ export async function saveSettings(formData: FormData) {
         .patch("siteSettings")
         .set({
           siteName: String(formData.get("siteName") ?? "Flöra").trim(),
+          gaMeasurementId,
           announcement: readLocalizedString(formData, "announcement"),
           signUpTitle: readLocalizedString(formData, "signUpTitle"),
           signUpText: readLocalizedString(formData, "signUpText", "text"),

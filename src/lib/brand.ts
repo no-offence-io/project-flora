@@ -55,3 +55,9 @@ export function brandStyle(b: Brand): { style: Record<string, string>; fontHref?
   if (b.textColor) style["--foreground"] = b.textColor;
   return { style, ...(families.length ? { fontHref: `https://fonts.googleapis.com/css2?${families.map((f) => `family=${f}`).join("&")}&display=swap` } : {}) };
 }
+
+/** The Google Analytics measurement ID from Settings, or null when analytics is off. */
+export async function getAnalyticsId(): Promise<string | null> {
+  const { data } = await sanityFetch({ query: `*[_id == "siteSettings"][0].gaMeasurementId`, stega: false, tags: [CONTENT_TAG] });
+  return typeof data === "string" && /^G-[A-Z0-9]{4,16}$/.test(data) ? data : null;
+}

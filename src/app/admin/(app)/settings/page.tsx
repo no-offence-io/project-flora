@@ -6,7 +6,7 @@ import { FONTS } from "@/lib/brand-shared";
 import { adminClient, oreToKroner } from "@/lib/admin/sanity";
 
 type Settings = {
-  siteName?: string; announcement?: LocalizedString; signUpTitle?: LocalizedString; signUpText?: LocalizedString; signUpButton?: LocalizedString;
+  siteName?: string; gaMeasurementId?: string; announcement?: LocalizedString; signUpTitle?: LocalizedString; signUpText?: LocalizedString; signUpButton?: LocalizedString;
   footerText?: LocalizedString; instagram?: string; contactEmail?: string; shippingOre?: number; freeShippingFromOre?: number;
   signUpImage?: Pic; footerImage?: Pic;
   measurementFields?: { _key: string; label?: LocalizedString; hint?: LocalizedString }[];
@@ -18,8 +18,8 @@ type Settings = {
 type Pic = { _ref: string; url: string } | null;
 const PIC = (f: string) => `"${f}": select(defined(${f}.asset) => { "_ref": ${f}.asset._ref, "url": ${f}.asset->url })`;
 
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
-  const { saved } = await searchParams;
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string }> }) {
+  const { saved, error } = await searchParams;
   const s = (await adminClient().fetch<Settings | null>(`*[_id == "siteSettings"][0]{ ..., ${PIC("signUpImage")}, ${PIC("footerImage")}, "brand": { ...brand, ${PIC("logo").replace('"logo"', '"logo"').replace("logo.asset", "brand.logo.asset")} } }`)) ?? {};
   const b = s.brand ?? {};
   const measureSlots = [...(s.measurementFields ?? []), null];
@@ -29,6 +29,11 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       <div className="flex flex-col gap-[12px]">
         <Heading>Site settings</Heading>
         {saved ? <Muted>Saved.</Muted> : <Muted>Things that appear on every page.</Muted>}
+        {error && (
+          <p className="m-0 font-gotham text-paragraph text-[#b00020]" role="alert">
+            {error}
+          </p>
+        )}
       </div>
       <form action={saveSettings} className="flex max-w-[860px] flex-col gap-[42px]">
         <Card>
@@ -37,6 +42,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <div className="flex flex-col gap-[24px]">
             <Labelled label="Site name"><Input name="siteName" defaultValue={s.siteName ?? "Flöra"} /></Labelled>
             <Bilingual name="announcement" label="Announcement bar (leave empty to hide)" en={getText(s.announcement, "en")} no={getText(s.announcement, "no")} />
+            <Labelled label="Google Analytics measurement ID" hint="Looks like G-AB12CD34EF — in Analytics under Administrator → Datastrømmer. Visitors are asked before anything loads. Leave empty to turn analytics off.">
+              <Input name="gaMeasurementId" defaultValue={s.gaMeasurementId ?? ""} placeholder="G-…" autoComplete="off" />
+            </Labelled>
           </div>
         </Card>
         <Card>

@@ -19,6 +19,14 @@ export const siteSettings = defineType({
     defineField({name: 'demoMode', title: 'Admin test mode', type: 'boolean', readOnly: true, hidden: true}),
     defineField({name: 'siteName', title: 'Site name', type: 'string', group: 'general', initialValue: 'Flöra'}),
     defineField({
+      name: 'gaMeasurementId',
+      title: 'Google Analytics measurement ID',
+      description: 'Looks like G-AB12CD34EF. Visitors are asked for consent before anything loads. Empty = analytics off.',
+      type: 'string',
+      group: 'general',
+      validation: (rule) => rule.regex(/^G-[A-Z0-9]{4,16}$/, {name: 'measurement ID (G-…)'}),
+    }),
+    defineField({
       name: 'announcement',
       title: 'Announcement bar',
       description: 'Short line shown at the top of every page. Leave empty to hide.',
