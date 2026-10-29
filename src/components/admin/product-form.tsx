@@ -36,7 +36,7 @@ export const PRODUCT_ADMIN_PROJECTION = `{
   "specs": specs[]{ _key, label, value, emphasis, expandable, hideOnMobile }
 }`;
 
-const CATEGORIES = ["Tops", "Skirts", "Sets", "Accessories"];
+const CATEGORIES = ["Tops", "Skirts", "Pants", "Sets", "Accessories"];
 
 /** The product editor: the checkout form's fields, grouped the way the product page shows them. */
 export default function ProductForm({ product }: { product: ProductDoc | null }) {

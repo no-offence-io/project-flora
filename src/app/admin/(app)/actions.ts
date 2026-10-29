@@ -80,7 +80,7 @@ export async function sendShippingEmail(formData: FormData) {
   redirect(`/admin/orders/${id}?sent=1`);
 }
 
-const CATEGORIES = ["Tops", "Skirts", "Sets", "Accessories"] as const;
+const CATEGORIES = ["Tops", "Skirts", "Pants", "Sets", "Accessories"] as const;
 
 export async function saveProduct(formData: FormData) {
   await requireAdmin();

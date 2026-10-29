@@ -18,7 +18,7 @@ export type ProductSpec = {
 };
 
 /** Must match the `category` list in studio/schemaTypes/documents/product.ts. */
-export const CATEGORIES = ["Tops", "Skirts", "Sets", "Accessories"] as const;
+export const CATEGORIES = ["Tops", "Skirts", "Pants", "Sets", "Accessories"] as const;
 export type Category = (typeof CATEGORIES)[number];
 
 /** How a product is sized: made to the customer's measurements (the default), a fixed size list, or one size. */

@@ -400,7 +400,7 @@ export type Product = {
   _rev: string;
   name?: InternationalizedArrayString;
   slug?: Slug;
-  category?: "Tops" | "Skirts" | "Sets" | "Accessories";
+  category?: "Tops" | "Skirts" | "Pants" | "Sets" | "Accessories";
   description?: InternationalizedArrayText;
   visible?: boolean;
   priceOre?: number;

@@ -38,7 +38,7 @@ export const product = defineType({
       title: 'Category',
       type: 'string',
       group: 'content',
-      options: {list: ['Tops', 'Skirts', 'Sets', 'Accessories'], layout: 'radio'},
+      options: {list: ['Tops', 'Skirts', 'Pants', 'Sets', 'Accessories'], layout: 'radio'},
       validation: (rule) => rule.required(),
     }),
     defineField({
