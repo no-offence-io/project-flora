@@ -275,7 +275,8 @@ export async function saveSettings(formData: FormData) {
           sizeGuide: readLocalizedString(formData, "sizeGuide", "text"),
           shippingZones,
           shipsTo: String(formData.get("shipsTo") ?? "").split(/[,\n]/).map((c) => c.trim()).filter(Boolean),
-          brand,
+          // Field by field, so the icon page's own brand fields (favicon, tabIcon…) are left alone.
+          ...Object.fromEntries(Object.entries(brand).map(([k, v]) => [`brand.${k}`, v])),
         })
         .commit(),
     );

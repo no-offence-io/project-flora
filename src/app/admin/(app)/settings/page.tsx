@@ -1,8 +1,9 @@
 import { saveSettings } from "../actions";
-import { Bilingual, Button, Card, Checkbox, Heading, Input, Labelled, Muted, Select, Subheading, Textarea } from "@/components/admin/ui";
+import { Bilingual, Button, Card, Checkbox, Heading, Input, Labelled, Muted, Select, Subheading, Textarea, TextLink } from "@/components/admin/ui";
 import { ImageField } from "@/components/admin/media-field";
 import { getText, type LocalizedString } from "@/lib/admin/localized";
 import { FONTS } from "@/lib/brand-shared";
+import { DEFAULT_LOGO } from "@/lib/brand";
 import { adminClient, oreToKroner } from "@/lib/admin/sanity";
 
 type Settings = {
@@ -53,12 +54,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <Card>
           <Subheading>Brand</Subheading>
           <div className="h-px w-full bg-black/25" />
-          <Muted>The look of the whole site. Leave a field empty to keep the built-in design (Americana headings, Gotham text, 60/24px headings, 13.35px paragraphs, black on white).</Muted>
-          <ImageField name="brandLogo" label="Logo" hint="White on a transparent background, SVG or PNG. The site darkens it where it sits on white." current={b.logo} />
+          <Muted>The look of the whole site. What you see here is what the site uses right now — the built-in design unless you have changed it. Edit anything and save.</Muted>
+          <ImageField name="brandLogo" label="Logo" hint="White on a transparent background, SVG or PNG. The site darkens it where it sits on white." current={b.logo} placeholder={DEFAULT_LOGO} dark />
+          <Muted className="text-[11px]">The browser-tab and home-screen icon has its own page: <TextLink href="/admin/icon">Icon</TextLink>.</Muted>
           <div className="flex flex-col gap-[24px] md:flex-row">
             <Labelled label="Heading font" className="flex-1">
               <Select name="headingFont" defaultValue={b.headingFont ?? ""}>
-                <option value="">Built-in (Americana)</option>
+                <option value="">Americana (built-in)</option>
                 {Object.entries(FONTS).map(([key, f]) => (
                   <option key={key} value={key}>{f.label}</option>
                 ))}
@@ -66,7 +68,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             </Labelled>
             <Labelled label="Text font" className="flex-1">
               <Select name="bodyFont" defaultValue={b.bodyFont ?? ""}>
-                <option value="">Built-in (Gotham)</option>
+                <option value="">Gotham (built-in)</option>
                 {Object.entries(FONTS).map(([key, f]) => (
                   <option key={key} value={key}>{f.label}</option>
                 ))}
@@ -74,22 +76,22 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             </Labelled>
           </div>
           <div className="grid grid-cols-2 gap-[12px] md:grid-cols-4 md:gap-[24px]">
-            <Labelled label="Heading, desktop (px)"><Input name="headingSizeDesktop" inputMode="decimal" defaultValue={b.headingSizeDesktop ?? ""} placeholder="60" /></Labelled>
-            <Labelled label="Heading, mobile (px)"><Input name="headingSizeMobile" inputMode="decimal" defaultValue={b.headingSizeMobile ?? ""} placeholder="24" /></Labelled>
-            <Labelled label="Banner title (px)"><Input name="bannerSize" inputMode="decimal" defaultValue={b.bannerSize ?? ""} placeholder="80" /></Labelled>
-            <Labelled label="Paragraph (px)"><Input name="paragraphSize" inputMode="decimal" defaultValue={b.paragraphSize ?? ""} placeholder="13.35" /></Labelled>
+            <Labelled label="Heading, desktop (px)"><Input name="headingSizeDesktop" inputMode="decimal" defaultValue={b.headingSizeDesktop ?? 60} /></Labelled>
+            <Labelled label="Heading, mobile (px)"><Input name="headingSizeMobile" inputMode="decimal" defaultValue={b.headingSizeMobile ?? 24} /></Labelled>
+            <Labelled label="Banner title (px)"><Input name="bannerSize" inputMode="decimal" defaultValue={b.bannerSize ?? 80} /></Labelled>
+            <Labelled label="Paragraph (px)"><Input name="paragraphSize" inputMode="decimal" defaultValue={b.paragraphSize ?? 13.35} /></Labelled>
           </div>
           <div className="flex flex-col gap-[24px] md:flex-row">
             <Labelled label="Background colour" hint="Hex, e.g. #ffffff" className="flex-1">
               <div className="flex items-center gap-[12px]">
                 <span aria-hidden className="h-[24px] w-[24px] shrink-0 rounded-full border border-black/20" style={{ backgroundColor: b.backgroundColor ?? "#ffffff" }} />
-                <Input name="backgroundColor" defaultValue={b.backgroundColor ?? ""} placeholder="#ffffff" pattern="#([0-9a-fA-F]{3}){1,2}" />
+                <Input name="backgroundColor" defaultValue={b.backgroundColor ?? "#ffffff"} pattern="#([0-9a-fA-F]{3}){1,2}" />
               </div>
             </Labelled>
             <Labelled label="Text colour" hint="Hex, e.g. #000000" className="flex-1">
               <div className="flex items-center gap-[12px]">
                 <span aria-hidden className="h-[24px] w-[24px] shrink-0 rounded-full border border-black/20" style={{ backgroundColor: b.textColor ?? "#000000" }} />
-                <Input name="textColor" defaultValue={b.textColor ?? ""} placeholder="#000000" pattern="#([0-9a-fA-F]{3}){1,2}" />
+                <Input name="textColor" defaultValue={b.textColor ?? "#000000"} pattern="#([0-9a-fA-F]{3}){1,2}" />
               </div>
             </Labelled>
           </div>
@@ -102,7 +104,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <Bilingual name="signUpTitle" label="Title" en={getText(s.signUpTitle, "en")} no={getText(s.signUpTitle, "no")} />
             <Bilingual name="signUpText" label="Text" en={getText(s.signUpText, "en")} no={getText(s.signUpText, "no")} multiline rows={3} />
             <Bilingual name="signUpButton" label="Button label" en={getText(s.signUpButton, "en")} no={getText(s.signUpButton, "no")} />
-            <ImageField name="signUpImage" label="Background photo" hint="Leave empty to keep the built-in photo." current={s.signUpImage} />
+            <ImageField name="signUpImage" label="Background photo" current={s.signUpImage} placeholder="/signup/signup-bg.jpg" />
           </div>
         </Card>
         <Card>
@@ -110,7 +112,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <div className="h-px w-full bg-black/25" />
           <div className="flex flex-col gap-[24px]">
             <Bilingual name="footerText" label="Footer text" en={getText(s.footerText, "en")} no={getText(s.footerText, "no")} multiline rows={3} />
-            <ImageField name="footerImage" label="Background photo" hint="Leave empty to keep the built-in photo." current={s.footerImage} />
+            <ImageField name="footerImage" label="Background photo" current={s.footerImage} placeholder="/footer/footer-bg.jpg" />
             <div className="flex flex-col gap-[24px] md:flex-row">
               <Labelled label="Instagram URL" className="flex-1"><Input name="instagram" type="url" defaultValue={s.instagram ?? ""} /></Labelled>
               <Labelled label="Contact email" className="flex-1"><Input name="contactEmail" type="email" defaultValue={s.contactEmail ?? ""} /></Labelled>

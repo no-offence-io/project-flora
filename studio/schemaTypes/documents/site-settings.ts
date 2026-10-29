@@ -151,6 +151,16 @@ export const siteSettings = defineType({
         defineField({name: 'paragraphSize', title: 'Paragraph size (px)', type: 'number', validation: (rule) => rule.min(10).max(24)}),
         defineField({name: 'backgroundColor', title: 'Background colour', description: 'Hex, e.g. #ffffff', type: 'string'}),
         defineField({name: 'textColor', title: 'Text colour', description: 'Hex, e.g. #000000', type: 'string'}),
+        defineField({
+          name: 'favicon',
+          title: 'Browser-tab icon',
+          type: 'string',
+          options: {list: [{title: 'Black disc, white mark', value: 'black'}, {title: 'White disc, black mark', value: 'white'}], layout: 'radio'},
+          initialValue: 'black',
+        }),
+        defineField({name: 'tabIcon', title: 'Browser-tab icon (uploaded)', description: 'Square PNG or JPG, at least 512×512. Empty = the bud mark.', type: 'image'}),
+        defineField({name: 'homeIcon', title: 'Phone home-screen icon (uploaded)', description: 'Square, at least 512×512. Empty = the tab icon.', type: 'image'}),
+        defineField({name: 'androidIcon', title: 'Android icon (uploaded)', description: 'Square, at least 512×512. Empty = the home-screen icon.', type: 'image'}),
       ],
     }),
     defineField({

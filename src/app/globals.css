@@ -292,3 +292,15 @@ html:has(.admin-night) .admin-night-sheet :is(img, video, iframe) {
   .admin-night-auto .admin-panel { filter: invert(1) hue-rotate(180deg); }
   .admin-night-auto .admin-panel img { filter: none; }
 }
+
+/*
+ * `.admin-true-colors`: an element whose real colours must show in night mode (the icon previews —
+ * a light Safari tab must stay light). Inverted once more to undo the admin's inversion; nothing
+ * inside it is touched again, so nested inline backgrounds don't flip back.
+ */
+.admin-night .admin-true-colors { filter: invert(1) hue-rotate(180deg); }
+.admin-night .admin-true-colors :is(img, video, iframe, [style*="background-color"]) { filter: none; }
+@media (prefers-color-scheme: dark) {
+  .admin-night-auto .admin-true-colors { filter: invert(1) hue-rotate(180deg); }
+  .admin-night-auto .admin-true-colors :is(img, video, iframe, [style*="background-color"]) { filter: none; }
+}

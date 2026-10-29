@@ -1,10 +1,11 @@
 import "server-only";
 import { defineQuery } from "next-sanity";
 import { FONTS, type Brand } from "./brand-shared";
+import { parseFaviconStyle, type FaviconStyle } from "./favicon";
 import { CONTENT_TAG } from "./catalog";
 import { sanityFetch } from "@/sanity/lib/live";
 
-const BRAND_QUERY = defineQuery(`*[_id == "siteSettings"][0].brand{ "logo": logo.asset->url, headingFont, bodyFont, headingSizeDesktop, headingSizeMobile, bannerSize, paragraphSize, backgroundColor, textColor }`);
+const BRAND_QUERY = defineQuery(`*[_id == "siteSettings"][0].brand{ "logo": logo.asset->url, headingFont, bodyFont, headingSizeDesktop, headingSizeMobile, bannerSize, paragraphSize, backgroundColor, textColor, favicon, "tabIcon": tabIcon.asset->url, "homeIcon": homeIcon.asset->url, "androidIcon": androidIcon.asset->url }`);
 
 export const DEFAULT_LOGO = "/footer/flora-logo.svg";
 
@@ -23,8 +24,32 @@ export async function getBrand(): Promise<Brand> {
     paragraphSize: num("paragraphSize"),
     backgroundColor: str("backgroundColor"),
     textColor: str("textColor"),
+    favicon: parseFaviconStyle(d.favicon),
+    tabIcon: str("tabIcon"),
+    homeIcon: str("homeIcon"),
+    androidIcon: str("androidIcon"),
   };
 }
+
+/** Which colourway of the bud mark the browser tab and home screen show. */
+export async function getFaviconStyle(): Promise<FaviconStyle> {
+  return (await getBrand()).favicon ?? "black";
+}
+
+/**
+ * What each place shows: an uploaded picture where Ida put one, otherwise the built-in mark in the
+ * chosen colourway. The home-screen icon falls back to the tab icon, Android to the home-screen one.
+ */
+export type SiteIcons = { style: FaviconStyle; tab?: string; home?: string; android?: string };
+export async function getSiteIcons(): Promise<SiteIcons> {
+  const b = await getBrand();
+  const tab = b.tabIcon;
+  const home = b.homeIcon ?? tab;
+  return { style: b.favicon ?? "black", ...(tab ? { tab } : {}), ...(home ? { home } : {}), ...(b.androidIcon ?? home ? { android: b.androidIcon ?? home } : {}) };
+}
+
+/** A Sanity image URL resized to a square PNG. `bg` flattens transparency onto white, which home screens want. */
+export const squarePng = (url: string, px: number, bg = false) => `${url}?w=${px}&h=${px}&fit=crop&fm=png${bg ? "&bg=ffffff" : ""}`;
 
 /** The logo everywhere it appears: the uploaded one, or the site's own file. */
 export async function getLogoSrc(): Promise<string> {

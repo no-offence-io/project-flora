@@ -26,6 +26,7 @@ export const GROUPS: { title: string; links: { label: string; href: string }[] }
       { label: "Pages", href: "/admin/pages" },
       { label: "Media", href: "/admin/media" },
       { label: "Settings & brand", href: "/admin/settings" },
+      { label: "Icon", href: "/admin/icon" },
     ],
   },
   {

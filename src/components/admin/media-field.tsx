@@ -10,20 +10,28 @@ export type CurrentImage = { _ref: string; url: string } | null | undefined;
 export type CurrentVideo = { _ref: string; url: string; filename?: string } | null | undefined;
 
 /** The cart's thumbnail treatment: the whole photo on a light box, never cropped. */
-export function Thumb({ url, alt = "", className = "" }: { url?: string | null; alt?: string; className?: string }) {
+export function Thumb({ url, alt = "", className = "", dark = false }: { url?: string | null; alt?: string; className?: string; dark?: boolean }) {
   return (
-    <span className={`relative flex aspect-[4/5] w-full items-center justify-center bg-[#f7f7f7] ${className}`}>
+    <span className={`relative flex aspect-[4/5] w-full items-center justify-center ${dark ? "bg-black" : "bg-[#f7f7f7]"} ${className}`}>
       {url ? <Image src={url} alt={alt} fill sizes="200px" className="object-contain p-[12px]" /> : <span className="font-gotham text-[11px] text-black/50">No photo</span>}
     </span>
   );
 }
 
-export function ImageField({ name, label, current, hint }: { name: string; label: string; current: CurrentImage; hint?: string }) {
+/**
+ * `placeholder` is the picture the site uses when nothing is uploaded (the built-in logo, say), shown
+ * so the field never looks empty while something is in fact in use. `dark` frames a white-on-
+ * transparent picture on black so it can be seen.
+ */
+export function ImageField({ name, label, current, hint, placeholder, dark = false }: { name: string; label: string; current: CurrentImage; hint?: string; placeholder?: string; dark?: boolean }) {
   return (
     <Labelled label={label} hint={hint}>
       <div className="flex gap-[12px]">
-        <Thumb url={current?.url} className="w-[120px] shrink-0" />
+        <span className="w-[120px] shrink-0">
+          <Thumb url={current?.url ?? placeholder} dark={dark} />
+        </span>
         <div className="flex min-w-0 flex-1 flex-col gap-[12px] font-gotham text-paragraph">
+          {!current && placeholder && <span className="text-[11px] text-black/50">Built-in — in use now. Upload a file to replace it.</span>}
           <input type="hidden" name={`${name}.existing`} value={current?._ref ?? ""} />
           <input type="file" name={name} accept="image/*" className="text-paragraph file:mr-[12px] file:border file:border-black/20 file:bg-transparent file:px-[12px] file:py-[8px] file:font-gotham file:text-paragraph file:text-black" />
           {current && (

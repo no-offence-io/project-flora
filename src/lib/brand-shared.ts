@@ -28,4 +28,10 @@ export type Brand = {
   paragraphSize?: number;
   backgroundColor?: string;
   textColor?: string;
+  /** Browser-tab icon colourway: black disc with white mark, or the reverse. */
+  favicon?: "black" | "white";
+  /** Uploaded icons per place (Sanity image URLs); the built-in mark is used where empty. */
+  tabIcon?: string;
+  homeIcon?: string;
+  androidIcon?: string;
 };
