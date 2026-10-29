@@ -105,10 +105,10 @@ export default function ValuesScrolly({
                 <Image src={value.image.src} alt={value.image.alt} fill sizes="100vw" className="object-cover" />
               </div>
 
-              {/* Desktop: the title sits at the top left of the block, clear of the navbar, while the
+              {/* Desktop: the title sits at the very top left of the block, while the
                   text stays centred beside the photo. Phones keep title and text together. */}
               <div className="flex flex-col gap-[12px] md:contents">
-                <h3 className={`m-0 font-americana text-big-header-mobile capitalize text-black transition-[opacity,transform] duration-500 ease-out md:absolute md:left-0 md:top-[60px] ${fade(activeIndex === i)}`}>{value.title}</h3>
+                <h3 className={`m-0 font-americana text-big-header-mobile capitalize text-black transition-[opacity,transform] duration-500 ease-out md:absolute md:left-0 md:top-0 ${fade(activeIndex === i)}`}>{value.title}</h3>
                 <p className={`m-0 max-w-[521px] font-gotham text-paragraph text-black/70 transition-[opacity,transform] duration-500 ease-out ${fade(activeIndex === i)}`}>{value.description}</p>
               </div>
             </div>
