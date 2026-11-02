@@ -6,7 +6,7 @@ import type { Lang } from "./language-shared";
  * where they appear. A missing Norwegian entry falls back to English rather than to a blank.
  */
 const en = {
-  "nav.shop": "Shop", "nav.values": "Values", "nav.about": "About",
+  "nav.shop": "Shop", "nav.values": "Values", "nav.about": "About", "hero.explore": "Explore",
   "menu.open": "Open menu", "menu.close": "Close menu",
   "footer.terms": "Terms", "footer.refunds": "Refunds & Exchange", "footer.privacy": "Privacy", "footer.shipping": "Shipping", "footer.faq": "FAQ",
   "footer.credit": "Design & website by No Offence",
@@ -76,7 +76,7 @@ const en = {
 export type Key = keyof typeof en;
 
 const no: Record<Key, string> = {
-  "nav.shop": "Butikk", "nav.values": "Verdier", "nav.about": "Om oss",
+  "nav.shop": "Butikk", "nav.values": "Verdier", "nav.about": "Om oss", "hero.explore": "Utforsk",
   "menu.open": "Åpne meny", "menu.close": "Lukk meny",
   "footer.terms": "Vilkår", "footer.refunds": "Retur og bytte", "footer.privacy": "Personvern", "footer.shipping": "Frakt", "footer.faq": "Ofte stilte spørsmål",
   "footer.credit": "Design og nettside av No Offence",

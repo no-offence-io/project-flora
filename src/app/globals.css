@@ -100,6 +100,26 @@ body:has(.coming-soon-gate) {
   }
 }
 
+/* The hero's "Explore" line: hangs from its top, reaches down and draws back up. */
+.scroll-cue-line {
+  transform-origin: top;
+  animation: scroll-cue 2.4s ease-in-out infinite;
+}
+@keyframes scroll-cue {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scroll-cue-line {
+    animation: none;
+  }
+}
+
 /* The clear cross in search fields: the browser draws it in its own accent blue; ours is black. */
 input[type="search"]::-webkit-search-cancel-button {
   -webkit-appearance: none;

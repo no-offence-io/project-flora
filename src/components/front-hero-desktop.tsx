@@ -4,6 +4,7 @@ import CartLink from "./cart-link";
 import HeroVideo from "./hero-video";
 import { getT } from "@/lib/i18n-server";
 import RolloverText from "./rollover-text";
+import ScrollCue from "./scroll-cue";
 import { getLogoSrc } from "@/lib/brand";
 
 const NAV_LINKS = [
@@ -13,11 +14,11 @@ const NAV_LINKS = [
   { key: "nav.about", href: "/about" },
 ] as const;
 
-const NAV_TEXT = "flex items-center gap-[42px] font-americana text-big-header-mobile capitalize whitespace-nowrap";
+const NAV_TEXT = "flex items-center gap-[24px] lg:gap-[42px] font-americana text-big-header-mobile capitalize whitespace-nowrap";
 
 function Logo({ src }: { src: string }) {
   return (
-    <Link href="/" aria-label="Flöra home">
+    <Link href="/" aria-label="Flöra home" className="shrink-0">
       <Image
         src={src}
         alt="Flöra"
@@ -25,7 +26,9 @@ function Logo({ src }: { src: string }) {
         height={109.193}
         preload
         loading="eager"
-        className="h-[109.193px] w-[486.544px]"
+        /* Full size once there is room beside the links; smaller, never squeezed, on tablets. */
+        className="h-auto w-[172px] lg:w-[240px] xl:w-[486.544px]"
+        style={{ height: "auto" }}
       />
     </Link>
   );
@@ -94,7 +97,7 @@ export default async function FrontHeroDesktop({
           /* Figma layout: wordmark left, links and cart right */
           <header className="flex w-full items-start justify-between">
             <Logo src={logo} />
-            <div className="flex items-start gap-[120px]">
+            <div className="flex items-start gap-[24px] lg:gap-[120px]">
               <nav aria-label="Primary" className={NAV_TEXT}>
                 {NAV_LINKS.map((link) => (
                   <Link key={t(link.key)} href={link.href}>
@@ -107,7 +110,11 @@ export default async function FrontHeroDesktop({
           </header>
         )}
 
-        <p className="w-[521px] font-gotham text-paragraph">{INTRO}</p>
+        {/* Equal side columns keep the cue on the page's centre; the intro narrows before it could touch it. */}
+        <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-[24px]">
+          <p className="max-w-[521px] font-gotham text-paragraph">{INTRO}</p>
+          <ScrollCue />
+        </div>
       </div>
     </section>
   );

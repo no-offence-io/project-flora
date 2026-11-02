@@ -3,6 +3,7 @@ import Link from "next/link";
 import CartLink from "./cart-link";
 import HeroVideo from "./hero-video";
 import { BurgerButton } from "./nav-menu";
+import ScrollCue from "./scroll-cue";
 import { getLogoSrc } from "@/lib/brand";
 
 const INTRO =
@@ -59,7 +60,10 @@ export default async function FrontHeroMobile({
         </div>
       </header>
 
-      <p className="relative w-full font-gotham text-paragraph">{INTRO}</p>
+      <div className="relative flex w-full flex-col items-center gap-[24px]">
+        <p className="w-full font-gotham text-paragraph">{INTRO}</p>
+        <ScrollCue />
+      </div>
     </section>
   );
 }
