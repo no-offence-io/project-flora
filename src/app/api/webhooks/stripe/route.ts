@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { sendOrderConfirmation } from "@/lib/notify";
 import { getStripe } from "@/lib/stripe";
+import { METADATA_SITE } from "@/lib/order-metadata";
 import { recordOrder } from "@/lib/record-order";
 import { getWriteClient } from "@/sanity/lib/write";
 import { notice } from "@/lib/notices";
@@ -23,6 +24,9 @@ import { notice } from "@/lib/notices";
  * sequential so this doesn't happen in practice; a datastore with a unique key on the intent id is
  * the real fix once orders live somewhere other than Stripe's metadata.
  *
+ * The Stripe account is shared with the old shop, so every event arrives here: payments not marked
+ * as ours are ignored, and a refund only counts if it belongs to an order we have.
+ *
  * The signature check needs the raw request body; parsing it as JSON first would break it.
  */
 export async function POST(req: Request) {
@@ -41,6 +45,7 @@ export async function POST(req: Request) {
 
   switch (event.type) {
     case "payment_intent.succeeded": {
+      if (event.data.object.metadata.site !== METADATA_SITE) break;
       // Re-read, don't trust event.data.object: see the note on idempotency above.
       const intent = await getStripe().paymentIntents.retrieve(event.data.object.id, { expand: ["payment_method"] });
 
@@ -56,6 +61,12 @@ export async function POST(req: Request) {
       }
       const { orderNumber, created } = order;
       if (!created) break; // a retry or replay: the order, and its stock, are already recorded
+
+      if (order.oversold.length) {
+        const what = order.oversold.join(", ");
+        await getWriteClient().patch(order.docId).set({ internalNote: `SOLD TWICE: ${what}. Two customers paid at the same moment. Contact this customer and refund if it can't be made.` }).commit();
+        await notice({ kind: "error", source: "orders", title: `${orderNumber} was paid for after ${what} had sold out`, detail: `Two customers paid at the same moment. Contact ${order.customer.name} (${order.customer.email}) and refund if it can't be made.`, href: `/admin/orders/${order.docId}`, dedupeKey: `oversold:${orderNumber}` });
+      }
 
       // Stamp the PaymentIntent too, so the order number is visible in the Stripe dashboard.
       await getStripe().paymentIntents.update(intent.id, {
@@ -100,8 +111,22 @@ export async function POST(req: Request) {
     }
     case "payment_intent.payment_failed": {
       const intent = event.data.object;
+      if (intent.metadata.site !== METADATA_SITE) break;
       console.warn(`[payment failed] ${intent.id}: ${intent.last_payment_error?.message ?? "unknown reason"}`);
       await notice({ kind: "warning", source: "payments", title: "A payment attempt failed", detail: `${intent.receipt_email ?? intent.metadata.customer_email ?? "unknown customer"}: ${intent.last_payment_error?.message ?? "unknown reason"}`, dedupeKey: `failed:${intent.id}` });
+      break;
+    }
+    case "charge.refunded": {
+      // Refunds made in Stripe's own dashboard too, not only from ours.
+      const charge = event.data.object;
+      const intentId = typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
+      if (!intentId) break;
+      const docId = `order-${intentId}`;
+      const order = await getWriteClient().getDocument<{ orderNumber?: string }>(docId);
+      if (!order) break; // the old shop, or a payment from before this one
+      const amount = `${(charge.amount_refunded / 100).toLocaleString("nb-NO")} kr`;
+      if (charge.refunded) await getWriteClient().patch(docId).set({ status: "refunded" }).commit();
+      await notice({ kind: "info", source: "orders", title: `${order.orderNumber} ${charge.refunded ? "was refunded" : "was partly refunded"} · ${amount}`, detail: "The stock was not changed. If the piece is back and can be sold again, add it on the product page.", href: `/admin/orders/${docId}`, dedupeKey: `refund:${intentId}:${charge.amount_refunded}` });
       break;
     }
     default:

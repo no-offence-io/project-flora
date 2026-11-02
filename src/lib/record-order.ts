@@ -15,6 +15,8 @@ export type RecordedOrder = {
   language: "en" | "no";
   customer: { name: string; email: string; address: string };
   totals: { subtotalOre: number; shippingOre: number; discountOre: number; discountCode?: string; vatIncludedOre: number; totalOre: number };
+  /** Lines paid for after the last one had gone: two customers bought it at the same moment. */
+  oversold: string[];
 };
 
 /**
@@ -71,7 +73,7 @@ export async function recordOrder(intent: Stripe.PaymentIntent): Promise<Recorde
     totalOre,
   };
   const customer = { name: m.customer_name ?? "", email: intent.receipt_email ?? m.customer_email ?? "", address: m.customer_address ?? "" };
-  const base = { orderNumber, docId, lines: recordedLines, language, customer, totals } as const;
+  const base: Omit<RecordedOrder, "created"> = { orderNumber, docId, lines: recordedLines, language, customer, totals, oversold: [] };
 
   if (await client.getDocument(docId)) return { ...base, created: false };
 
@@ -120,12 +122,35 @@ export async function recordOrder(intent: Stripe.PaymentIntent): Promise<Recorde
 
   try {
     await tx.commit({ autoGenerateArrayKeys: false });
-    return { ...base, created: true };
+    return { ...base, created: true, oversold: await settleOversold(lines, products) };
   } catch (err) {
     // A duplicate id means another delivery beat us to it, stock decrements included.
     if (err instanceof Error && /already exists/i.test(err.message)) return { ...base, created: false };
     throw err;
   }
+}
+
+/**
+ * Stock is checked before payment, so two customers can pay for the last piece at the same moment.
+ * Stripe has taken both payments by now, so the second order stands: this finds what went below
+ * zero, puts it back to zero so the shop reads sold out, and reports it for a person to resolve.
+ */
+async function settleOversold(lines: ReturnType<typeof linesFromMetadata>, products: Record<string, { _id: string; name: string }>): Promise<string[]> {
+  const client = getWriteClient();
+  const ids = lines.map((l) => products[l.id]?._id).filter(Boolean);
+  const rows = await client.fetch<{ _id: string; stock?: number; sizes?: { label?: string; stock?: number }[] }[]>(`*[_id in $ids]{ _id, stock, sizes }`, { ids });
+  const oversold: string[] = [];
+  for (const l of lines) {
+    const product = products[l.id];
+    const row = rows.find((r) => r._id === product?._id);
+    if (!row) continue;
+    const path = l.s ? `sizes[label=="${l.s.replace(/"/g, "")}"].stock` : "stock";
+    const left = l.s ? row.sizes?.find((s) => s.label === l.s)?.stock : row.stock;
+    if ((left ?? 0) >= 0) continue;
+    oversold.push(`${product.name}${l.s ? ` (${l.s})` : ""}`);
+    await client.patch(row._id).set({ [path]: 0 }).commit();
+  }
+  return oversold;
 }
 
 /** "Visa ending in 2560", when the webhook expanded the payment method. Only brand and last four — never more. */

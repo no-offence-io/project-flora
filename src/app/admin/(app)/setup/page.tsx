@@ -20,7 +20,7 @@ export default async function SetupPage({ searchParams }: { searchParams: Promis
       status: stripeMode === "live" ? "Live — real cards are charged" : stripeMode === "test" ? "Test mode — only test cards work" : "Not connected",
       how: [
         "Going live: in Stripe switch to live mode and copy the live secret and publishable keys into Vercel as STRIPE_SECRET_KEY and NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.",
-        "Add a live webhook (Developers → Webhooks → /api/webhooks/stripe, event payment_intent.succeeded) and put its signing secret in STRIPE_WEBHOOK_SECRET.",
+        "Add a live webhook (Developers → Webhooks → /api/webhooks/stripe, events payment_intent.succeeded, payment_intent.payment_failed and charge.refunded) and put its signing secret in STRIPE_WEBHOOK_SECRET.",
         "Register www.prosjectflora.com under Payment method domains in live mode so Apple Pay and Google Pay show.",
         "Redeploy. The site refuses to start payments if the keys don't match each other.",
       ],
