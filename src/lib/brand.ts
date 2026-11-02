@@ -2,6 +2,7 @@ import "server-only";
 import { defineQuery } from "next-sanity";
 import { FONTS, type Brand } from "./brand-shared";
 import { parseFaviconStyle, type FaviconStyle } from "./favicon";
+import { parseLoadingStyle, type LoadingStyle } from "./loading-shared";
 import { parseTransition, type TransitionSetting } from "./page-transition-shared";
 import { CONTENT_TAG } from "./catalog";
 import { sanityFetch } from "@/sanity/lib/live";
@@ -92,4 +93,10 @@ export async function getAnalyticsId(): Promise<string | null> {
 export async function getPageTransition(): Promise<TransitionSetting> {
   const { data } = await sanityFetch({ query: `*[_id == "siteSettings"][0].pageTransition`, stega: false, tags: [CONTENT_TAG] });
   return parseTransition(data as Record<string, unknown> | null);
+}
+
+/** How photos wait to load, from the same dashboard page. */
+export async function getLoadingStyle(): Promise<LoadingStyle> {
+  const { data } = await sanityFetch({ query: `*[_id == "siteSettings"][0].loadingStyle`, stega: false, tags: [CONTENT_TAG] });
+  return parseLoadingStyle(data);
 }

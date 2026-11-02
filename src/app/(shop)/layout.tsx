@@ -7,7 +7,8 @@ import Navbar from "@/components/navbar";
 import { CartProvider } from "@/components/cart-context";
 import LoadingScreen from "@/components/loading-screen";
 import { SanityLive } from "@/sanity/lib/live";
-import { getAnalyticsId, getLogoSrc, getPageTransition } from "@/lib/brand";
+import CartPill from "@/components/cart-pill";
+import { getAnalyticsId, getLoadingStyle, getLogoSrc, getPageTransition } from "@/lib/brand";
 import { getLanguage } from "@/lib/language";
 import { cookies } from "next/headers";
 import { parseTheme, THEME_COOKIE } from "@/lib/theme-shared";
@@ -21,14 +22,14 @@ import AnalyticsConsent from "@/components/analytics-consent";
  * layouts, so they get the fonts and global styles from the root but none of this.
  */
 export default async function ShopLayout({ children }: { children: ReactNode }) {
-  const [lang, logo, jar, analyticsId, transition] = await Promise.all([getLanguage(), getLogoSrc(), cookies(), getAnalyticsId(), getPageTransition()]);
+  const [lang, logo, jar, analyticsId, transition, loading] = await Promise.all([getLanguage(), getLogoSrc(), cookies(), getAnalyticsId(), getPageTransition(), getLoadingStyle()]);
   const theme = parseTheme(jar.get(THEME_COOKIE)?.value);
   return (
     <I18nProvider lang={lang}>
       <CartProvider>
         <NavMenuProvider>
           {/* The site is capped at 1600px and centred on wide desktops */}
-          <div className="shop-content mx-auto flex w-full max-w-[1600px] flex-1 flex-col bg-white">
+          <div data-loader={loading} className="shop-content mx-auto flex w-full max-w-[1600px] flex-1 flex-col bg-white">
             {children}
             <Footer />
           </div>
@@ -37,6 +38,7 @@ export default async function ShopLayout({ children }: { children: ReactNode }) 
           </StickyNavbar>
           <NavMenuOverlay lang={lang} logoSrc={logo} theme={theme} />
           <PageTransition setting={transition} logoSrc={logo} />
+          <CartPill />
           <VisitTracker />
           <AnalyticsConsent measurementId={analyticsId} />
         </NavMenuProvider>

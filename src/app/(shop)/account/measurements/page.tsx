@@ -1,3 +1,4 @@
+import { FormBusy } from "@/components/busy";
 import { redirect } from "next/navigation";
 import { BUTTON, FIELD, Heading } from "@/components/account-ui";
 import RolloverText from "@/components/rollover-text";
@@ -29,7 +30,7 @@ export default async function MeasurementsPage({ searchParams }: { searchParams:
             </label>
           ))}
         </div>
-        <button type="submit" className={BUTTON}><RolloverText text={t("account.save")} /></button>
+        <button type="submit" className={BUTTON}><FormBusy><RolloverText text={t("account.save")} /></FormBusy></button>
       </form>
     </div>
   );

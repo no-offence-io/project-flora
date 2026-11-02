@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { Busy } from "./busy";
 import RolloverText from "./rollover-text";
 import { useT } from "@/components/i18n-provider";
 import type { Key } from "@/lib/i18n";
@@ -27,7 +28,7 @@ export default function OrderLookup() {
           <input id="order-email" name="email" type="email" required placeholder={t("order.email")} autoComplete="email" className={FIELD} />
         </label>
         <button type="submit" disabled={pending} className="flex w-full items-center justify-center bg-black p-[12px] font-gotham text-paragraph text-white disabled:opacity-50">
-          <RolloverText text={t("order.find")} />
+          <Busy state={pending ? "pending" : "idle"}><RolloverText text={t("order.find")} /></Busy>
         </button>
         {state.status === "notFound" && (
           <p className="m-0 text-black/70" role="alert">

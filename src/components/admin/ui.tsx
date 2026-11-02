@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { FormBusy } from "@/components/busy";
 import Chevron from "@/components/chevron";
 import { isStatus, STATUS_LABEL, STATUS_TONE } from "@/lib/order-status";
 
@@ -50,7 +51,7 @@ export function Button({ children, type = "submit", className = "", ...rest }: {
       className={`flex w-full items-center justify-center bg-black p-[12px] font-gotham text-paragraph text-white hover:opacity-80 transition-opacity disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
       {...rest}
     >
-      {children}
+      {type === "submit" ? <FormBusy>{children}</FormBusy> : children}
     </button>
   );
 }

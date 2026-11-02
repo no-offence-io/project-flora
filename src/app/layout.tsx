@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
+import { IMAGE_REVEAL_SCRIPT } from "@/lib/loading-shared";
 import { Geist, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
@@ -59,6 +60,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
   return (
     <html
+      suppressHydrationWarning
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${gotham.variable} ${americana.variable} h-full antialiased theme-${theme}`}
       style={style as React.CSSProperties}
@@ -70,6 +72,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       )}
       {/* Only fonts and global styles live here; each area (shop, admin, account) brings its own chrome in its own layout. */}
       <body className="min-h-full flex flex-col">
+        <script dangerouslySetInnerHTML={{ __html: IMAGE_REVEAL_SCRIPT }} />
         {children}
         {/* Cookieless visitor counts; needs Analytics enabled once on the Vercel project. */}
         <Analytics />

@@ -146,6 +146,8 @@ export default function PageTransition({ area = "shop", setting = DEFAULT_TRANSI
           pointerEvents: visible ? "auto" : "none",
         }}
       />
+      {/* While the next page is fetched: a line across the top. */}
+      <div aria-hidden className={`page-progress ${visible ? "is-on" : ""}`} />
       {/* The middle screen. Hidden, but its logo is loaded, until a push passes through it. */}
       {area === "shop" && type === "push" && middle && logoSrc && (
         <div aria-hidden className="page-middle fixed inset-0 z-[95] items-center justify-center bg-black">

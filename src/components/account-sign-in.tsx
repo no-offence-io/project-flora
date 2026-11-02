@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { Busy } from "./busy";
 import RolloverText from "./rollover-text";
 import { BUTTON, FIELD } from "./account-ui";
 import { useT } from "@/components/i18n-provider";
@@ -19,7 +20,7 @@ export default function AccountSignIn({ next }: { next: string }) {
         <input id="account-email" name="email" type="email" required autoComplete="email" placeholder={t("form.email")} className={FIELD} />
       </label>
       <button type="submit" disabled={pending} className={BUTTON}>
-        <RolloverText text={t("account.sendLink")} />
+        <Busy state={pending ? "pending" : "idle"}><RolloverText text={t("account.sendLink")} /></Busy>
       </button>
       {(state.status === "invalid" || state.status === "failed") && (
         <p className="m-0 font-gotham text-paragraph text-[#b00020]" role="alert">{t(state.status === "invalid" ? "account.invalid" : "account.failed")}</p>

@@ -69,7 +69,7 @@ export default function AnalyticsConsent({ measurementId }: { measurementId: str
 
   if (!measurementId || consent !== "unset" || gated) return null;
   return (
-    <div role="region" aria-label={t("consent.text")} className="shop-fixed fixed inset-x-0 bottom-0 z-[75]">
+    <div role="region" aria-label={t("consent.text")} className="consent-box shop-fixed fixed inset-x-0 bottom-0 z-[75]">
       <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-[12px] border-t border-black/25 bg-white px-[24px] py-[18px] font-gotham text-paragraph text-black md:flex-row md:items-center md:justify-between md:px-[42px]">
         <p className="m-0">{t("consent.text")}</p>
         <div className="flex shrink-0 gap-[12px]">

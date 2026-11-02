@@ -1,3 +1,4 @@
+import { FormBusy } from "@/components/busy";
 import { redirect } from "next/navigation";
 import { BUTTON, FIELD, Heading } from "@/components/account-ui";
 import PhonePrefixSelect from "@/components/phone-prefix-select";
@@ -50,7 +51,7 @@ export default async function DetailsPage({ searchParams }: { searchParams: Prom
           <PhonePrefixSelect name="phonePrefixIso" defaultIso={iso ?? "NO"} />
           {field("phone", t("form.phone"), c.phone, "tel-national")}
         </div>
-        <button type="submit" className={BUTTON}><RolloverText text={t("account.save")} /></button>
+        <button type="submit" className={BUTTON}><FormBusy><RolloverText text={t("account.save")} /></FormBusy></button>
       </form>
     </div>
   );

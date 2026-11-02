@@ -19,6 +19,14 @@ export const siteSettings = defineType({
     defineField({name: 'demoMode', title: 'Admin test mode', type: 'boolean', readOnly: true, hidden: true}),
     defineField({name: 'siteName', title: 'Site name', type: 'string', group: 'general', initialValue: 'Flöra'}),
     defineField({
+      name: 'loadingStyle',
+      title: 'Photo loading look',
+      description: 'Set on the dashboard, under Page transitions.',
+      type: 'string',
+      group: 'general',
+      options: {list: ['a', 'b', 'c']},
+    }),
+    defineField({
       name: 'pageTransition',
       title: 'Page transition',
       description: 'Set on the dashboard, under Page transitions.',

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { Busy } from "./busy";
 import { useCart } from "./cart-context";
 import Chevron from "./chevron";
 import RolloverText from "./rollover-text";
@@ -10,6 +11,9 @@ import { useT } from "@/components/i18n-provider";
 
 const FIELD = "w-full border border-black/20 bg-transparent p-[12px] font-gotham text-paragraph text-black outline-none placeholder:text-black/50 focus:border-black/60";
 const CM = /^\d{1,3}([.,]\d)?$/;
+
+/** Saving to the cart is instant; this short pause lets the press register. */
+const ADD_PAUSE = 450;
 
 /**
  * How the customer picks what to buy, then the black Add To Cart button from the Figma product page.
@@ -23,29 +27,35 @@ export default function ProductOptions({ product, sizing, className = "" }: { pr
   const [size, setSize] = useState<string | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
-  const [added, setAdded] = useState(false);
+  const [adding, setAdding] = useState<"idle" | "pending" | "done">("idle");
   const [guideOpen, setGuideOpen] = useState(false);
+  const commit = useRef<(() => void) | null>(null);
   const soldOut = isSoldOut(product);
 
   useEffect(() => {
-    if (!added) return;
-    const timer = window.setTimeout(() => setAdded(false), 1500);
+    if (adding === "idle") return;
+    const timer = window.setTimeout(() => {
+      if (adding === "pending") {
+        commit.current?.();
+        setAdding("done");
+      } else setAdding("idle");
+    }, adding === "pending" ? ADD_PAUSE : 1500);
     return () => window.clearTimeout(timer);
-  }, [added]);
+  }, [adding]);
 
   const onAdd = () => {
     if (product.sizing === "sizes") {
       if (!size) return setError(t("product.chooseSize"));
-      add(product, 1, { size });
+      commit.current = () => add(product, 1, { size });
     } else if (product.sizing === "measurements") {
       const measurements = sizing.fields.map((f) => ({ label: f.label, value: (values[f.label] ?? "").trim().replace(",", ".") }));
       if (measurements.some((m) => !CM.test(m.value))) return setError(t("product.addMeasurements"));
-      add(product, 1, { measurements });
+      commit.current = () => add(product, 1, { measurements });
     } else {
-      add(product);
+      commit.current = () => add(product);
     }
     setError(null);
-    setAdded(true);
+    setAdding("pending");
   };
 
   const leftInStock = product.sizing === "sizes" ? (size ? product.sizes.find((s) => s.label === size)?.stock ?? 0 : null) : product.stock;
@@ -138,7 +148,9 @@ export default function ProductOptions({ product, sizing, className = "" }: { pr
           aria-live="polite"
           className="flex w-full items-center justify-center bg-black px-[12px] py-[8px] font-gotham text-paragraph text-white disabled:cursor-not-allowed disabled:bg-black/25"
         >
-          <RolloverText text={soldOut ? t("product.soldOut") : added ? t("product.added") : t("product.add")} />
+          <Busy state={adding} done={t("product.added")}>
+            <RolloverText text={soldOut ? t("product.soldOut") : t("product.add")} />
+          </Busy>
         </button>
         {error && (
           <p className="m-0 text-[11px] leading-normal text-[#b00020]" role="alert">

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Card, Muted, Subheading } from "@/components/admin/ui";
+import type { LoadingStyle } from "@/lib/loading-shared";
 import type { BlinkAxis, TransitionDirection, TransitionSetting, TransitionType } from "@/lib/page-transition-shared";
 
 const TYPES: { value: TransitionType; label: string; hint: string }[] = [
@@ -20,6 +21,12 @@ const DIRECTIONS: { value: TransitionDirection; label: string }[] = [
 const AXES: { value: BlinkAxis; label: string }[] = [
   { value: "vertical", label: "Top and bottom" },
   { value: "horizontal", label: "Left and right" },
+];
+
+const LOOKS: { value: LoadingStyle; label: string; hint: string }[] = [
+  { value: "a", label: "A · Soft light", hint: "A light passing over the tile" },
+  { value: "b", label: "B · Breathing Ö", hint: "The Flöra mark, breathing" },
+  { value: "c", label: "C · Drawn frame", hint: "A thin line drawn around the tile" },
 ];
 
 const EASE = "cubic-bezier(0.76, 0, 0.24, 1)";
@@ -49,8 +56,9 @@ function Choice<T extends string>({ label, options, value, onChange }: { label: 
   );
 }
 
-export default function TransitionForm({ initial, action }: { initial: TransitionSetting; action: (formData: FormData) => void | Promise<void> }) {
+export default function TransitionForm({ initial, initialLoading, action }: { initial: TransitionSetting; initialLoading: LoadingStyle; action: (formData: FormData) => void | Promise<void> }) {
   const [s, setS] = useState(initial);
+  const [look, setLook] = useState(initialLoading);
   const set = (patch: Partial<TransitionSetting>) => setS((prev) => ({ ...prev, ...patch }));
   const stage = useRef<HTMLDivElement>(null);
   const from = useRef<HTMLDivElement>(null);
@@ -98,6 +106,7 @@ export default function TransitionForm({ initial, action }: { initial: Transitio
       <input type="hidden" name="direction" value={s.direction} />
       <input type="hidden" name="axis" value={s.axis} />
       {s.middle && <input type="hidden" name="middle" value="on" />}
+      <input type="hidden" name="loadingStyle" value={look} />
 
       <Card>
         <Subheading>Transition</Subheading>
@@ -135,6 +144,23 @@ export default function TransitionForm({ initial, action }: { initial: Transitio
           <div ref={middle} className="absolute inset-0 flex items-center justify-center font-americana text-[24px]" style={{ backgroundColor: "#000000", color: "#ffffff", visibility: "hidden" }}>FLÖRA</div>
         </div>
         <button type="button" onClick={play} className="w-max border border-black px-[18px] py-[10px] font-gotham text-paragraph text-black hover:bg-black hover:text-white transition-colors">Play again</button>
+      </Card>
+
+      <Card>
+        <Subheading>While photos load</Subheading>
+        <div className="h-px w-full bg-black/25" />
+        <div className="grid grid-cols-3 gap-[12px] md:gap-[24px]">
+          {LOOKS.map((l) => (
+            <label key={l.value} className="flex min-w-0 cursor-pointer flex-col gap-[6px] font-gotham text-paragraph text-black">
+              <span data-loader={l.value} className="loader-tile relative block aspect-[4/5] border border-transparent bg-[#f7f7f7] has-[+_span_input:checked]:border-black" />
+              <span className="flex items-center gap-[8px]">
+                <input type="radio" checked={look === l.value} onChange={() => setLook(l.value)} className="h-[14px] w-[14px] shrink-0 accent-black" />
+                {l.label}
+              </span>
+              <span className="text-[11px] leading-normal text-black/50">{l.hint}</span>
+            </label>
+          ))}
+        </div>
       </Card>
 
       <Button className="md:max-w-[320px]">Save</Button>

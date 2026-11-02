@@ -25,6 +25,7 @@ import { getStripePromise } from "@/lib/stripe-client";
 import { useT } from "@/components/i18n-provider";
 import RolloverText from "./rollover-text";
 import { readVisit } from "@/components/visit-tracker";
+import { Busy } from "./busy";
 
 type Quote = Pick<
   IntentResponse,
@@ -393,9 +394,13 @@ export default function CheckoutClient({ formId, countries, account }: { formId:
             />
           </Elements>
         ) : (
-          <p className="m-0 text-black/50" role="status">
-            {quoteError ?? t("pay.preparing")}
-          </p>
+          quoteError ? (
+            <p className="m-0 text-black/50" role="status">
+              {quoteError}
+            </p>
+          ) : (
+            <div role="status" aria-label={t("pay.preparing")} className="loader-tile relative h-[160px]" data-loader="b" />
+          )
         )}
       </OrderSummary>
     </div>
@@ -589,7 +594,7 @@ function PaymentSection({
         disabled={!stripe || !elements || confirming}
         className="flex w-full items-center justify-center bg-black p-[12px] font-gotham text-paragraph text-white disabled:cursor-not-allowed disabled:opacity-50"
       >
-        <RolloverText text={confirming ? t("pay.confirming") : t("pay.confirm")} />
+        <Busy state={confirming ? "pending" : "idle"}><RolloverText text={t("pay.confirm")} /></Busy>
       </button>
 
       <p className="m-0 text-black/50">

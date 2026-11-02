@@ -14,6 +14,9 @@ type CartContextValue = {
   clear: () => void;
 };
 
+/** Fired with the piece's name when something is added, for the cart pill. */
+export const CART_ADDED = "flora:cart-added";
+
 const CartContext = createContext<CartContextValue | null>(null);
 
 /* Tiny external store: the cart lives here and in local storage, and React subscribes to it. */
@@ -63,6 +66,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         ? list.map((item) => (item.key === key ? { ...item, quantity: Math.min(10, item.quantity + quantity) } : item))
         : [...list, cartItemFromProduct(product, quantity, options)],
     );
+    window.dispatchEvent(new CustomEvent(CART_ADDED, { detail: product.name }));
   }, []);
   const setQuantity = useCallback(
     (key: string, quantity: number) => write(read().map((item) => (item.key === key ? { ...item, quantity } : item))),

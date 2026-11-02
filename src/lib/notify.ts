@@ -111,15 +111,14 @@ const FONT_FACES = () => `<style>
 @font-face{font-family:'Gotham';src:url('${siteUrl()}/email/fonts/gotham.otf') format('opentype');font-weight:325;font-style:normal;}
 </style>`;
 
-function layout(title: string, body: string) {
-  const serif = SERIF;
+function layout(title: string, body: string, headingFont = SERIF) {
   const sans = SANS;
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">${FONT_FACES()}</head><body style="margin:0;padding:0;background:#ffffff;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;"><tr><td align="center" style="padding:42px 24px;">
 <table role="presentation" width="520" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;border:0.5px solid rgba(0,0,0,0.25);">
 <tr><td style="padding:24px;${sans}font-size:13.35px;line-height:1.4;color:#000000;">
 <p style="margin:0 0 24px 0;"><img src="${siteUrl()}/email/flora-logo.png" alt="Flöra" width="134" height="30" style="display:block;width:134px;height:30px;border:0;"></p>
-<h1 style="margin:0 0 24px 0;${serif}font-size:32px;line-height:1;font-weight:400;">${esc(title)}</h1>
+<h1 style="margin:0 0 24px 0;${headingFont}font-size:32px;line-height:1;font-weight:400;">${esc(title)}</h1>
 ${body}
 </td></tr>
 <tr><td style="padding:12px 24px;border-top:0.5px solid rgba(0,0,0,0.25);${sans}font-size:11px;color:rgba(0,0,0,0.5);">Flöra · <a href="${siteUrl()}" style="color:rgba(0,0,0,0.5);">${siteUrl().replace(/^https?:\/\//, "")}</a></td></tr>
@@ -191,6 +190,7 @@ export async function sendOrderConfirmation(order: Pick<RecordedOrder, "orderNum
       rule +
       (order.customer.address ? `<p style="margin:0 0 6px 0;">${t.deliveryTo}</p>` + p(`${esc(order.customer.name)}<br>${esc(order.customer.address)}`) : "") +
       p(t.questions),
+    SANS,
   );
   const notify = process.env.EMAIL_NOTIFY;
   const sent = await sendMail({ to: [order.customer.email], subject: t.confirmSubject(order.orderNumber), html, replyTo: notify || undefined });
