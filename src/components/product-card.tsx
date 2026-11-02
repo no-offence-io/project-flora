@@ -4,9 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import SaleBadge from "./sale-badge";
+import TextScroll from "./text-scroll";
 import { useScroller } from "./use-scroller";
 import type { SlideshowProduct } from "./products-slideshow";
 import { useT } from "@/components/i18n-provider";
+
+const MOBILE_SWATCHES = 2;
 
 /**
  * Product card from Figma: grey image well, name, price (with optional struck compare price) and colour swatches.
@@ -51,7 +54,7 @@ export default function ProductCard({
   };
 
   return (
-    <div className={`flex flex-col justify-end gap-[12px] font-gotham text-paragraph text-black ${className}`}>
+    <div className={`flex flex-col gap-[12px] font-gotham text-paragraph text-black ${className}`}>
       {/*
         The well itself carries no padding: each slide pads and backgrounds itself instead, so the
         whole padded box travels together when sliding. Padding on the well would leave a static
@@ -110,9 +113,9 @@ export default function ProductCard({
         {product.compareAtPrice && <SaleBadge className="absolute top-[12px] right-[12px]" />}
       </Link>
 
-      <div className="flex items-start gap-[24px]">
-        <Link href={product.href} className="flex flex-col gap-[12px] whitespace-nowrap">
-          <span>{product.name}</span>
+      <div className="flex min-w-0 items-start gap-[12px] md:gap-[24px]">
+        <Link href={product.href} className="flex min-w-0 flex-1 flex-col gap-[12px] whitespace-nowrap">
+          <TextScroll text={product.name} />
           <span className="flex gap-[12px]">
             <span>{product.price}</span>
             {product.compareAtPrice && <s className="text-[#c7c7c7]">{product.compareAtPrice}</s>}
@@ -120,9 +123,10 @@ export default function ProductCard({
           </span>
         </Link>
         {product.colors && product.colors.length > 0 && (
-          <ul className="flex min-w-0 flex-wrap items-center justify-end gap-[8px]" aria-label={t("product.colours")}>
+          <ul className="flex shrink-0 items-center gap-[8px] md:max-w-[50%] md:flex-wrap md:justify-end" aria-label={t("product.colours")}>
             {product.colors.map((color, i) => (
-              <li key={color.hex} className="flex">
+              // Two swatches on a phone's half-width card, then a count; all of them from `md`.
+              <li key={color.hex} className={i < MOBILE_SWATCHES ? "flex" : "hidden md:flex"}>
                 <button
                   type="button"
                   aria-label={color.name}
@@ -135,6 +139,9 @@ export default function ProductCard({
                 />
               </li>
             ))}
+            {product.colors.length > MOBILE_SWATCHES && (
+              <li aria-hidden className="text-[11px] leading-[8px] md:hidden">+{product.colors.length - MOBILE_SWATCHES}</li>
+            )}
           </ul>
         )}
       </div>

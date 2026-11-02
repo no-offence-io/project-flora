@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { CART_ADDED, useCart } from "./cart-context";
+import TextScroll from "./text-scroll";
 import { useT } from "@/components/i18n-provider";
 import { formatNok } from "@/lib/money";
 
@@ -65,9 +66,9 @@ export default function CartPill() {
           {latest && <Image src={latest.image.src} alt="" fill sizes="44px" className="object-contain p-[5px]" />}
         </span>
         <span className="cart-pill-text">
-          <span>
+          <span className="min-w-0">
             {t("cart.added")}
-            <small>{added}</small>
+            <small><TextScroll text={added ?? ""} /></small>
           </span>
           <span className="cart-pill-view">{t("cart.view")}</span>
         </span>

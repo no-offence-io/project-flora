@@ -551,6 +551,71 @@ body:has(.consent-box) .cart-pill {
   }
 }
 
+/* Text too long for its space: fades at the edge, slides to its end and back (text-scroll.tsx). */
+@property --fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 18px;
+}
+.text-scroll {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.text-scroll > span {
+  display: inline-block;
+}
+.text-scroll.is-long {
+  mask-image: linear-gradient(to right, transparent, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent);
+  animation: text-scroll-fade var(--scroll-time) ease-in-out infinite;
+}
+.text-scroll.is-long > span {
+  animation: text-scroll var(--scroll-time) ease-in-out infinite;
+}
+@keyframes text-scroll {
+  0%,
+  15% {
+    transform: none;
+  }
+  45%,
+  55% {
+    transform: translateX(var(--scroll-by));
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes text-scroll-fade {
+  0%,
+  15% {
+    --fade-start: 0px;
+    --fade-end: 18px;
+  }
+  45%,
+  55% {
+    --fade-start: 18px;
+    --fade-end: 0px;
+  }
+  100% {
+    --fade-start: 0px;
+    --fade-end: 18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .text-scroll.is-long,
+  .text-scroll.is-long > span {
+    animation: none;
+  }
+}
+
 /* Anything that can be pressed shows the hand. In the base layer, so `cursor-not-allowed` still wins. */
 @layer base {
   button:not(:disabled),
