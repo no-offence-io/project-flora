@@ -11,6 +11,9 @@ export const parseLoadingStyle = (v: unknown): LoadingStyle => (LOADING_STYLES.i
  * can fade it in. One the browser already has shows at once: either it is complete the moment it
  * is added, or it finishes within a moment of being added. Resource timing can't tell this, as a
  * photo reused from memory still reports its first, slow download.
+ * A finished image also switches to synchronous decoding. next/image asks for async, and iPhone
+ * Safari discards decoded photos off-screen, so async made every photo blank for a moment as it
+ * scrolled back into view. Loaded means loaded.
  * Without JavaScript the `reveal` class never appears and images behave as normal.
  */
-export const IMAGE_REVEAL_SCRIPT = `(function(){var d=document,s=new WeakMap;d.documentElement.classList.add("reveal");function a(i){if(i.complete&&i.naturalWidth)i.dataset.ready="instant";else s.set(i,performance.now())}new MutationObserver(function(m){m.forEach(function(r){r.addedNodes.forEach(function(n){if(n.nodeType!==1)return;if(n.tagName==="IMG")a(n);else n.querySelectorAll("img").forEach(a)})})}).observe(d,{childList:true,subtree:true});function f(e){var i=e.target;if(!i||i.tagName!=="IMG"||i.dataset.ready)return;var t=s.get(i);i.dataset.ready=t!==undefined&&performance.now()-t<150?"instant":"fade"}d.addEventListener("load",f,true);d.addEventListener("error",f,true)})()`;
+export const IMAGE_REVEAL_SCRIPT = `(function(){var d=document,s=new WeakMap;d.documentElement.classList.add("reveal");function a(i){if(i.complete&&i.naturalWidth){i.dataset.ready="instant";i.decoding="sync"}else s.set(i,performance.now())}new MutationObserver(function(m){m.forEach(function(r){r.addedNodes.forEach(function(n){if(n.nodeType!==1)return;if(n.tagName==="IMG")a(n);else n.querySelectorAll("img").forEach(a)})})}).observe(d,{childList:true,subtree:true});function f(e){var i=e.target;if(!i||i.tagName!=="IMG")return;i.decoding="sync";if(i.dataset.ready)return;var t=s.get(i);i.dataset.ready=t!==undefined&&performance.now()-t<150?"instant":"fade"}d.addEventListener("load",f,true);d.addEventListener("error",f,true)})()`;
