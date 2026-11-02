@@ -36,8 +36,10 @@ export default async function SignUpBannerMobile({
       data-keep-colors
       className={`relative mx-[24px] flex h-[607px] flex-col items-center justify-center gap-[24px] overflow-hidden rounded-[12px] bg-black p-[24px] text-white ${className}`}
     >
-      {/* Photo scaled to 224% of the card width and mirrored, matching the Figma crop, drifting with parallax under a 41% black overlay.
-          The zoomed box already overflows the card by well over 150px top and bottom, so that is the shift limit. */}
+      {/* signup-bg-mobile.jpg is the mirrored part of the photo in the Figma crop, under a 41% black
+          overlay. A pre-cut file, not the whole photo zoomed to 224% and clipped, which iPhone
+          Safari drops off-screen and redraws late (see footer-mobile.tsx). It overflows the card
+          by over 150px, so that is the parallax limit. */}
       <div aria-hidden className="absolute inset-0">
         <ParallaxLayer
           speed={0.15}
@@ -48,14 +50,8 @@ export default async function SignUpBannerMobile({
           {image ? (
             <Image src={image} alt="" fill sizes="100vw" className="object-cover" />
           ) : (
-          <div className="absolute top-0 left-[-69.3%] aspect-[2432/3626] w-[224.3%] -translate-y-[19.6%]">
-            <Image
-              src="/signup/signup-bg.jpg"
-              alt=""
-              fill
-              sizes="230vw"
-              className="-scale-x-100 object-cover"
-            />
+          <div className="absolute top-0 left-0 aspect-[1085/2828] w-full -translate-y-[5.9%]">
+            <Image src="/signup/signup-bg-mobile.jpg" alt="" fill sizes="100vw" className="object-cover" />
           </div>
           )}
         </ParallaxLayer>
