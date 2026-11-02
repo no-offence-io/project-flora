@@ -43,7 +43,9 @@ export async function sendNewsletterToAll(doc: NewsletterDoc): Promise<number> {
   const subscribers = await adminClient().fetch<{ _id: string; email: string; language?: string }[]>(
     `*[_type == "subscriber" && !defined(unsubscribedAt) && defined(email) && demo != true]{ _id, email, language }`,
   );
+  if (!subscribers.length) throw new Error("There are no subscribers to send to yet.");
   let sent = 0;
+  let lastError = "";
   const failed: string[] = [];
   for (const s of subscribers) {
     const lang = s.language === "no" ? "no" : "en";
@@ -53,11 +55,20 @@ export async function sendNewsletterToAll(doc: NewsletterDoc): Promise<number> {
     } catch (err) {
       console.error(`[newsletter] failed for ${s.email}`, err);
       failed.push(s.email);
+      lastError = err instanceof Error ? err.message : String(err);
     }
   }
   const { notice } = await import("@/lib/notices");
   const name = doc.title || subject.en;
   if (failed.length) await notice({ kind: "error", source: "newsletter", title: `Newsletter "${name}" failed for ${failed.length} of ${subscribers.length}`, detail: failed.slice(0, 20).join(", "), href: `/admin/newsletters/${doc._id}` });
   else await notice({ kind: "info", source: "newsletter", title: `Newsletter "${name}" sent to ${sent} subscribers`, href: `/admin/newsletters/${doc._id}` });
+  // Nobody got it: an error, not a sent newsletter, so it stays a draft that can be sent again.
+  if (!sent) {
+    throw new Error(
+      /verify a domain/i.test(lastError)
+        ? "Nothing was sent. Resend can only email subscribers once your domain is verified: see Setup, under Email."
+        : `Nothing was sent. ${lastError || "The email service didn't accept it."}`,
+    );
+  }
   return sent;
 }
