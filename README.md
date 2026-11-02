@@ -281,8 +281,8 @@ not just an environment edit.
 1. Switch `STRIPE_SECRET_KEY` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` to live keys in Vercel's
    environment variables (Production scope). Never in the repo.
 2. Register the webhook again in live mode: Developers → Webhooks → add
-   `https://prosjectflora.com/api/webhooks/stripe` for `payment_intent.succeeded` and
-   `payment_intent.payment_failed`; put its signing secret in `STRIPE_WEBHOOK_SECRET`.
+   `https://prosjectflora.com/api/webhooks/stripe` for `payment_intent.succeeded`,
+   `payment_intent.payment_failed` and `charge.refunded`; put its signing secret in `STRIPE_WEBHOOK_SECRET`.
 3. Register `prosjectflora.com` and `www.prosjectflora.com` under payment method domains in live
    mode (see Wallets above). Apple Pay verification fetches
    `/.well-known/apple-developer-merchantid-domain-association`, which the app serves from `public/`,
