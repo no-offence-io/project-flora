@@ -15,22 +15,18 @@ export default async function FooterMobile({ parallax = true, className = "" }: 
       data-keep-colors
       className={`full-bleed relative flex h-svh flex-col items-center justify-end gap-[10px] overflow-hidden p-[24px] text-white ${className}`}
     >
-      {/* Background: the photo is scaled to 313% of the footer width and shifted so the
-          figure sits behind the wordmark, matching the Figma crop at 393px. */}
-      <div aria-hidden className="absolute inset-0">
-        {/* The zoomed box overflows the footer by several hundred pixels, so 150px is a safe shift limit */}
+      {/* Background: footer-bg-mobile.jpg is the part of the photo seen at the Figma crop, with the
+          figure behind the wordmark. A pre-cut file, not the whole photo zoomed to 313% and clipped:
+          a layer that wide is around 3700×5500px on an iPhone, and Safari drops it off-screen, so
+          it flashed as it came back. Black underneath for the moment any photo is being redrawn. */}
+      <div aria-hidden className="absolute inset-0 bg-black">
+        {/* The crop runs well past the footer top and bottom, so 150px is a safe shift limit */}
         <ParallaxLayer speed={0.15} maxShift={150} enabled={parallax} className="inset-0 h-full">
           {copy.footerImage ? (
             <Image src={copy.footerImage} alt="" fill sizes="100vw" className="object-cover" />
           ) : (
-            <div className="absolute top-0 left-[-107.12%] aspect-[2408/3623] w-[313.49%] -translate-y-[41.8%]">
-              <Image
-                src="/footer/footer-bg.jpg"
-                alt=""
-                fill
-                sizes="320vw"
-                className="object-cover"
-              />
+            <div className="absolute left-0 aspect-[768/2536] w-full" style={{ top: "-55.6vw" }}>
+              <Image src="/footer/footer-bg-mobile.jpg" alt="" fill sizes="100vw" className="object-cover" />
             </div>
           )}
         </ParallaxLayer>

@@ -34,7 +34,7 @@ export default async function SignUpBannerMobile({
   return (
     <section
       data-keep-colors
-      className={`relative mx-[24px] flex h-[607px] flex-col items-center justify-center gap-[24px] overflow-hidden rounded-[12px] p-[24px] text-white ${className}`}
+      className={`relative mx-[24px] flex h-[607px] flex-col items-center justify-center gap-[24px] overflow-hidden rounded-[12px] bg-black p-[24px] text-white ${className}`}
     >
       {/* Photo scaled to 224% of the card width and mirrored, matching the Figma crop, drifting with parallax under a 41% black overlay.
           The zoomed box already overflows the card by well over 150px top and bottom, so that is the shift limit. */}
