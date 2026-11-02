@@ -8,25 +8,27 @@ import { CART_ADDED, useCart } from "./cart-context";
 import { useT } from "@/components/i18n-provider";
 import { formatNok } from "@/lib/money";
 
-const SHORTEN_AFTER = 3800;
+const SHOWN_FOR = 4500;
 
 /**
- * The pill at the bottom of the screen. Adding a piece opens it with the photo; after a few seconds
- * it shrinks to "Cart · 1" and stays while the cart has items. Tapping it opens a small cart.
+ * The pill at the bottom of the screen, there for a few seconds after adding a piece. Tapping it
+ * opens a small cart, which stays until it is closed.
  */
 export default function CartPill() {
   const { items, count } = useCart();
   const t = useT();
   const pathname = usePathname();
   const [added, setAdded] = useState<string | null>(null);
+  const [shown, setShown] = useState(false);
   const [full, setFull] = useState(false);
   const timer = useRef(0);
 
   useEffect(() => {
     const onAdded = (e: Event) => {
       setAdded((e as CustomEvent<string>).detail);
+      setShown(true);
       window.clearTimeout(timer.current);
-      timer.current = window.setTimeout(() => setAdded(null), SHORTEN_AFTER);
+      timer.current = window.setTimeout(() => setShown(false), SHOWN_FOR);
     };
     window.addEventListener(CART_ADDED, onAdded);
     return () => {
@@ -35,8 +37,12 @@ export default function CartPill() {
     };
   }, []);
 
-  const hidden = count === 0 || pathname.startsWith("/checkout") || pathname.startsWith("/order-complete");
-  const totalOre = items.reduce((sum, item) => sum + item.unitPriceOre * item.quantity, 0);
+  const toggle = () => {
+    window.clearTimeout(timer.current);
+    if (full) setShown(false);
+    setFull(!full);
+  };
+  const hidden = !shown || count === 0 || pathname.startsWith("/checkout") || pathname.startsWith("/order-complete");
   const latest = items[items.length - 1];
 
   return (
@@ -51,19 +57,19 @@ export default function CartPill() {
               </li>
             ))}
           </ul>
-          <Link href="/checkout" className="cart-pill-go" onClick={() => setFull(false)}>{t("cart.continue")}</Link>
+          <Link href="/checkout" className="cart-pill-go" onClick={toggle}>{t("cart.continue")}</Link>
         </div>
       </div>
-      <button type="button" aria-expanded={full} onClick={() => setFull((v) => !v)} className="cart-pill-bar">
+      <button type="button" aria-expanded={full} onClick={toggle} className="cart-pill-bar">
         <span className="cart-pill-photo">
           {latest && <Image src={latest.image.src} alt="" fill sizes="44px" className="object-contain p-[5px]" />}
         </span>
         <span className="cart-pill-text">
           <span>
-            {added ? t("cart.added") : `${t("cart.link")} · ${count}`}
-            <small>{added ?? formatNok(totalOre)}</small>
+            {t("cart.added")}
+            <small>{added}</small>
           </span>
-          {added && <span className="cart-pill-view">{t("cart.view")}</span>}
+          <span className="cart-pill-view">{t("cart.view")}</span>
         </span>
       </button>
     </div>

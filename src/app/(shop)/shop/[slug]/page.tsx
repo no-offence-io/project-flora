@@ -55,7 +55,7 @@ export default async function ProductPage({ params }: PageProps<"/shop/[slug]">)
       <div className="flex flex-col gap-[24px] md:h-screen md:gap-0">
         <Navbar tone="dark" />
         <section className="flex flex-col gap-[24px] md:min-h-0 md:flex-1 md:flex-row md:gap-0">
-          <div className="h-[386px] w-full md:h-full md:w-[720px] md:shrink-0">
+          <div className="h-[386px] w-full md:h-full md:w-1/2 md:max-w-[720px] md:shrink-0">
             <ProductGallery images={product.images} />
           </div>
           <div id="details" className="md:contents">

@@ -117,7 +117,7 @@ export default function ProductCard({
           </span>
         </Link>
         {product.colors && product.colors.length > 0 && (
-          <ul className="flex items-center gap-[8px]" aria-label={t("product.colours")}>
+          <ul className="flex min-w-0 flex-wrap items-center justify-end gap-[8px]" aria-label={t("product.colours")}>
             {product.colors.map((color, i) => (
               <li key={color.hex} className="flex">
                 <button

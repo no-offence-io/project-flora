@@ -9,7 +9,7 @@ import type { SizingSettings } from "@/lib/catalog";
 export default function ProductDetails({ product, sizing, soldOutLabel, className = "" }: { product: Product; sizing: SizingSettings; soldOutLabel: string; className?: string }) {
   return (
     <div
-      className={`flex flex-col gap-[120px] px-[24px] text-black md:h-full md:min-h-0 md:flex-1 md:justify-between md:gap-[24px] md:py-[42px] md:pr-[42px] md:pl-[60px] ${className}`}
+      className={`flex flex-col gap-[120px] px-[24px] text-black md:h-full md:min-h-0 md:min-w-0 md:flex-1 md:justify-between md:gap-[24px] md:py-[42px] md:pr-[42px] md:pl-[60px] ${className}`}
     >
       <div className="flex flex-col gap-[24px]">
         <div className="flex flex-col gap-[8px] md:gap-[24px]">

@@ -360,40 +360,6 @@ html.theme-light.reveal .shop-content img[data-ready="fade"] {
     background-size: 100% 1px, 1px 100%, 100% 1px, 1px 100%;
   }
 }
-/* Text waiting on the server: a thin line per row. */
-.hairline {
-  display: block;
-  height: 1px;
-  background: rgba(0, 0, 0, 0.25);
-  margin-block: 8px;
-  animation: loader-hairline 1.8s ease-in-out infinite;
-}
-@keyframes loader-hairline {
-  50% {
-    opacity: 0.35;
-  }
-}
-/* Each page fades in section by section, unless a view transition is animating it already. */
-.page-in > * > * {
-  animation: section-in 500ms ease both;
-}
-.page-in > * > :nth-child(2) {
-  animation-delay: 80ms;
-}
-.page-in > * > :nth-child(3) {
-  animation-delay: 160ms;
-}
-.page-in > * > :nth-child(n + 4) {
-  animation-delay: 240ms;
-}
-@keyframes section-in {
-  from {
-    opacity: 0;
-  }
-}
-html[data-pt] .page-in > * > * {
-  animation: none;
-}
 .page-progress {
   position: fixed;
   inset: 0 0 auto;
@@ -579,7 +545,6 @@ body:has(.consent-box) .cart-pill {
 }
 @media (prefers-reduced-motion: reduce) {
   .reveal .shop-content img[data-ready="fade"],
-  .page-in > * > *,
   .loader-tile::after,
   .busy-spinner {
     animation-duration: 0.01ms;

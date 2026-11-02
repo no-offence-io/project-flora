@@ -51,13 +51,13 @@ export function CareInstructions({
   return (
     <ul
       className={`flex font-gotham text-[8px] leading-normal whitespace-nowrap ${
-        grid ? "flex-wrap gap-[8px]" : responsive ? "flex-wrap gap-[8px] md:flex-nowrap md:justify-between" : "items-center justify-between"
+        grid ? "flex-wrap gap-[8px]" : responsive ? "flex-wrap gap-[8px] xl:flex-nowrap xl:justify-between" : "items-center justify-between"
       } ${className}`}
     >
       {items.map((item) => (
         <li
           key={item.label}
-          className={`flex items-center ${grid ? "w-[calc(50%-4px)] gap-[12px]" : responsive ? "w-[calc(50%-4px)] gap-[12px] md:w-auto md:gap-[8px]" : "gap-[8px]"}`}
+          className={`flex items-center ${grid ? "w-[calc(50%-4px)] gap-[12px]" : responsive ? "w-[calc(50%-4px)] gap-[12px] md:gap-[8px] xl:w-auto" : "gap-[8px]"}`}
         >
           <CareIcon name={item.icon} height={15} />
           <span>{item.label}</span>
