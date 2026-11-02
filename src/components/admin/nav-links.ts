@@ -27,6 +27,7 @@ export const GROUPS: { title: string; links: { label: string; href: string }[] }
       { label: "Media", href: "/admin/media" },
       { label: "Settings & brand", href: "/admin/settings" },
       { label: "Icon", href: "/admin/icon" },
+      { label: "Page transitions", href: "/admin/transitions" },
     ],
   },
   {

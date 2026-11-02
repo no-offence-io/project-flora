@@ -7,7 +7,7 @@ import Navbar from "@/components/navbar";
 import { CartProvider } from "@/components/cart-context";
 import LoadingScreen from "@/components/loading-screen";
 import { SanityLive } from "@/sanity/lib/live";
-import { getAnalyticsId, getLogoSrc } from "@/lib/brand";
+import { getAnalyticsId, getLogoSrc, getPageTransition } from "@/lib/brand";
 import { getLanguage } from "@/lib/language";
 import { cookies } from "next/headers";
 import { parseTheme, THEME_COOKIE } from "@/lib/theme-shared";
@@ -21,7 +21,7 @@ import AnalyticsConsent from "@/components/analytics-consent";
  * layouts, so they get the fonts and global styles from the root but none of this.
  */
 export default async function ShopLayout({ children }: { children: ReactNode }) {
-  const [lang, logo, jar, analyticsId] = await Promise.all([getLanguage(), getLogoSrc(), cookies(), getAnalyticsId()]);
+  const [lang, logo, jar, analyticsId, transition] = await Promise.all([getLanguage(), getLogoSrc(), cookies(), getAnalyticsId(), getPageTransition()]);
   const theme = parseTheme(jar.get(THEME_COOKIE)?.value);
   return (
     <I18nProvider lang={lang}>
@@ -36,7 +36,7 @@ export default async function ShopLayout({ children }: { children: ReactNode }) 
             <Navbar tone="dark" />
           </StickyNavbar>
           <NavMenuOverlay lang={lang} logoSrc={logo} theme={theme} />
-          <PageTransition />
+          <PageTransition setting={transition} logoSrc={logo} />
           <VisitTracker />
           <AnalyticsConsent measurementId={analyticsId} />
         </NavMenuProvider>

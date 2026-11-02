@@ -19,6 +19,19 @@ export const siteSettings = defineType({
     defineField({name: 'demoMode', title: 'Admin test mode', type: 'boolean', readOnly: true, hidden: true}),
     defineField({name: 'siteName', title: 'Site name', type: 'string', group: 'general', initialValue: 'Flöra'}),
     defineField({
+      name: 'pageTransition',
+      title: 'Page transition',
+      description: 'Set on the dashboard, under Page transitions.',
+      type: 'object',
+      group: 'general',
+      fields: [
+        defineField({name: 'type', type: 'string', options: {list: ['fade', 'push', 'blink', 'blur', 'none']}}),
+        defineField({name: 'direction', title: 'Push direction', type: 'string', options: {list: ['left', 'right', 'up', 'down']}}),
+        defineField({name: 'middle', title: 'Middle screen', type: 'boolean'}),
+        defineField({name: 'axis', title: 'Blink closes', type: 'string', options: {list: ['vertical', 'horizontal']}}),
+      ],
+    }),
+    defineField({
       name: 'gaMeasurementId',
       title: 'Google Analytics measurement ID',
       description: 'Looks like G-AB12CD34EF. Visitors are asked for consent before anything loads. Empty = analytics off.',

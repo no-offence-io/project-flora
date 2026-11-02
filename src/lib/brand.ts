@@ -2,6 +2,7 @@ import "server-only";
 import { defineQuery } from "next-sanity";
 import { FONTS, type Brand } from "./brand-shared";
 import { parseFaviconStyle, type FaviconStyle } from "./favicon";
+import { parseTransition, type TransitionSetting } from "./page-transition-shared";
 import { CONTENT_TAG } from "./catalog";
 import { sanityFetch } from "@/sanity/lib/live";
 
@@ -85,4 +86,10 @@ export function brandStyle(b: Brand): { style: Record<string, string>; fontHref?
 export async function getAnalyticsId(): Promise<string | null> {
   const { data } = await sanityFetch({ query: `*[_id == "siteSettings"][0].gaMeasurementId`, stega: false, tags: [CONTENT_TAG] });
   return typeof data === "string" && /^G-[A-Z0-9]{4,16}$/.test(data) ? data : null;
+}
+
+/** How the shop moves between pages, from the dashboard's Page transitions page. */
+export async function getPageTransition(): Promise<TransitionSetting> {
+  const { data } = await sanityFetch({ query: `*[_id == "siteSettings"][0].pageTransition`, stega: false, tags: [CONTENT_TAG] });
+  return parseTransition(data as Record<string, unknown> | null);
 }
