@@ -1,3 +1,6 @@
+/** Set the first time a visitor sees the intro. The server reads it, so returning visitors never get a flash of it. */
+export const INTRO_COOKIE = "flora-intro-seen";
+
 /** How a photo waits to load, chosen on the dashboard's Page transitions page. */
 export const LOADING_STYLES = ["a", "b", "c"] as const;
 export type LoadingStyle = (typeof LOADING_STYLES)[number];

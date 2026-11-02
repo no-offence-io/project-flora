@@ -11,6 +11,7 @@ import CartPill from "@/components/cart-pill";
 import { getAnalyticsId, getLoadingStyle, getLogoSrc, getPageTransition } from "@/lib/brand";
 import { getLanguage } from "@/lib/language";
 import { cookies } from "next/headers";
+import { INTRO_COOKIE } from "@/lib/loading-shared";
 import { parseTheme, THEME_COOKIE } from "@/lib/theme-shared";
 import { I18nProvider } from "@/components/i18n-provider";
 import VisitTracker from "@/components/visit-tracker";
@@ -43,7 +44,7 @@ export default async function ShopLayout({ children }: { children: ReactNode }) 
           <AnalyticsConsent measurementId={analyticsId} />
         </NavMenuProvider>
       </CartProvider>
-      <LoadingScreen />
+      {!jar.has(INTRO_COOKIE) && <LoadingScreen />}
       {/* Subscribes the page to Sanity content changes; required for sanityFetch to stay live. */}
       <SanityLive />
     </I18nProvider>

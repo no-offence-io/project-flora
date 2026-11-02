@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import gsap from "gsap";
 import { DrawSVGPlugin } from "gsap/DrawSVGPlugin";
+import { INTRO_COOKIE } from "@/lib/loading-shared";
 
 /**
  * The Flöra bud mark, split into the pieces the animation needs to move independently. The ring's
@@ -50,9 +51,16 @@ const WAVE_WAVELENGTH = 18;
 /**
  * Full-screen intro: the Flöra mark draws itself in outline (GSAP DrawSVGPlugin), then a black
  * liquid fill rises from the bottom to the top behind that outline with a continuously sloshing
- * wavy edge, before the whole screen fades away to reveal the site. Shown once per full page load,
- * not on client-side navigations between pages. Skipped outright for reduced-motion visitors.
+ * wavy edge, before the whole screen fades away to reveal the site. Shown once per visitor: the
+ * shop layout leaves it out once the cookie is set. Runs a fixed 3.2s and waits for nothing.
+ * Skipped outright for reduced-motion visitors.
  */
+function rememberIntro() {
+  // Seeing it on the coming-soon page doesn't count, so launch day still gets the intro.
+  if (document.querySelector(".coming-soon-gate")) return;
+  document.cookie = `${INTRO_COOKIE}=1; path=/; max-age=${365 * 86400}; samesite=lax`;
+}
+
 function subscribeReducedMotion(onChange: () => void) {
   const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
   mql.addEventListener("change", onChange);
@@ -83,6 +91,7 @@ export default function LoadingScreen() {
   const blinkRef = useRef<SVGGElement>(null);
 
   useIsomorphicLayoutEffect(() => {
+    rememberIntro();
     if (prefersReducedMotion) return;
 
     gsap.registerPlugin(DrawSVGPlugin);
