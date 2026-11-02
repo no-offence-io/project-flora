@@ -17,6 +17,10 @@ export function leadsElsewhere(href: string): boolean {
   return url.origin === window.location.origin && url.pathname !== window.location.pathname;
 }
 const IN_MS = 450;
+/** Ready before anyone clicks, so the menu's pages open at once. */
+const MAIN_PAGES = ["/shop", "/vintage", "/values", "/about"];
+/** Pages that show the customer's own data, which must never be served from before a sign-in. */
+const NEVER_AHEAD = /^\/(account|checkout|order|api|admin)/;
 
 /**
  * Fades the whole shop between pages — navbar, menu and footer included — in every browser.
@@ -116,6 +120,54 @@ export default function PageTransition({ area = "shop", setting = DEFAULT_TRANSI
       window.removeEventListener("popstate", onPop);
     };
   }, [router, area, type, direction, middle, axis]);
+
+  // Fetch a page's content ahead of the click: the main pages and every link on screen, then any
+  // link hovered or touched. Only the page itself, as photos load when they are reached. A click
+  // then has nothing to wait for, so the transition starts at once.
+  useEffect(() => {
+    if (area !== "shop") return;
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+    if (connection?.saveData) return;
+    const fetched = new Set<string>();
+    const fetchAhead = (href: string) => {
+      const url = new URL(href, window.location.href);
+      if (url.origin !== window.location.origin || NEVER_AHEAD.test(url.pathname) || fetched.has(url.pathname)) return;
+      fetched.add(url.pathname);
+      // "full": the whole page. By default Next fetches only part of a page personalised by cookies,
+      // and the click then waits for the server anyway.
+      router.prefetch(url.pathname + url.search, { kind: "full" } as never);
+    };
+    // Whatever links are on screen, phones included, where there is no hover to give a head start.
+    const fetchVisible = () => {
+      for (const a of document.querySelectorAll<HTMLAnchorElement>(".shop-content a[href^='/']")) {
+        const box = a.getBoundingClientRect();
+        if (box.width && box.bottom > 0 && box.top < window.innerHeight) fetchAhead(a.href);
+      }
+    };
+    let settle = 0;
+    const onScroll = () => {
+      window.clearTimeout(settle);
+      settle = window.setTimeout(fetchVisible, 250);
+    };
+    const onPoint = (e: Event) => {
+      const a = (e.target as Element | null)?.closest?.("a");
+      if (a?.href) fetchAhead(a.href);
+    };
+    const idle = window.setTimeout(() => {
+      MAIN_PAGES.forEach(fetchAhead);
+      fetchVisible();
+    }, 600);
+    document.addEventListener("pointerover", onPoint, { passive: true });
+    document.addEventListener("touchstart", onPoint, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.clearTimeout(idle);
+      window.clearTimeout(settle);
+      window.removeEventListener("scroll", onScroll);
+      document.removeEventListener("pointerover", onPoint);
+      document.removeEventListener("touchstart", onPoint);
+    };
+  }, [router, area, pathname]);
 
   // The new page has rendered: give it a frame, then reveal it.
   useEffect(() => {

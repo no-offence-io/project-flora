@@ -551,6 +551,22 @@ body:has(.consent-box) .cart-pill {
   }
 }
 
+/* Anything that can be pressed shows the hand. In the base layer, so `cursor-not-allowed` still wins. */
+@layer base {
+  button:not(:disabled),
+  [role="button"],
+  select:not(:disabled),
+  summary,
+  input[type="radio"]:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  label:has(input[type="radio"], input[type="checkbox"]) {
+    cursor: pointer;
+  }
+  input[type="file"]::file-selector-button {
+    cursor: pointer;
+  }
+}
+
 /* The clear cross in search fields: the browser draws it in its own accent blue; ours is black. */
 input[type="search"]::-webkit-search-cancel-button {
   -webkit-appearance: none;

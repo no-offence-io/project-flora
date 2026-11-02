@@ -41,11 +41,14 @@ export default function ProductCard({
   const slides = product.images && product.images.length > 0 ? product.images : [product.image];
   const { ref } = useScroller(0);
 
-  // All colour photos are pre-mounted at opacity 0 (not created on first hover), for two reasons:
-  // an element switching opacity has something to transition from, and `loading="eager"` starts
-  // fetching them the moment the card renders, so by the time anyone actually hovers, the photo
-  // is already decoded — otherwise the first hover always shows a blank flash while it loads.
+  // Colour tiles are always there at opacity 0, so they can cross-fade, but each one's photo is only
+  // requested the first time its swatch is hovered: most visitors never see most colours.
   const [activeColor, setActiveColor] = useState<number | null>(null);
+  const [wanted, setWanted] = useState<ReadonlySet<number>>(new Set());
+  const showColor = (i: number) => {
+    setActiveColor(i);
+    setWanted((seen) => (seen.has(i) ? seen : new Set(seen).add(i)));
+  };
 
   return (
     <div className={`flex flex-col justify-end gap-[12px] font-gotham text-paragraph text-black ${className}`}>
@@ -99,7 +102,7 @@ export default function ProductCard({
               style={{ opacity: activeColor === i ? 1 : 0 }}
             >
               <div className="relative h-full w-full">
-                <Image src={color.image.src} alt="" fill sizes={imageSizes} loading="eager" preload className="object-contain" />
+                {wanted.has(i) && <Image src={color.image.src} alt="" fill sizes={imageSizes} className="object-contain" />}
               </div>
             </div>
           ))}
@@ -123,9 +126,9 @@ export default function ProductCard({
                 <button
                   type="button"
                   aria-label={color.name}
-                  onMouseEnter={() => setActiveColor(i)}
+                  onMouseEnter={() => showColor(i)}
                   onMouseLeave={() => setActiveColor(null)}
-                  onFocus={() => setActiveColor(i)}
+                  onFocus={() => showColor(i)}
                   onBlur={() => setActiveColor(null)}
                   className="size-[8px] shrink-0 outline-offset-2 transition-transform hover:scale-125 focus-visible:scale-125"
                   style={{ backgroundColor: color.hex }}
