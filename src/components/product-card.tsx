@@ -62,7 +62,7 @@ export default function ProductCard({
       */}
       <Link href={product.href} className={`relative flex w-full items-center justify-center ${wellClassName}`}>
         <div className="relative h-full w-full overflow-hidden">
-          {allowImageScroll ? (
+          {allowImageScroll && slides.length > 1 ? (
             // A real scroll container, only ever used standalone (the shop grid), never inside a
             // horizontally-scrolling row — `overscroll-behavior-x: contain` stops a swipe here
             // from also nudging the page, which is safe exactly because there's no scrollable

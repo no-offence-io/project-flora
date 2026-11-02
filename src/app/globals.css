@@ -264,8 +264,10 @@ html[data-pt="blur"]::view-transition-new(root) {
 .reveal .shop-content img[data-nimg="fill"]:not([data-ready]) {
   opacity: 0;
 }
+/* `backwards`, never `both`: an animation that holds its end state keeps the photo in a graphics
+   layer of its own for good, and iPhone Safari discards those off-screen and repaints them late. */
 .reveal .shop-content img[data-ready="fade"] {
-  animation: photo-in 700ms ease both;
+  animation: photo-in 700ms ease backwards;
 }
 @keyframes photo-in {
   from {
@@ -406,6 +408,9 @@ html.theme-dark:not(:has(.coming-soon-gate)) .page-progress {
   border: 1px solid transparent;
   border-top-color: currentColor;
   border-right-color: currentColor;
+}
+/* Only while pending: a spinner turning unseen keeps its whole button on a separate layer. */
+.busy[data-state="pending"] .busy-spinner {
   animation: busy-spin 750ms linear infinite;
 }
 .busy-done {
