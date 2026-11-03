@@ -22,13 +22,8 @@ const PREVIEW_COOKIE = "flora-preview";
  * See the matcher below, which also lets static assets through so this page can render at all.
  */
 export function proxy(request: NextRequest) {
-  // The admin is never gated; the proxy only tells its layout which section is open, since a
-  // layout can't read the pathname itself.
-  if (request.nextUrl.pathname.startsWith("/admin")) {
-    const headers = new Headers(request.headers);
-    headers.set("x-admin-path", request.nextUrl.pathname);
-    return NextResponse.next({ request: { headers } });
-  }
+  // The admin is never gated; it has its own login.
+  if (request.nextUrl.pathname.startsWith("/admin")) return NextResponse.next();
   if (process.env.COMING_SOON !== "true") return NextResponse.next();
 
   const token = process.env.PREVIEW_TOKEN;

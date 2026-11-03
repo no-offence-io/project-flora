@@ -2,9 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
-import { GROUPS } from "./nav-links";
+import { GROUPS, sectionOf } from "./nav-links";
 import { leadsElsewhere, PAGE_COVERED } from "../page-transition";
 
 /*
@@ -33,7 +34,9 @@ function saveNightPreference(next: "auto" | "on" | "off") {
   });
 }
 
-export default function AdminNav({ current, email, unread = 0, logo, signOut, demo = false, toggleDemo, night: nightInitial = "auto" }: { current: string; email: string; unread?: number; logo: string; signOut: () => Promise<void>; demo?: boolean; toggleDemo: () => Promise<void>; night?: "auto" | "on" | "off" }) {
+export default function AdminNav({ email, unread = 0, logo, signOut, demo = false, toggleDemo, night: nightInitial = "auto" }: { email: string; unread?: number; logo: string; signOut: () => Promise<void>; demo?: boolean; toggleDemo: () => Promise<void>; night?: "auto" | "on" | "off" }) {
+  // From the live path: the layout stays mounted between admin pages, so a value it passed down would go stale.
+  const current = sectionOf(usePathname());
   const [switching, setSwitching] = useState(false);
   const [night, setNight] = useState<"auto" | "on" | "off">(nightInitial);
   // Night mode: follows the device by default; "On"/"Off" pin it for this browser. A cookie lets the

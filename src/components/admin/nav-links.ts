@@ -39,3 +39,10 @@ export const GROUPS: { title: string; links: { label: string; href: string }[] }
   },
 ];
 
+
+/** The sidebar entry a path belongs to: the longest matching link. */
+export function sectionOf(path: string): string {
+  const hrefs = GROUPS.flatMap((g) => g.links.map((l) => l.href)).filter((h) => h !== "/admin");
+  const match = hrefs.filter((h) => path === h || path.startsWith(`${h}/`)).sort((a, b) => b.length - a.length)[0];
+  return match ?? "/admin";
+}
