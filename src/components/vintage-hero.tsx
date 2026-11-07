@@ -17,7 +17,7 @@ export default function VintageHero({ product, labels, dark = false, children }:
   const photo = product.images[0];
   const muted = dark ? "text-white/50" : "text-black/50";
   return (
-    <section className={`treasure-hero relative flex min-h-[calc(100svh-80px)] flex-col items-center justify-center gap-[42px] overflow-hidden px-[24px] pb-[60px] md:px-[42px] md:pb-[120px] ${dark ? "text-white" : "text-black"}`}>
+    <section className={`treasure-hero relative flex min-h-[calc(100svh-80px)] flex-col items-center justify-center gap-[42px] overflow-hidden px-[24px] pt-[42px] pb-[60px] md:px-[42px] md:pt-[60px] md:pb-[60px] ${dark ? "text-white" : "text-black"}`}>
       {dark && <div aria-hidden className="treasure-glow pointer-events-none absolute left-1/2 top-1/2 h-[60vmin] w-[60vmin] -translate-x-1/2 -translate-y-1/2 rounded-full" />}
 
       {/*
@@ -25,7 +25,7 @@ export default function VintageHero({ product, labels, dark = false, children }:
         solid layers between them so the edge has real thickness when it turns side-on. The front
         and back hide their reverse sides; the edge layers are seen from both, which is the point.
       */}
-      <div className="treasure-stage relative flex h-[52vh] w-full items-center justify-center md:h-[60vh]">
+      <div className="treasure-stage relative flex h-[48vh] w-full items-center justify-center md:h-[50vh]">
         <div className="treasure-float flex h-full items-center justify-center">
           <div className="treasure-spin relative aspect-[3/4] h-full max-h-full max-w-[min(82vw,440px)]">
             {EDGE.map((z) => (
