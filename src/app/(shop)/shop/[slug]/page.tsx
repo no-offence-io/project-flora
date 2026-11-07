@@ -10,7 +10,7 @@ import ProductSpecs from "@/components/product-specs";
 import ProductsSlideshow from "@/components/products-slideshow";
 import { CareInstructions } from "@/components/care-icons";
 import VintageHero from "@/components/vintage-hero";
-import { getProduct, getProducts, getSizingSettings, getVintageProducts } from "@/lib/catalog";
+import { getProduct, getProducts, getSizingSettings, getVintageCard, getVintageProducts } from "@/lib/catalog";
 import { isSoldOut } from "@/lib/catalog-types";
 import { LIFESTYLE_PHOTOS, toSlideshowProduct } from "@/lib/catalog-types";
 import { getT } from "@/lib/i18n-server";
@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: PageProps<"/shop/[slug]">): P
 
 export default async function ProductPage({ params }: PageProps<"/shop/[slug]">) {
   const { slug } = await params;
-  const [product, t, sizing] = await Promise.all([getProduct(slug), getT(), getSizingSettings()]);
+  const [product, t, sizing, card] = await Promise.all([getProduct(slug), getT(), getSizingSettings(), getVintageCard()]);
   if (!product) notFound();
 
   // A vintage piece keeps company with the other vintage pieces; the collection with the collection.
@@ -63,7 +63,7 @@ export default async function ProductPage({ params }: PageProps<"/shop/[slug]">)
         {/* Top screen: the piece turning in the middle of a white screen, then everything about it in one centred column. */}
         <div className="flex flex-col">
           <Navbar tone="dark" />
-          <VintageHero product={product} labels={{ oneOfAKind: t("vintage.oneOfAKind"), soldOut: t("product.soldOut") }} />
+          <VintageHero product={product} card={card} labels={{ oneOfAKind: t("vintage.oneOfAKind"), soldOut: t("product.soldOut") }} />
         </div>
 
         <section id="details" className="mx-auto flex w-full max-w-[521px] flex-col gap-[42px] px-[24px] text-black md:px-0">

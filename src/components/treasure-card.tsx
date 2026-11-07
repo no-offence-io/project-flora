@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { BUD_MARK } from "@/lib/bud-mark";
+import { DEFAULT_VINTAGE_CARD, DEPTH_RANGE, type SheetBack, type VintageCardSetting } from "@/lib/vintage-card-shared";
 
 /*
  * A real 3D card, drawn with three.js: the photo on the front under a lacquered clear coat, the brand
@@ -36,16 +37,13 @@ const GLASS_THICKNESS = 0.2;
 /** Corner radius; RoundedBoxGeometry caps it at half the depth, so thin cards round less. */
 const RADIUS = 0.14;
 
-export type TreasureVariant = "card" | "glass";
-/** What the back of the photo inside the glass looks like: the vintage section's paper tone, or near black. */
-export type SheetBack = "paper" | "dark";
 const SHEET_BACK: Record<SheetBack, number> = { paper: 0xf4f1ea, dark: 0x141414 };
 /** The photo inside the glass is a real print, with a hair of thickness so its edge catches the light. */
 const SHEET_D = 0.012;
 /** The canvas hangs this much taller than its box, so the shadow on the floor isn't cut off below. */
 const EXTEND = 1.5;
 
-function brandBackTexture(): THREE.CanvasTexture {
+function brandBackTexture(color: string): THREE.CanvasTexture {
   const c = document.createElement("canvas");
   c.width = 768;
   c.height = 1024;
@@ -57,7 +55,7 @@ function brandBackTexture(): THREE.CanvasTexture {
   g.save();
   g.translate((c.width - BUD_MARK.width * scale) / 2, (c.height - BUD_MARK.height * scale) / 2);
   g.scale(scale, scale);
-  g.fillStyle = "rgba(255,255,255,0.88)";
+  g.fillStyle = color;
   for (const d of BUD_MARK.paths) g.fill(new Path2D(d));
   g.restore();
   const t = new THREE.CanvasTexture(c);
@@ -65,24 +63,38 @@ function brandBackTexture(): THREE.CanvasTexture {
   return t;
 }
 
-/** The bud mark alone on transparent, for etching into the back of the glass: black over a paper back, white over a dark one. */
-function markTexture(sheetBack: SheetBack): THREE.CanvasTexture {
+/** The bud mark drawn once: in its colour on transparent (the etched mark itself), or soft-edged on grey (its bump map). */
+function markCanvas(mode: "mark" | "bump", color = "#0a0a0a"): HTMLCanvasElement {
   const c = document.createElement("canvas");
   c.width = 512;
   c.height = 512;
   const g = c.getContext("2d")!;
+  if (mode === "bump") {
+    g.fillStyle = "#808080";
+    g.fillRect(0, 0, c.width, c.height);
+    g.filter = "blur(5px)";
+  }
   const scale = 300 / BUD_MARK.height;
   g.translate((c.width - BUD_MARK.width * scale) / 2, (c.height - BUD_MARK.height * scale) / 2);
   g.scale(scale, scale);
-  g.fillStyle = sheetBack === "dark" ? "#f4f1ea" : "#0a0a0a";
+  g.fillStyle = mode === "bump" ? "#303030" : color;
   for (const d of BUD_MARK.paths) g.fill(new Path2D(d));
-  const t = new THREE.CanvasTexture(c);
+  return c;
+}
+/** The mark as drawn on its plane: 300 of 512 texture pixels tall, on a plane MARK_PLANE wide. */
+const MARK_PLANE = 1.1;
+const MARK_H = (MARK_PLANE * 300) / 512;
+const MARK_W = (MARK_H * BUD_MARK.width) / BUD_MARK.height;
+
+function markTexture(color: string): THREE.CanvasTexture {
+  const t = new THREE.CanvasTexture(markCanvas("mark", color));
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
+const markBumpTexture = () => new THREE.CanvasTexture(markCanvas("bump"));
 
 /** Slow, soft noise used to ripple the glass surface very slightly, as cast glass does. */
-function wobbleTexture(): THREE.CanvasTexture {
+function wobbleCanvas(): HTMLCanvasElement {
   const size = 256;
   const c = document.createElement("canvas");
   c.width = c.height = size;
@@ -97,9 +109,37 @@ function wobbleTexture(): THREE.CanvasTexture {
     g.arc(Math.random() * size, Math.random() * size, 20 + Math.random() * 40, 0, Math.PI * 2);
     g.fill();
   }
-  const t = new THREE.CanvasTexture(c);
+  return c;
+}
+function wobbleTexture(): THREE.CanvasTexture {
+  const t = new THREE.CanvasTexture(wobbleCanvas());
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   return t;
+}
+
+/**
+ * The bump map for the glass block's back face: the same faint wobble, plus the mark pressed into the
+ * surface where the etched mark sits, so the glass itself shows the engraving. Drawn to the face's
+ * own proportions (the back face maps 0–1 across CARD_W and CARD_H).
+ */
+function glassBackBumpTexture(): THREE.CanvasTexture {
+  const size = 512;
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  const g = c.getContext("2d")!;
+  g.fillStyle = "#808080";
+  g.fillRect(0, 0, size, size);
+  g.globalAlpha = 0.3;
+  g.drawImage(wobbleCanvas(), 0, 0, size, size);
+  g.globalAlpha = 1;
+  const w = (size * MARK_W) / CARD_W;
+  const h = (size * MARK_H) / CARD_H;
+  g.filter = "blur(2px)";
+  g.translate((size - w) / 2, (size - h) / 2);
+  g.scale(w / BUD_MARK.width, h / BUD_MARK.height);
+  g.fillStyle = "#404040";
+  for (const d of BUD_MARK.paths) g.fill(new Path2D(d));
+  return new THREE.CanvasTexture(c);
 }
 
 /** Fine, even noise used as a roughness map: the sheen on the card breaks up like it does on real paper. */
@@ -121,33 +161,46 @@ function paperTexture(): THREE.CanvasTexture {
   return t;
 }
 
-export default function TreasureCard({ src, alt, dark = false, variant: initialVariant = "card", className = "" }: { src: string; alt: string; dark?: boolean; variant?: TreasureVariant; className?: string }) {
+export default function TreasureCard({ src, alt, dark = false, setting = DEFAULT_VINTAGE_CARD, className = "" }: { src: string; alt: string; dark?: boolean; setting?: VintageCardSetting; className?: string }) {
   const host = useRef<HTMLDivElement>(null);
   const [fallback, setFallback] = useState(false);
-  // In development a panel under the card switches the variant and sets the depth, to settle on values.
+  // In development a panel under the card overrides the setting, to try values before saving them on the dashboard.
   const dev = process.env.NODE_ENV === "development";
-  const [variant, setVariant] = useState<TreasureVariant>(initialVariant);
+  const [override, setOverride] = useState<Partial<VintageCardSetting>>({});
+  const { variant, sheetBack, depth, markColor } = { ...setting, ...override };
   const glass = variant === "glass";
-  const [depth, setDepth] = useState(glass ? BOX_D : CARD_D);
+  // Depth and the print's back change live, without rebuilding the scene; the scene reads them through refs.
   const rebuild = useRef<((depth: number) => void) | null>(null);
-  const [sheetBack, setSheetBack] = useState<SheetBack>("paper");
+  const depthNow = useRef(depth);
   const sheetBackMaterial = useRef<THREE.MeshStandardMaterial | null>(null);
-  const markMaterial = useRef<THREE.MeshStandardMaterial | null>(null);
   const sheetBackNow = useRef(sheetBack);
+  const markMaterial = useRef<THREE.MeshPhysicalMaterial | null>(null);
+  const cardBackMaterial = useRef<THREE.MeshPhysicalMaterial | null>(null);
+  const markColorNow = useRef(markColor);
 
   useEffect(() => {
+    depthNow.current = depth;
     rebuild.current?.(depth);
   }, [depth]);
   useEffect(() => {
     sheetBackNow.current = sheetBack;
     sheetBackMaterial.current?.color.set(SHEET_BACK[sheetBack]);
+  }, [sheetBack]);
+  useEffect(() => {
+    markColorNow.current = markColor;
     const mark = markMaterial.current;
     if (mark) {
       mark.map?.dispose();
-      mark.map = markTexture(sheetBack);
+      mark.map = markTexture(markColor);
       mark.needsUpdate = true;
     }
-  }, [sheetBack]);
+    const cardBack = cardBackMaterial.current;
+    if (cardBack) {
+      cardBack.map?.dispose();
+      cardBack.map = brandBackTexture(markColor);
+      cardBack.needsUpdate = true;
+    }
+  }, [markColor]);
 
   useEffect(() => {
     const el = host.current;
@@ -213,21 +266,30 @@ export default function TreasureCard({ src, alt, dark = false, variant: initialV
     const envMapIntensity = dark ? 0.9 : 0.55;
     const edge = new THREE.MeshStandardMaterial({ color: dark ? 0x303030 : 0xd8d3c8, roughness: dark ? 0.55 : 0.9, metalness: dark ? 0.25 : 0, envMapIntensity });
     const front = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.6, roughnessMap: paper, metalness: 0, clearcoat: 0.55, clearcoatRoughness: 0.35, clearcoatRoughnessMap: paper, envMapIntensity });
-    const back = new THREE.MeshPhysicalMaterial({ map: brandBackTexture(), roughness: 0.7, roughnessMap: paper, metalness: 0.05, clearcoat: 0.35, clearcoatRoughness: 0.4, envMapIntensity });
+    const back = new THREE.MeshPhysicalMaterial({ map: brandBackTexture(markColorNow.current), roughness: 0.7, roughnessMap: paper, metalness: 0.05, clearcoat: 0.35, clearcoatRoughness: 0.4, envMapIntensity });
     // The glass variant: a clear block (refraction and reflections from the environment) with the photo
     // floating flat, like a sheet of paper, in its middle and the mark etched in black on the inside of its back.
     // Real glass, subtly: it bends what's behind it (thickness, ior), splits light a little at the
     // edges (dispersion) and its surface isn't perfectly flat (a faint bump map), which shows as a slow wobble.
     const wobble = wobbleTexture();
     const glassMaterial = new THREE.MeshPhysicalMaterial({ color: 0xffffff, transmission: 1, roughness: 0, thickness: GLASS_THICKNESS, ior: 1.5, dispersion: 0.12, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.03, bumpMap: wobble, bumpScale: 0.006, attenuationColor: new THREE.Color(0xe4efea), attenuationDistance: 3, envMapIntensity });
+    // The back face carries the engraving as a recess in the glass surface.
+    const glassBackBump = glassBackBumpTexture();
+    const glassBack = glassMaterial.clone();
+    glassBack.bumpMap = glassBackBump;
+    glassBack.bumpScale = 0.02;
     const inner = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, roughnessMap: paper, metalness: 0 });
     const innerBack = new THREE.MeshStandardMaterial({ color: SHEET_BACK[sheetBackNow.current], roughness: 0.9, metalness: 0 });
     sheetBackMaterial.current = innerBack;
-    // Opaque with a cut-out (alphaTest) rather than transparent, so the glass's own render pass includes it.
-    const mark = new THREE.MeshStandardMaterial({ map: markTexture(sheetBackNow.current), alphaTest: 0.5, roughness: 0.95, metalness: 0, side: THREE.DoubleSide });
+    // The etched mark: lacquered black with a bevelled edge (its bump map), so it reads as cut into
+    // the glass and catches the light. Opaque with a cut-out (alphaTest) rather than transparent,
+    // so the glass's own render pass includes it.
+    const markBump = markBumpTexture();
+    const mark = new THREE.MeshPhysicalMaterial({ map: markTexture(markColorNow.current), alphaTest: 0.5, color: 0xffffff, roughness: 0.25, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.12, bumpMap: markBump, bumpScale: 0.01, envMapIntensity, side: THREE.DoubleSide });
     markMaterial.current = mark;
+    cardBackMaterial.current = back;
     const card = new THREE.Group();
-    const shell = new THREE.Mesh(new RoundedBoxGeometry(CARD_W, CARD_H, 1, 6, glass ? GLASS_RADIUS : RADIUS), glass ? glassMaterial : [edge, edge, edge, edge, front, back]);
+    const shell = new THREE.Mesh(new RoundedBoxGeometry(CARD_W, CARD_H, 1, 6, glass ? GLASS_RADIUS : RADIUS), glass ? [glassMaterial, glassMaterial, glassMaterial, glassMaterial, glassMaterial, glassBack] : [edge, edge, edge, edge, front, back]);
     shell.castShadow = true;
     shell.receiveShadow = false;
     card.add(shell);
@@ -236,7 +298,7 @@ export default function TreasureCard({ src, alt, dark = false, variant: initialV
     // The print: photo on the front, plain back, and paper edges as thick as a real print.
     const sheet = glass ? new THREE.BoxGeometry(photoW, photoH, SHEET_D) : null;
     const photo = sheet ? new THREE.Mesh(sheet, [innerBack, innerBack, innerBack, innerBack, inner, innerBack]) : null;
-    const etched = glass ? new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.1), mark) : null;
+    const etched = glass ? new THREE.Mesh(new THREE.PlaneGeometry(MARK_PLANE, MARK_PLANE), mark) : null;
     if (photo) card.add(photo);
     if (etched) card.add(etched);
     scene.add(card);
@@ -245,7 +307,7 @@ export default function TreasureCard({ src, alt, dark = false, variant: initialV
       shell.geometry = new RoundedBoxGeometry(CARD_W, CARD_H, d, 6, glass ? GLASS_RADIUS : RADIUS);
       if (etched) etched.position.z = -d / 2 + 0.01;
     };
-    build(glass ? BOX_D : CARD_D);
+    build(depthNow.current);
     rebuild.current = build;
 
     // The photo, fitted to cover the front once it has loaded (the card is drawn white meanwhile).
@@ -399,8 +461,11 @@ export default function TreasureCard({ src, alt, dark = false, variant: initialV
       etched?.geometry.dispose();
       sheetBackMaterial.current = null;
       markMaterial.current = null;
+      cardBackMaterial.current = null;
       wobble.dispose();
-      for (const m of [edge, front, back, glassMaterial, inner, innerBack, mark]) {
+      glassBackBump.dispose();
+      markBump.dispose();
+      for (const m of [edge, front, back, glassMaterial, glassBack, inner, innerBack, mark]) {
         m.map?.dispose();
         m.dispose();
       }
@@ -424,7 +489,7 @@ export default function TreasureCard({ src, alt, dark = false, variant: initialV
       {dev && (
         <div className="fixed right-[16px] bottom-[16px] z-50 flex items-center gap-[14px] rounded-full bg-black/80 px-[14px] py-[8px] font-mono text-[12px] text-white shadow-lg">
           {(["card", "glass"] as const).map((v) => (
-            <button key={v} type="button" onClick={() => { setVariant(v); setDepth(v === "glass" ? BOX_D : CARD_D); }} className={`rounded-full px-[10px] py-[2px] ${v === variant ? "bg-white text-black" : "text-white/70 hover:text-white"}`}>
+            <button key={v} type="button" onClick={() => setOverride((o) => ({ ...o, variant: v, depth: v === setting.variant ? setting.depth : v === "glass" ? BOX_D : CARD_D }))} className={`rounded-full px-[10px] py-[2px] ${v === variant ? "bg-white text-black" : "text-white/70 hover:text-white"}`}>
               {v}
             </button>
           ))}
@@ -432,7 +497,7 @@ export default function TreasureCard({ src, alt, dark = false, variant: initialV
             <span className="flex items-center gap-[6px]">
               back
               {(["paper", "dark"] as const).map((b) => (
-                <button key={b} type="button" onClick={() => setSheetBack(b)} className={`rounded-full px-[8px] py-[2px] ${b === sheetBack ? "bg-white text-black" : "text-white/70 hover:text-white"}`}>
+                <button key={b} type="button" onClick={() => setOverride((o) => ({ ...o, sheetBack: b }))} className={`rounded-full px-[8px] py-[2px] ${b === sheetBack ? "bg-white text-black" : "text-white/70 hover:text-white"}`}>
                   {b}
                 </button>
               ))}
@@ -440,7 +505,7 @@ export default function TreasureCard({ src, alt, dark = false, variant: initialV
           )}
           <label className="flex items-center gap-[8px]">
             depth
-            <input type="range" min={0.02} max={1.2} step={0.01} value={depth} onChange={(e) => setDepth(Number(e.target.value))} className="w-[140px]" />
+            <input type="range" min={DEPTH_RANGE.min} max={DEPTH_RANGE.max} step={0.01} value={depth} onChange={(e) => setOverride((o) => ({ ...o, depth: Number(e.target.value) }))} className="w-[140px]" />
             <span className="w-[36px] tabular-nums">{depth.toFixed(2)}</span>
           </label>
         </div>

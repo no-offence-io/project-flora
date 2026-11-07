@@ -41,6 +41,19 @@ export const siteSettings = defineType({
       ],
     }),
     defineField({
+      name: 'vintageCard',
+      title: 'Vintage card',
+      description: 'How a vintage piece is shown at the top of its page. Set on the dashboard, under Vintage card.',
+      type: 'object',
+      group: 'general',
+      fields: [
+        defineField({name: 'variant', title: 'Look', type: 'string', options: {list: ['card', 'glass']}}),
+        defineField({name: 'sheetBack', title: 'Back of the print', type: 'string', options: {list: ['paper', 'dark']}}),
+        defineField({name: 'depth', title: 'Depth', type: 'number'}),
+        defineField({name: 'markColor', title: 'Colour of the mark', description: '#rrggbb', type: 'string'}),
+      ],
+    }),
+    defineField({
       name: 'gaMeasurementId',
       title: 'Google Analytics measurement ID',
       description: 'Looks like G-AB12CD34EF. Visitors are asked for consent before anything loads. Empty = analytics off.',

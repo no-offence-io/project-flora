@@ -670,7 +670,7 @@ html:has(.admin-night) .admin-night-portal {
   filter: invert(1) hue-rotate(180deg);
   background: #ffffff;
 }
-.admin-night :is(img, video, iframe, [style*="background-color"]),
+.admin-night :is(img, video, iframe, canvas, [style*="background-color"]),
 html:has(.admin-night) .admin-night-portal :is(img, video, iframe) {
   filter: invert(1) hue-rotate(180deg);
 }
@@ -691,7 +691,7 @@ html:has(.admin-night) .admin-night-portal :is(button, a).bg-black {
     filter: invert(1) hue-rotate(180deg);
     background: #ffffff;
   }
-  .admin-night-auto :is(img, video, iframe, [style*="background-color"]),
+  .admin-night-auto :is(img, video, iframe, canvas, [style*="background-color"]),
   html:has(.admin-night-auto) .admin-night-portal :is(img, video, iframe) {
     filter: invert(1) hue-rotate(180deg);
   }

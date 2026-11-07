@@ -1,4 +1,5 @@
 import "server-only";
+import { parseVintageCard, type VintageCardSetting } from "./vintage-card-shared";
 import { defineQuery } from "next-sanity";
 import { client } from "@/sanity/lib/client";
 import { sanityFetch } from "@/sanity/lib/live";
@@ -251,6 +252,13 @@ export async function getAboutPage(): Promise<AboutContent | null> {
   const d = data as { title?: string | null; intro?: string | null; body?: Block[] | null; image?: RawImage | null } | null;
   if (!d) return null;
   return { title: d.title ?? "About", intro: d.intro ?? "", paragraphs: paragraphs(d.body), ...(d.image?.src ? { image: { src: d.image.src, alt: d.image.alt ?? "" } } : {}) };
+}
+
+const VINTAGE_CARD_QUERY = defineQuery(`*[_id == "siteSettings"][0].vintageCard`);
+/** How the vintage product page shows the piece (see vintage-card-shared.ts); set on the dashboard. */
+export async function getVintageCard(): Promise<VintageCardSetting> {
+  const { data } = await sanityFetch({ query: VINTAGE_CARD_QUERY, stega: false, tags: [CONTENT_TAG] });
+  return parseVintageCard((data ?? null) as { variant?: unknown; sheetBack?: unknown; depth?: unknown } | null);
 }
 
 const VINTAGE_PAGE_QUERY = defineQuery(`*[_id == "vintagePage"][0]{ "title": ${L("title")}, "intro": ${L("intro")}, "emptyText": ${L("emptyText")}, "image": ${IMG("image")} }`);
