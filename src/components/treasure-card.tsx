@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import { BOX_D, CARD_D, EXTEND, configureTreasureRenderer, createTreasureScene } from "./treasure-scene";
-import { DEFAULT_VINTAGE_CARD, DEPTH_RANGE, type VintageCardSetting } from "@/lib/vintage-card-shared";
+import { EXTEND, configureTreasureRenderer, createTreasureScene } from "./treasure-scene";
+import { DEFAULT_VINTAGE_CARD, type VintageCardSetting } from "@/lib/vintage-card-shared";
 
 /*
  * The treasure card on the page (the scene itself is in treasure-scene.ts). Left alone it turns
@@ -15,16 +15,12 @@ import { DEFAULT_VINTAGE_CARD, DEPTH_RANGE, type VintageCardSetting } from "@/li
 export default function TreasureCard({ src, alt, dark = false, setting = DEFAULT_VINTAGE_CARD, className = "" }: { src: string; alt: string; dark?: boolean; setting?: VintageCardSetting; className?: string }) {
   const host = useRef<HTMLDivElement>(null);
   const [fallback, setFallback] = useState(false);
-  // In development a panel under the card overrides the setting, to try values before saving them on the dashboard.
-  const dev = process.env.NODE_ENV === "development";
-  const [override, setOverride] = useState<Partial<VintageCardSetting>>({});
-  const current: VintageCardSetting = { ...setting, ...override };
-  const { variant, sheetBack, depth, markColor } = current;
+  const { variant, sheetBack, depth, markColor } = setting;
   const glass = variant === "glass";
   // Depth, the print's back and the mark's colour change live, without rebuilding the scene; the
   // scene is built from whatever these refs hold and then follows them.
   const live = useRef<ReturnType<typeof createTreasureScene> | null>(null);
-  const settingNow = useRef(current);
+  const settingNow = useRef(setting);
 
   useEffect(() => {
     settingNow.current.depth = depth;
@@ -176,33 +172,5 @@ export default function TreasureCard({ src, alt, dark = false, setting = DEFAULT
     return <img src={src} alt={alt} className={`absolute inset-0 h-full w-full object-contain ${className}`} />;
   }
   // Absolutely placed and taller than its box: see EXTEND.
-  return (
-    <>
-      <div ref={host} className={`absolute inset-x-0 top-0 ${className}`} style={{ height: `${EXTEND * 100}%` }} />
-      {dev && (
-        <div className="fixed right-[16px] bottom-[16px] z-50 flex items-center gap-[14px] rounded-full bg-black/80 px-[14px] py-[8px] font-mono text-[12px] text-white shadow-lg">
-          {(["card", "glass"] as const).map((v) => (
-            <button key={v} type="button" onClick={() => setOverride((o) => ({ ...o, variant: v, depth: v === setting.variant ? setting.depth : v === "glass" ? BOX_D : CARD_D }))} className={`rounded-full px-[10px] py-[2px] ${v === variant ? "bg-white text-black" : "text-white/70 hover:text-white"}`}>
-              {v}
-            </button>
-          ))}
-          {glass && (
-            <span className="flex items-center gap-[6px]">
-              back
-              {(["paper", "dark"] as const).map((b) => (
-                <button key={b} type="button" onClick={() => setOverride((o) => ({ ...o, sheetBack: b }))} className={`rounded-full px-[8px] py-[2px] ${b === sheetBack ? "bg-white text-black" : "text-white/70 hover:text-white"}`}>
-                  {b}
-                </button>
-              ))}
-            </span>
-          )}
-          <label className="flex items-center gap-[8px]">
-            depth
-            <input type="range" min={DEPTH_RANGE.min} max={DEPTH_RANGE.max} step={0.01} value={depth} onChange={(e) => setOverride((o) => ({ ...o, depth: Number(e.target.value) }))} className="w-[140px]" />
-            <span className="w-[36px] tabular-nums">{depth.toFixed(2)}</span>
-          </label>
-        </div>
-      )}
-    </>
-  );
+  return <div ref={host} className={`absolute inset-x-0 top-0 ${className}`} style={{ height: `${EXTEND * 100}%` }} />;
 }
