@@ -7,6 +7,7 @@ import { z } from "zod";
 import { adminClient, kronerToOre } from "@/lib/admin/sanity";
 import { requireAdmin } from "@/lib/admin/session";
 import { ORDER_STATUSES } from "@/lib/order-status";
+import { refundVippsPayment, VippsError } from "@/lib/vipps";
 
 /** The quick buttons in the order list's preview: change the status, nothing else. */
 export async function setOrderStatus(formData: FormData) {
@@ -147,4 +148,31 @@ export async function resendConfirmation(formData: FormData) {
   }
   revalidatePath(`/admin/orders/${id}`);
   back("confirmed=1");
+}
+
+/**
+ * Full refund of a Vipps order, from its page. Money moves here, so: the admin check, the id
+ * shape, the "sure" tick, and an idempotency key fixed per order so a double click can't refund
+ * twice. Vipps itself refuses once the captured amount is back with the customer.
+ */
+export async function refundVippsOrder(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!/^order-vipps-fl-[a-f0-9]{24}$/.test(id)) throw new Error("Invalid order");
+  const back: (q: string) => never = (q) => redirect(`/admin/orders/${id}?${q}`);
+  if (formData.get("sure") !== "on") back("error=" + encodeURIComponent("Tick the box to confirm the refund."));
+  const o = await adminClient().fetch<{ vippsReference?: string; totalOre?: number; status?: string } | null>(`*[_id == $id][0]{ vippsReference, totalOre, status }`, { id });
+  if (!o?.vippsReference || !o.totalOre) back("error=" + encodeURIComponent("This order has no Vipps payment to refund."));
+  if (o.status === "refunded") back("error=" + encodeURIComponent("This order is already refunded."));
+  try {
+    const aggregate = await refundVippsPayment(o.vippsReference, o.totalOre, `refund-${o.vippsReference}-full`);
+    if (aggregate.refundedAmount.value < o.totalOre) back("error=" + encodeURIComponent(`Vipps confirmed only ${aggregate.refundedAmount.value / 100} kr of the refund. Check the Vipps portal.`));
+  } catch (err) {
+    back("error=" + encodeURIComponent(err instanceof VippsError ? `Vipps refused the refund (${err.status}). ${err.body.slice(0, 200)}` : err instanceof Error ? err.message : "Vipps refused the refund"));
+  }
+  await adminClient().patch(id).set({ status: "refunded" }).commit();
+  revalidatePath("/admin");
+  revalidatePath("/admin/orders");
+  revalidatePath(`/admin/orders/${id}`);
+  back("refunded=1");
 }

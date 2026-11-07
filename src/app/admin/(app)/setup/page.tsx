@@ -4,6 +4,7 @@ import { Button, Card, Heading, Muted, Subheading, Tag } from "@/components/admi
 import { requireAdmin } from "@/lib/admin/session";
 import { emailConfigured } from "@/lib/notify";
 import { fromHeader, getEmailSettings } from "@/lib/email-settings";
+import { vippsConfigured, vippsEnv } from "@/lib/vipps";
 
 /**
  * Every outside service the shop leans on, with whether it is connected and exactly what to paste
@@ -55,12 +56,14 @@ export default async function SetupPage({ searchParams }: { searchParams: Promis
       how: [],
     },
     {
-      title: "Vipps",
-      ok: false,
-      status: "Placeholder button — not connected",
+      title: "Vipps MobilePay",
+      ok: vippsConfigured() && vippsEnv() === "production",
+      status: !vippsConfigured() ? "Not connected — the Vipps button says so to customers" : vippsEnv() === "production" ? `Live — sales unit ${process.env.VIPPS_MSN}${process.env.VIPPS_WEBHOOK_SECRET ? "" : " (no webhook secret: orders rely on the customer coming back)"}` : `Test mode — sales unit ${process.env.VIPPS_MSN}, only Vipps test users can pay`,
       how: [
-        "Needs a Vipps MobilePay merchant agreement (portal.vippsmobilepay.com) for the company; that gives a client id, client secret, subscription key and merchant serial number.",
-        "Once those exist, the button can be wired to Vipps's ePayment API. Until then it tells customers to pick another method.",
+        "In portal.vippsmobilepay.com → Utvikler → API-nøkler, copy the production keys for the FLÖRA sales unit.",
+        "In Vercel add VIPPS_ENV=production, VIPPS_MSN, VIPPS_CLIENT_ID, VIPPS_CLIENT_SECRET and VIPPS_SUBSCRIPTION_KEY (all sensitive). Redeploy.",
+        "Register the webhook once (Martin: node scripts/vipps-webhook.mjs register https://www.prosjectflora.com/api/webhooks/vipps) and put the secret it prints in VIPPS_WEBHOOK_SECRET.",
+        "The live site refuses to start Vipps payments while VIPPS_ENV is test.",
       ],
     },
     {

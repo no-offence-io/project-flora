@@ -4,8 +4,8 @@ import { intentRequestSchema, type IntentResponse } from "@/lib/checkout-schema"
 import { getCustomer } from "@/lib/customer";
 import { getLanguage } from "@/lib/language";
 import { getWriteClient } from "@/sanity/lib/write";
-import { METADATA_SITE, quoteCart, quoteToMetadata } from "@/lib/orders";
-import { deviceFrom, originLabel } from "@/lib/visit-shared";
+import { METADATA_SITE, quoteCart } from "@/lib/orders";
+import { checkoutMetadata } from "@/lib/checkout-metadata";
 import { assertStripeEnvironment, getStripe, StripeConfigError } from "@/lib/stripe";
 
 /** A PaymentIntent can only have its amount changed before the customer has confirmed it. */
@@ -42,38 +42,9 @@ export async function POST(req: Request) {
 
   // Price as charged, sizes and measurements travel on the intent, so the order record never has
   // to re-derive them later — and the customer's language, so their emails match the site they saw.
-  const metadata = quoteToMetadata(quote, { lang: await getLanguage(), country });
   // Who is paying comes from the signed session cookie, never from the request body.
   const account = await getCustomer();
-  if (customer) {
-    metadata.customer_street = customer.street.slice(0, 200);
-    if (customer.apartment) metadata.customer_apartment = customer.apartment.slice(0, 200);
-    metadata.customer_postcode = customer.postcode;
-    metadata.customer_city = customer.city;
-    metadata.customer_country = customer.country;
-    metadata.customer_first = customer.firstName;
-    metadata.customer_last = customer.lastName;
-    metadata.customer_prefix = customer.phonePrefix;
-    metadata.customer_phone_only = customer.phone;
-    if (customer.register && !account) metadata.register = "1";
-    metadata.customer_email = customer.email;
-    metadata.customer_name = `${customer.firstName} ${customer.lastName}`;
-    metadata.customer_phone = `${customer.phonePrefix} ${customer.phone}`;
-    metadata.customer_address = [customer.street, customer.apartment, `${customer.postcode} ${customer.city}`, customer.country]
-      .filter(Boolean)
-      .join(", ")
-      .slice(0, 500);
-    if (customer.note) metadata.customer_note = customer.note.slice(0, 500);
-    // Where they came from, for the dashboard. The label is decided here, not by the browser.
-    metadata.visit = JSON.stringify({
-      l: originLabel(visit),
-      d: deviceFrom(req.headers.get("user-agent")),
-      ...(visit?.views ? { v: visit.views } : {}),
-      ...(visit?.landing ? { p: visit.landing } : {}),
-      ...(visit?.referrer ? { r: visit.referrer } : {}),
-      ...(visit?.campaign ? { c: visit.campaign } : {}),
-    }).slice(0, 500);
-  }
+  const metadata = checkoutMetadata({ quote, lang: await getLanguage(), country, customer, visit, userAgent: req.headers.get("user-agent"), account });
 
   try {
     // Before anything is created: refuse outright if this deployment's Stripe environment is one
@@ -95,7 +66,6 @@ export async function POST(req: Request) {
         stripeCustomer = (await stripe.customers.create({ email: account.email, metadata: { site: METADATA_SITE, account: account._id } })).id;
         await getWriteClient().patch(account._id).set({ stripeCustomerId: stripeCustomer }).commit();
       }
-      metadata.account = account._id;
     }
     const customerParam = stripeCustomer ? { customer: stripeCustomer } : {};
 

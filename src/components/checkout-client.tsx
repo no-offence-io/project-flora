@@ -167,7 +167,7 @@ function readCustomer(form: HTMLFormElement): Customer {
  */
 export type CheckoutAccount = { email: string; firstName?: string; lastName?: string; phonePrefix?: string; phone?: string; street?: string; apartment?: string; postcode?: string; city?: string; country?: string };
 
-export default function CheckoutClient({ formId, countries, account }: { formId: string; countries: string[]; account: CheckoutAccount | null }) {
+export default function CheckoutClient({ formId, countries, account, vipps }: { formId: string; countries: string[]; account: CheckoutAccount | null; /** Whether the server can take Vipps payments; the button is left out otherwise. */ vipps: boolean }) {
   const { items } = useCart();
   const t = useT();
   const stripePromise = useMemo(() => getStripePromise(), []);
@@ -182,6 +182,31 @@ export default function CheckoutClient({ formId, countries, account }: { formId:
   const [discountCode, setDiscountCode] = useState("");
   const [discountError, setDiscountError] = useState<string | null>(null);
   const intentIdRef = useRef<string | null>(null);
+
+  /** Vipps: the same cart and customer the card flow sends, answered with the address to open. */
+  const startVipps = useCallback(
+    async (form: HTMLFormElement): Promise<string> => {
+      const res = await fetch("/api/checkout/vipps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: items.map((item) => ({
+            id: item.id,
+            quantity: item.quantity,
+            ...(item.size ? { size: item.size } : {}),
+            ...(item.measurements.length ? { measurements: item.measurements } : {}),
+          })),
+          customer: readCustomer(form),
+          ...(readVisit() ? { visit: readVisit() } : {}),
+          ...(discountCode ? { discountCode } : {}),
+        }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { redirectUrl?: string; error?: string; code?: string };
+      if (!res.ok || !body.redirectUrl) throw new Error(body.code === "vipps" ? t("pay.vippsFailed") : body.error || t("pay.vippsFailed"));
+      return body.redirectUrl;
+    },
+    [items, discountCode, t],
+  );
 
   const requestIntent = useCallback(
     async (withCustomer?: Customer | null): Promise<IntentResult> => {
@@ -391,6 +416,7 @@ export default function CheckoutClient({ formId, countries, account }: { formId:
               stripePromise={stripePromise}
               expressCardGroup={expressCardGroup}
               klarnaGroup={klarnaGroup}
+              onVipps={vipps ? startVipps : null}
             />
           </Elements>
         ) : (
@@ -433,6 +459,7 @@ function PaymentSection({
   stripePromise,
   expressCardGroup,
   klarnaGroup,
+  onVipps,
 }: {
   formId: string;
   clientSecret: string;
@@ -442,11 +469,17 @@ function PaymentSection({
   stripePromise: StripePromise;
   expressCardGroup: StripeElementsOptions;
   klarnaGroup: StripeElementsOptions;
+  /** Starts a Vipps payment and resolves with the address to open; null when Vipps isn't available here. */
+  onVipps: ((form: HTMLFormElement) => Promise<string>) | null;
 }) {
   const stripe = useStripe();
   const t = useT();
   const elements = useElements();
-  const [message, setMessage] = useState<string | null>(null);
+  // This section only ever mounts in the browser (after the quote arrives), so the address can be
+  // read up front: Vipps hands a customer who cancelled in the app back here with ?vipps=cancelled.
+  const [message, setMessage] = useState<string | null>(() =>
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("vipps") === "cancelled" ? t("pay.vippsCancelled") : null,
+  );
   /** Per column, whether Stripe found that button usable here; `null` until it reports. */
   const [available, setAvailable] = useState<Availability>({
     apple: null,
@@ -485,6 +518,28 @@ function PaymentSection({
       if (error)
         setMessage(error.message ?? t("pay.failed"));
     } finally {
+      onConfirmingChange(false);
+    }
+  };
+
+  // Drop the marker from the address so a reload doesn't repeat the message.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("vipps") !== "cancelled") return;
+    params.delete("vipps");
+    window.history.replaceState(null, "", `${window.location.pathname}${params.size ? `?${params}` : ""}`);
+  }, []);
+
+  const payWithVipps = async () => {
+    const form = validForm();
+    if (!form || confirming || !onVipps) return;
+    onConfirmingChange(true);
+    setMessage(t("pay.vippsOpening"));
+    try {
+      // The page leaves for Vipps here; `confirming` stays on so nothing else can be started meanwhile.
+      window.location.assign(await onVipps(form));
+    } catch (err) {
+      setMessage(err instanceof Error && err.message ? err.message : t("pay.vippsFailed"));
       onConfirmingChange(false);
     }
   };
@@ -538,27 +593,26 @@ function PaymentSection({
             onAvailability={report("klarna")}
           />
         )}
-        {/* Placeholder until Vipps is set up (it isn't on the Stripe account, so it will be a direct
-            Vipps integration later). Drawn in Vipps' own orange so the row reads as it will. */}
-        <button
-          type="button"
-          onClick={() =>
-            setMessage(
-              t("pay.vippsSoon"),
-            )
-          }
-          disabled={confirming}
-          aria-label="Vipps"
-          className={`${COLUMN} flex h-[44px] items-center justify-center rounded-[8px] bg-[#ff5b24] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50`}
-        >
-          <Image
-            src="/checkout/vipps-white.svg"
-            alt=""
-            width={35}
-            height={25}
-            className="h-[36px] w-auto"
-          />
-        </button>
+        {/* Vipps is not on the Stripe account, so this one talks to Vipps directly: the form is
+            checked, the server quotes the cart and starts the payment, and the customer is sent to
+            Vipps to approve it. Drawn in Vipps' own orange, as their guidelines ask. */}
+        {onVipps && (
+          <button
+            type="button"
+            onClick={payWithVipps}
+            disabled={confirming}
+            aria-label="Vipps"
+            className={`${COLUMN} flex h-[44px] items-center justify-center rounded-[8px] bg-[#ff5b24] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50`}
+          >
+            <Image
+              src="/checkout/vipps-white.svg"
+              alt=""
+              width={35}
+              height={25}
+              className="h-[36px] w-auto"
+            />
+          </button>
+        )}
       </div>
 
       <div className="flex items-center gap-[12px] text-black/50">

@@ -35,6 +35,7 @@ export function paidWith(o: { paymentCard?: { brand?: string; last4?: string }; 
   if (o.manual === "pr") return "Nothing — PR / gift";
   if (o.paymentCard?.last4) return `${o.paymentCard.brand ? o.paymentCard.brand.charAt(0).toUpperCase() + o.paymentCard.brand.slice(1) : "Card"} ending in ${o.paymentCard.last4}`;
   if (o.paymentProvider === "klarna") return "Klarna";
+  if (o.paymentProvider === "vipps") return "Vipps";
   if (o.manual) return o.paymentProvider && o.paymentProvider !== "other" ? o.paymentProvider : "Outside the shop";
   return "Card";
 }

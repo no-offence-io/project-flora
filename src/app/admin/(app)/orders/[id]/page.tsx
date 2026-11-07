@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { saveOrder, sendShippingEmail } from "../../actions";
-import { resendConfirmation } from "../actions";
+import { refundVippsOrder, resendConfirmation } from "../actions";
 import { Button, Card, Heading, Input, Labelled, Muted, Row, Select, StatusPill, Subheading, Tag, Textarea, TextLink } from "@/components/admin/ui";
 import { adminClient, kr } from "@/lib/admin/sanity";
 import { emailConfigured } from "@/lib/notify";
@@ -25,6 +25,7 @@ type Order = {
   vatIncludedOre?: number;
   totalOre?: number;
   stripePaymentIntentId?: string;
+  vippsReference?: string;
   manual?: string;
   paymentProvider?: string;
   paymentCard?: { brand?: string; last4?: string };
@@ -35,9 +36,9 @@ const HINT: Record<string, string> = { paid: "to be made", shipped: "on its way"
 
 const when = (iso?: string) => (iso ? new Date(iso).toLocaleString("nb-NO", { dateStyle: "short", timeStyle: "short" }) : "");
 
-export default async function OrderPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; sent?: string; confirmed?: string; error?: string }> }) {
+export default async function OrderPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; sent?: string; confirmed?: string; refunded?: string; error?: string }> }) {
   const { id } = await params;
-  const { saved, sent, confirmed, error } = await searchParams;
+  const { saved, sent, confirmed, refunded, error } = await searchParams;
   const o = await adminClient().fetch<Order | null>(`*[_type == "order" && _id == $id][0]`, { id });
   if (!o) notFound();
   const mailReady = emailConfigured();
@@ -65,6 +66,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
         {saved && <Muted>Saved.</Muted>}
         {sent && <Muted>Shipping email sent to {o.customer?.email}.</Muted>}
         {confirmed && <Muted>Confirmation email sent to {o.customer?.email}.</Muted>}
+        {refunded && <Muted>Refunded in full through Vipps. The customer has the money back within a few days.</Muted>}
         {error && (
           <p className="m-0 font-gotham text-paragraph text-[#b00020]" role="alert">
             {error}
@@ -124,6 +126,16 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
                 </a>
               </Muted>
             )}
+            {o.vippsReference && o.status !== "refunded" && (
+              <form action={refundVippsOrder} className="flex flex-wrap items-center gap-[12px]">
+                <input type="hidden" name="id" value={o._id} />
+                <label className="flex items-center gap-[8px] text-[11px] text-black/50">
+                  <input type="checkbox" name="sure" className="accent-black" /> I&apos;m sure — refund {kr(o.totalOre)} to the customer through Vipps
+                </label>
+                <Button type="submit">Refund in Vipps</Button>
+              </form>
+            )}
+            {o.vippsReference && <Muted>Vipps reference: {o.vippsReference}</Muted>}
           </Card>
 
           <Card>

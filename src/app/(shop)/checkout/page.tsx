@@ -5,6 +5,7 @@ import Navbar from "@/components/navbar";
 import { getShipsTo } from "@/lib/catalog";
 import { getCustomer } from "@/lib/customer";
 import { getT } from "@/lib/i18n-server";
+import { vippsConfigured, vippsEnv } from "@/lib/vipps";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getT();
@@ -19,6 +20,9 @@ export default async function CheckoutPage() {
   const account = customer
     ? { email: customer.email, firstName: customer.firstName, lastName: customer.lastName, phonePrefix: customer.phonePrefix, phone: customer.phone, street: customer.street, apartment: customer.apartment, postcode: customer.postcode, city: customer.city, country: customer.country }
     : null;
+  // The Vipps button is only drawn when this server can start a Vipps payment: keys present, and
+  // never test keys on the live site. A button that can only fail is worse than none.
+  const vipps = vippsConfigured() && (process.env.VERCEL_ENV !== "production" || vippsEnv() === "production");
   return (
     <div className="flex flex-col gap-[60px] pb-[60px] md:gap-[120px] md:pb-[120px]">
       <div className="flex flex-col gap-[24px] md:gap-[42px]">
@@ -33,7 +37,7 @@ export default async function CheckoutPage() {
             </h1>
           </div>
 
-          <CheckoutClient formId={FORM_ID} countries={countries} account={account} />
+          <CheckoutClient formId={FORM_ID} countries={countries} account={account} vipps={vipps} />
         </div>
       </div>
     </div>

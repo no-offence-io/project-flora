@@ -19,8 +19,42 @@ export type RecordedOrder = {
   oversold: string[];
 };
 
+/** A payment that has gone through, described the same way whoever took it. */
+export type PaidPayment = {
+  provider: "stripe" | "klarna" | "vipps";
+  /** The provider's own id: the PaymentIntent id, or the Vipps reference. */
+  id: string;
+  docId: string;
+  orderNumber: string;
+  amountOre: number;
+  currency: string;
+  /** ISO timestamp of when the payment was made. */
+  createdAt: string;
+  metadata: Record<string, string>;
+  receiptEmail?: string;
+  card?: { brand: string; last4: string };
+};
+
+/** The Stripe shape of it. The amount Stripe actually captured is the truth. */
+export function paymentFromIntent(intent: Stripe.PaymentIntent): PaidPayment {
+  return {
+    provider: paymentProviderOf(intent),
+    id: intent.id,
+    docId: `order-${intent.id}`,
+    orderNumber: orderReference(intent.id),
+    amountOre: intent.amount_received || intent.amount,
+    currency: intent.currency,
+    createdAt: new Date((intent.created ?? Date.now() / 1000) * 1000).toISOString(),
+    metadata: intent.metadata,
+    ...(intent.receipt_email ? { receiptEmail: intent.receipt_email } : {}),
+    ...paymentCardOf(intent),
+  };
+}
+
+export const recordOrder = (intent: Stripe.PaymentIntent) => recordPaidOrder(paymentFromIntent(intent));
+
 /**
- * Turns a paid PaymentIntent into an order document in Sanity, and counts the stock down — once.
+ * Turns a settled payment into an order document in Sanity, and counts the stock down — once.
  *
  * The document id is derived from the PaymentIntent id and written with `create`, not
  * `createIfNotExists`: inside a transaction, a second attempt fails atomically on the duplicate id,
@@ -32,11 +66,10 @@ export type RecordedOrder = {
  * Sized products count down the chosen size's own stock (`sizes[label=="M"].stock`); the others
  * count down the product's single number.
  */
-export async function recordOrder(intent: Stripe.PaymentIntent): Promise<RecordedOrder> {
+export async function recordPaidOrder(payment: PaidPayment): Promise<RecordedOrder> {
   const client = getWriteClient();
-  const orderNumber = orderReference(intent.id);
-  const docId = `order-${intent.id}`;
-  const m = intent.metadata;
+  const { orderNumber, docId } = payment;
+  const m = payment.metadata;
   const language = m.lang === "no" ? "no" : "en";
 
   const lines = linesFromMetadata(m);
@@ -62,8 +95,8 @@ export async function recordOrder(intent: Stripe.PaymentIntent): Promise<Recorde
     await getShippingRules(),
     { country: m.country, discount: m.discount ? { code: m.discount, kind: "amount", value: discountOre, freeShipping: false } : null },
   );
-  // The amount Stripe actually captured is the truth; the recomputed parts should add up to it.
-  const totalOre = intent.amount_received || intent.amount;
+  // The amount the provider actually captured is the truth; the recomputed parts should add up to it.
+  const totalOre = payment.amountOre;
   const totals = {
     subtotalOre: computed.subtotalOre,
     shippingOre: Math.max(0, totalOre - (computed.subtotalOre - discountOre)),
@@ -72,17 +105,20 @@ export async function recordOrder(intent: Stripe.PaymentIntent): Promise<Recorde
     vatIncludedOre: Math.round((totalOre * 0.25) / 1.25),
     totalOre,
   };
-  const customer = { name: m.customer_name ?? "", email: intent.receipt_email ?? m.customer_email ?? "", address: m.customer_address ?? "" };
+  const customer = { name: m.customer_name ?? "", email: payment.receiptEmail ?? m.customer_email ?? "", address: m.customer_address ?? "" };
   const base: Omit<RecordedOrder, "created"> = { orderNumber, docId, lines: recordedLines, language, customer, totals, oversold: [] };
 
   if (await client.getDocument(docId)) return { ...base, created: false };
+
+  // Where to find the payment at the provider, by the field the dashboard knows it under.
+  const providerRef: Record<string, string> = payment.provider === "vipps" ? { vippsReference: payment.id } : { stripePaymentIntentId: payment.id };
 
   let tx = client.transaction().create({
     _id: docId,
     _type: "order",
     orderNumber,
     status: "paid",
-    orderedAt: new Date((intent.created ?? Date.now() / 1000) * 1000).toISOString(),
+    orderedAt: payment.createdAt,
     language,
     customer: {
       name: customer.name,
@@ -106,11 +142,11 @@ export async function recordOrder(intent: Stripe.PaymentIntent): Promise<Recorde
     ...(m.discount ? { discountCode: m.discount, discountOre } : {}),
     vatIncludedOre: totals.vatIncludedOre,
     totalOre,
-    currency: intent.currency,
-    paymentProvider: paymentProviderOf(intent),
-    ...paymentCardOf(intent),
+    currency: payment.currency,
+    paymentProvider: payment.provider,
+    ...(payment.card ? { paymentCard: payment.card } : {}),
     ...originOf(m.visit),
-    stripePaymentIntentId: intent.id,
+    ...providerRef,
   });
   for (const l of lines) {
     const id = products[l.id]?._id;
@@ -172,7 +208,7 @@ function originOf(raw: string | undefined): { origin?: Origin } {
   }
 }
 
-function paymentProviderOf(intent: Stripe.PaymentIntent): string {
+function paymentProviderOf(intent: Stripe.PaymentIntent): "stripe" | "klarna" {
   const types = intent.payment_method_types ?? [];
   if (types.includes("klarna") && !types.includes("card")) return "klarna";
   return "stripe";

@@ -143,7 +143,15 @@ export const order = defineType({
       type: 'string',
       readOnly: true,
       group: 'payment',
-      validation: (rule) => rule.custom((value, ctx) => (value || (ctx.document as {manual?: string} | undefined)?.manual ? true : 'Required')),
+      validation: (rule) => rule.custom((value, ctx) => (value || (ctx.document as {manual?: string; vippsReference?: string} | undefined)?.manual || (ctx.document as {vippsReference?: string} | undefined)?.vippsReference ? true : 'Required')),
+    }),
+    defineField({
+      name: 'vippsReference',
+      title: 'Vipps reference',
+      description: 'Find this payment in the Vipps MobilePay portal by this reference.',
+      type: 'string',
+      readOnly: true,
+      group: 'payment',
     }),
   ],
   preview: {

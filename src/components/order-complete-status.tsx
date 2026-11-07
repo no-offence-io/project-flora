@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useCart } from "./cart-context";
 import { formatNok, orderReference } from "@/lib/money";
@@ -13,6 +13,7 @@ type View =
   | { kind: "none" }
   | { kind: "succeeded"; reference: string; amountOre: number }
   | { kind: "processing"; reference: string }
+  | { kind: "vipps-pending" }
   | { kind: "failed" };
 
 /**
@@ -23,10 +24,52 @@ type View =
 export default function OrderCompleteStatus() {
   const params = useSearchParams();
   const clientSecret = params.get("payment_intent_client_secret");
+  const vipps = params.get("vipps");
+  const router = useRouter();
   const { clear } = useCart();
   const t = useT();
   const configured = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
-  const [view, setView] = useState<View>({ kind: clientSecret && configured ? "loading" : "none" });
+  const [view, setView] = useState<View>({ kind: (clientSecret && configured) || vipps ? "loading" : "none" });
+
+  // Vipps: ask our own server, which reads the payment from Vipps and records the order. The
+  // customer can land here before the money is reserved or while the webhook is still on its way,
+  // so keep asking for a while; a cancelled payment goes back to the checkout with the cart intact.
+  useEffect(() => {
+    if (!vipps) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const started = Date.now();
+    const ask = async () => {
+      let state = "pending";
+      let body: { state?: string; orderNumber?: string; amountOre?: number } = {};
+      try {
+        const res = await fetch(`/api/checkout/vipps/status?ref=${encodeURIComponent(vipps)}`, { cache: "no-store" });
+        body = (await res.json().catch(() => ({}))) as typeof body;
+        state = res.ok && body.state ? body.state : "pending";
+      } catch {
+        state = "pending";
+      }
+      if (cancelled) return;
+      if (state === "paid" && body.orderNumber) {
+        setView({ kind: "succeeded", reference: body.orderNumber, amountOre: body.amountOre ?? 0 });
+        clear();
+      } else if (state === "cancelled") {
+        router.replace("/checkout?vipps=cancelled");
+      } else if (state === "failed" || state === "unknown") {
+        setView({ kind: "failed" });
+      } else if (Date.now() - started > 90_000) {
+        setView({ kind: "vipps-pending" });
+      } else {
+        setView({ kind: "vipps-pending" });
+        timer = setTimeout(ask, 2000);
+      }
+    };
+    ask();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [vipps, clear, router]);
 
   useEffect(() => {
     if (!clientSecret) return;
@@ -88,6 +131,14 @@ export default function OrderCompleteStatus() {
           <Link href="/shop" className="text-black underline">
             {t("complete.continue")}
           </Link>
+        </>
+      )}
+      {view.kind === "vipps-pending" && (
+        <>
+          <h1 className="m-0 font-americana text-big-header-mobile capitalize md:text-big-header-desktop">{t("complete.almost")}</h1>
+          <p className="m-0 text-black/70" role="status">
+            {t("complete.vippsPending")}
+          </p>
         </>
       )}
       {view.kind === "processing" && (
