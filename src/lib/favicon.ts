@@ -3,14 +3,15 @@
  * Settings & brand. The SVG is drawn here; the PNGs (for Safari, and the iPhone home screen) are
  * the same drawing rendered once and kept inline, so the icon routes never touch the file system.
  */
+import { BUD_MARK } from "./bud-mark";
+
+const [RING, DOT_LEFT, DOT_RIGHT] = BUD_MARK.paths;
+
 export const FAVICON_STYLES = ["black", "white"] as const;
 export type FaviconStyle = (typeof FAVICON_STYLES)[number];
 export const FAVICON_LABEL: Record<FaviconStyle, string> = { black: "Black disc, white mark", white: "White disc, black mark" };
 export const parseFaviconStyle = (v: unknown): FaviconStyle => (v === "white" ? "white" : "black");
 
-const RING = "M17.5845 36.8429C26.5178 36.8429 30.1381 30.6407 30.1381 22.5871C30.1381 13.8855 26.5178 7.68331 17.5845 7.68331C8.65119 7.68331 5.03085 13.8855 5.03085 22.5871C5.03085 30.6407 8.65119 36.8429 17.5845 36.8429ZM17.5845 38C8.74522 38 0 32.1681 0 22.1705C0 12.3581 8.74522 6.52619 17.5845 6.52619C26.4237 6.52619 35.1689 12.3581 35.1689 22.1705C35.1689 32.1681 26.4237 38 17.5845 38Z";
-const DOT_LEFT = "M10.6729 2.26797C10.6729 1.06456 11.6603 0 12.9768 0C14.2933 0 15.2336 1.06456 15.2336 2.26797C15.2336 3.47138 14.2933 4.48965 12.9768 4.48965C11.6603 4.48965 10.6729 3.47138 10.6729 2.26797Z";
-const DOT_RIGHT = "M20.0294 2.26797C20.0294 1.06456 21.0167 0 22.3332 0C23.6497 0 24.5901 1.06456 24.5901 2.26797C24.5901 3.47138 23.6497 4.48965 22.3332 4.48965C21.0167 4.48965 20.0294 3.47138 20.0294 2.26797Z";
 
 export function faviconSvg(style: FaviconStyle, size?: number): string {
   const disc = style === "white" ? "#fff" : "#000";
