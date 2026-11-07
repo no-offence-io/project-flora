@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import Navbar from "@/components/navbar";
 import PhotoSlideshow from "@/components/photo-slideshow";
 import ProductDetails from "@/components/product-details";
 import ProductGallery from "@/components/product-gallery";
+import ProductOptions from "@/components/product-options";
+import ProductSpecs from "@/components/product-specs";
 import ProductsSlideshow from "@/components/products-slideshow";
-import { getProduct, getProducts, getSizingSettings } from "@/lib/catalog";
+import { CareInstructions } from "@/components/care-icons";
+import VintageHero from "@/components/vintage-hero";
+import { getProduct, getProducts, getSizingSettings, getVintageProducts } from "@/lib/catalog";
 import { isSoldOut } from "@/lib/catalog-types";
 import { LIFESTYLE_PHOTOS, toSlideshowProduct } from "@/lib/catalog-types";
 import { getT } from "@/lib/i18n-server";
@@ -25,9 +30,11 @@ export async function generateMetadata({ params }: PageProps<"/shop/[slug]">): P
 
 export default async function ProductPage({ params }: PageProps<"/shop/[slug]">) {
   const { slug } = await params;
-  const [product, all, t, sizing] = await Promise.all([getProduct(slug), getProducts(), getT(), getSizingSettings()]);
+  const [product, t, sizing] = await Promise.all([getProduct(slug), getT(), getSizingSettings()]);
   if (!product) notFound();
 
+  // A vintage piece keeps company with the other vintage pieces; the collection with the collection.
+  const all = product.vintage ? await getVintageProducts() : await getProducts();
   const related = all.filter((item) => item.slug !== product.slug).map(toSlideshowProduct);
   // Structured data so search results and shared links carry price and availability.
   const jsonLd = {
@@ -47,6 +54,41 @@ export default async function ProductPage({ params }: PageProps<"/shop/[slug]">)
       priceSpecification: { "@type": "PriceSpecification", price: (product.priceOre / 100).toFixed(2), priceCurrency: "NOK", valueAddedTaxIncluded: true },
     },
   };
+
+  if (product.vintage) {
+    const more = product.images.slice(1);
+    return (
+      <div className="flex flex-col gap-[60px] pb-[60px] md:gap-[120px] md:pb-[120px]">
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+        {/* Top screen: the piece turning in the middle of a white screen, then everything about it in one centred column. */}
+        <div className="flex flex-col">
+          <Navbar tone="dark" />
+          <VintageHero product={product} labels={{ oneOfAKind: t("vintage.oneOfAKind"), soldOut: t("product.soldOut") }} />
+        </div>
+
+        <section id="details" className="mx-auto flex w-full max-w-[521px] flex-col gap-[42px] px-[24px] text-black md:px-0">
+          <p className="m-0 whitespace-pre-line font-gotham text-paragraph text-black/70">{product.description}</p>
+          {product.specs.length > 0 && <ProductSpecs specs={product.specs} />}
+          <ProductOptions product={product} sizing={sizing} />
+          <CareInstructions layout="responsive" className="text-black/50 md:text-black" />
+        </section>
+
+        {more.length > 0 && (
+          <div id="photos" className="grid grid-cols-1 gap-[24px] px-[24px] md:grid-cols-2 md:gap-[42px] md:px-[42px]">
+            {more.map((image) => (
+              <div key={image.src} className="relative aspect-[4/5] w-full bg-[#f7f7f7]">
+                <Image src={image.src} alt={image.alt} fill sizes="(min-width: 768px) 50vw, 100vw" className="object-contain p-[24px]" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div id="also-like">
+          <ProductsSlideshow title={t("product.alsoLike")} products={related} seeAllHref="/vintage" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-[60px] pb-[60px] md:gap-[120px] md:pb-[120px]">
