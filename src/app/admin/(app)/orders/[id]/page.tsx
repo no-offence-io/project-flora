@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { saveOrder, sendShippingEmail } from "../../actions";
+import { resendConfirmation } from "../actions";
 import { Button, Card, Heading, Input, Labelled, Muted, Row, Select, StatusPill, Subheading, Tag, Textarea, TextLink } from "@/components/admin/ui";
 import { adminClient, kr } from "@/lib/admin/sanity";
 import { emailConfigured } from "@/lib/notify";
@@ -34,9 +35,9 @@ const HINT: Record<string, string> = { paid: "to be made", shipped: "on its way"
 
 const when = (iso?: string) => (iso ? new Date(iso).toLocaleString("nb-NO", { dateStyle: "short", timeStyle: "short" }) : "");
 
-export default async function OrderPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; sent?: string; error?: string }> }) {
+export default async function OrderPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; sent?: string; confirmed?: string; error?: string }> }) {
   const { id } = await params;
-  const { saved, sent, error } = await searchParams;
+  const { saved, sent, confirmed, error } = await searchParams;
   const o = await adminClient().fetch<Order | null>(`*[_type == "order" && _id == $id][0]`, { id });
   if (!o) notFound();
   const mailReady = emailConfigured();
@@ -63,6 +64,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
         </Muted>
         {saved && <Muted>Saved.</Muted>}
         {sent && <Muted>Shipping email sent to {o.customer?.email}.</Muted>}
+        {confirmed && <Muted>Confirmation email sent to {o.customer?.email}.</Muted>}
         {error && (
           <p className="m-0 font-gotham text-paragraph text-[#b00020]" role="alert">
             {error}
@@ -141,7 +143,15 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
               <li className="pt-[6px]">Paid with: <span className="text-black/50">{paidWith(o)}</span></li>
             </ul>
             <ul className="m-0 flex list-none flex-col gap-[5px] p-0 text-[11px] leading-normal text-black/50">
-              <li>Confirmation email: {o.confirmationSentAt ? `sent ${when(o.confirmationSentAt)}` : "not sent"}</li>
+              <li className="flex flex-wrap items-center gap-[8px]">
+                <span>Confirmation email: {o.confirmationSentAt ? `sent ${when(o.confirmationSentAt)}` : "not sent"}</span>
+                {!o.manual && o.customer?.email && mailReady && (
+                  <form action={resendConfirmation}>
+                    <input type="hidden" name="id" value={o._id} />
+                    <button className="border-[0.5px] border-black px-[8px] py-[2px] text-[11px] text-black hover:bg-black hover:text-white transition-colors">{o.confirmationSentAt ? "Send again" : "Send now"}</button>
+                  </form>
+                )}
+              </li>
               <li>Shipping email: {o.shippingEmailSentAt ? `sent ${when(o.shippingEmailSentAt)}` : "not sent"}</li>
             </ul>
           </Card>

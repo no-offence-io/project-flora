@@ -104,3 +104,46 @@ export async function createManualOrder(formData: FormData) {
   revalidatePath("/admin/products");
   redirect(`/admin/orders/${docId}?saved=1`);
 }
+
+type StoredOrder = {
+  orderNumber?: string;
+  language?: string;
+  demo?: boolean;
+  customer?: { name?: string; email?: string; address?: string };
+  items?: { name?: string; quantity?: number; unitPriceOre?: number; size?: string; measurements?: { label?: string; value?: string }[]; image?: string | null }[];
+  subtotalOre?: number; shippingOre?: number; discountOre?: number; discountCode?: string; vatIncludedOre?: number; totalOre?: number;
+};
+
+/**
+ * Sends the order confirmation (again): for an order whose email failed, or a customer who lost it.
+ * Built from the stored order, so it says exactly what the original said.
+ */
+export async function resendConfirmation(formData: FormData) {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!id.startsWith("order-")) throw new Error("Invalid order");
+  const o = await adminClient().fetch<StoredOrder | null>(
+    `*[_id == $id][0]{ orderNumber, language, demo, customer, subtotalOre, shippingOre, discountOre, discountCode, vatIncludedOre, totalOre, items[]{ name, quantity, unitPriceOre, size, measurements, "image": product->images[0].asset->url } }`,
+    { id },
+  );
+  const back = (q: string): never => redirect(`/admin/orders/${id}?${q}`);
+  if (!o || !o.orderNumber) back("error=" + encodeURIComponent("Order not found."));
+  if (o.demo) back("error=" + encodeURIComponent("Test-mode orders have no real customer to email."));
+  if (!o.customer?.email) back("error=" + encodeURIComponent("This order has no email address."));
+  const { sendOrderConfirmation } = await import("@/lib/notify");
+  try {
+    const sent = await sendOrderConfirmation({
+      orderNumber: o.orderNumber,
+      language: o.language === "no" ? "no" : "en",
+      customer: { name: o.customer.name ?? "", email: o.customer.email, address: o.customer.address ?? "" },
+      lines: (o.items ?? []).map((it) => ({ name: it.name ?? "", quantity: it.quantity ?? 1, unitPriceOre: it.unitPriceOre ?? 0, ...(it.size ? { size: it.size } : {}), measurements: (it.measurements ?? []).map((m) => ({ label: m.label ?? "", value: m.value ?? "" })), ...(it.image ? { image: it.image } : {}) })),
+      totals: { subtotalOre: o.subtotalOre ?? 0, shippingOre: o.shippingOre ?? 0, discountOre: o.discountOre ?? 0, ...(o.discountCode ? { discountCode: o.discountCode } : {}), vatIncludedOre: o.vatIncludedOre ?? 0, totalOre: o.totalOre ?? 0 },
+    });
+    if (!sent) back("error=" + encodeURIComponent("Email isn't connected — see Setup."));
+    await adminClient().patch(id).set({ confirmationSentAt: new Date().toISOString() }).commit();
+  } catch (err) {
+    back("error=" + encodeURIComponent(err instanceof Error ? err.message : "Sending failed"));
+  }
+  revalidatePath(`/admin/orders/${id}`);
+  back("confirmed=1");
+}
