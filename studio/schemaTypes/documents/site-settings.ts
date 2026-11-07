@@ -14,6 +14,7 @@ export const siteSettings = defineType({
     {name: 'shop', title: 'Shop rules'},
     {name: 'sizing', title: 'Sizing'},
     {name: 'brand', title: 'Brand'},
+    {name: 'email', title: 'Emails'},
   ],
   fields: [
     defineField({name: 'demoMode', title: 'Admin test mode', type: 'boolean', readOnly: true, hidden: true}),
@@ -72,6 +73,20 @@ export const siteSettings = defineType({
     defineField({name: 'footerImage', title: 'Footer image', type: 'localizedImage', group: 'footer'}),
     defineField({name: 'instagram', title: 'Instagram URL', type: 'url', group: 'footer'}),
     defineField({name: 'contactEmail', title: 'Contact email', type: 'string', group: 'footer'}),
+    defineField({
+      name: 'email',
+      title: 'Emails',
+      description: 'Set on the dashboard, under Settings & brand → Emails.',
+      type: 'object',
+      group: 'email',
+      fields: [
+        defineField({name: 'fromName', title: 'Sender name', type: 'string'}),
+        defineField({name: 'fromAddress', title: 'Sender address', description: 'Must be at the verified domain.', type: 'string'}),
+        defineField({name: 'replyTo', title: 'Replies go to', type: 'string'}),
+        defineField({name: 'notifyTo', title: 'Owner notifications go to', description: 'One or more addresses, comma-separated.', type: 'string'}),
+        defineField({name: 'notifyOn', title: 'Owner is emailed about', type: 'array', of: [{type: 'string'}], options: {list: ['orders', 'payments', 'refunds', 'problems', 'newsletters']}}),
+      ],
+    }),
 
     defineField({
       name: 'shippingOre',

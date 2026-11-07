@@ -3,12 +3,14 @@ import { analyticsConfigured, serviceAccountEmail } from "@/lib/admin/analytics"
 import { Button, Card, Heading, Muted, Subheading, Tag } from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/admin/session";
 import { emailConfigured } from "@/lib/notify";
+import { fromHeader, getEmailSettings } from "@/lib/email-settings";
 
 /**
  * Every outside service the shop leans on, with whether it is connected and exactly what to paste
  * where if it isn't. Nothing here is secret: it only reports presence, never values.
  */
 export default async function SetupPage({ searchParams }: { searchParams: Promise<{ sent?: string; newsletter?: string; error?: string }> }) {
+  const mail = await getEmailSettings();
   const admin = await requireAdmin();
   const { sent, newsletter, error } = await searchParams;
   const stripeKey = process.env.STRIPE_SECRET_KEY ?? "";
@@ -28,12 +30,12 @@ export default async function SetupPage({ searchParams }: { searchParams: Promis
     {
       title: "Email (Resend)",
       ok: emailConfigured(),
-      status: emailConfigured() ? `Connected — sending as ${process.env.EMAIL_FROM || "onboarding@resend.dev (Resend's test sender)"}` : "Not connected — order confirmations and shipping emails are not being sent",
+      status: emailConfigured() ? `Connected — sending as ${fromHeader(mail)}${mail.fromAddress ? "" : " (Resend's test sender)"}` : "Not connected — order confirmations and shipping emails are not being sent",
       how: [
         "Create a free account at resend.com, then API Keys → Create → copy the key.",
         "In Vercel (project → Settings → Environment Variables) add RESEND_API_KEY with that key, and redeploy.",
-        "To send from the shop's own address: Resend → Domains → add prosjectflora.com, put the DNS records it shows into one.com, then set EMAIL_FROM to \"Flöra <hello@prosjectflora.com>\".",
-        "Optional: EMAIL_NOTIFY = the address that should get a copy of every order.",
+        "To send from the shop's own address: Resend → Domains → add prosjectflora.com, put the DNS records it shows into one.com, then enter the sender under Settings & brand → Emails.",
+        "Who gets told about orders, failed payments and problems is chosen there too.",
       ],
     },
     {

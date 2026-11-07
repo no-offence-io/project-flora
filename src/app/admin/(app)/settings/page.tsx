@@ -4,6 +4,9 @@ import { ImageField } from "@/components/admin/media-field";
 import { getText, type LocalizedString } from "@/lib/admin/localized";
 import { FONTS } from "@/lib/brand-shared";
 import { DEFAULT_LOGO } from "@/lib/brand";
+import { getEmailSettings, siteDomain } from "@/lib/email-settings";
+import { NOTIFY_SCENARIOS } from "@/lib/email-shared";
+import { emailConfigured } from "@/lib/notify";
 import { adminClient, oreToKroner } from "@/lib/admin/sanity";
 
 type Settings = {
@@ -23,6 +26,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const { saved, error } = await searchParams;
   const s = (await adminClient().fetch<Settings | null>(`*[_id == "siteSettings"][0]{ ..., ${PIC("signUpImage")}, ${PIC("footerImage")}, "brand": { ...brand, ${PIC("logo").replace('"logo"', '"logo"').replace("logo.asset", "brand.logo.asset")} } }`)) ?? {};
   const b = s.brand ?? {};
+  const mail = await getEmailSettings();
   const measureSlots = [...(s.measurementFields ?? []), null];
   const zoneSlots = [...(s.shippingZones ?? []), null];
   return (
@@ -105,6 +109,26 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <Bilingual name="signUpText" label="Text" en={getText(s.signUpText, "en")} no={getText(s.signUpText, "no")} multiline rows={3} />
             <Bilingual name="signUpButton" label="Button label" en={getText(s.signUpButton, "en")} no={getText(s.signUpButton, "no")} />
             <ImageField name="signUpImage" label="Background photo" current={s.signUpImage} placeholder="/signup/signup-bg.jpg" />
+          </div>
+        </Card>
+        <Card>
+          <Subheading>Emails</Subheading>
+          <div className="h-px w-full bg-black/25" />
+          <Muted>{emailConfigured() ? `What customers see as the sender, and what you get told about. Sending as ${mail.fromAddress ?? "Resend's test sender"} right now.` : "Email isn't connected yet (see Setup). These settings apply once it is."}</Muted>
+          <div className="flex flex-col gap-[24px] md:flex-row">
+            <Labelled label="Sender name" hint="Shown as the sender in the customer's inbox." className="flex-1"><Input name="fromName" defaultValue={mail.fromName} /></Labelled>
+            <Labelled label="Sender address" hint={`Has to end with @${siteDomain()}. The mailbox doesn't need to exist.`} className="flex-1"><Input name="fromAddress" type="email" defaultValue={mail.fromAddress ?? ""} placeholder={`hello@${siteDomain()}`} /></Labelled>
+          </div>
+          <Labelled label="Replies go to" hint="When a customer replies to an order email, it lands here. Any address works."><Input name="replyTo" type="email" defaultValue={mail.replyTo ?? ""} /></Labelled>
+          <Labelled label="Your notifications go to" hint="One or more addresses, comma-separated. Leave empty to get none."><Input name="notifyTo" defaultValue={mail.notifyTo.join(", ")} placeholder="ida@example.com" /></Labelled>
+          <div className="flex flex-col gap-[12px]">
+            <span className="font-gotham text-[11px] leading-normal text-black">Email me about</span>
+            {NOTIFY_SCENARIOS.map((sc) => (
+              <div key={sc.key} className="flex flex-col gap-[2px]">
+                <Checkbox name="notifyOn" value={sc.key} label={sc.label} defaultChecked={mail.notifyOn.includes(sc.key)} />
+                <span className="pl-[22px] font-gotham text-[11px] leading-normal text-black/50">{sc.hint}</span>
+              </div>
+            ))}
           </div>
         </Card>
         <Card>

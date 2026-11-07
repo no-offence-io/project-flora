@@ -1,6 +1,8 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { getWriteClient } from "@/sanity/lib/write";
+import { getEmailSettings, notifyAddresses } from "./email-settings";
+import type { NotifyScenario } from "./email-shared";
 
 /*
  * The owner's notification centre. Anything that goes wrong without a person watching — a failed
@@ -23,18 +25,35 @@ export async function notice(input: { kind: NoticeKind; title: string; detail?: 
       return;
     }
     await client.createOrReplace({ _id: id, _type: "notification", kind: input.kind, title: input.title, detail: input.detail ?? "", source: input.source, href: input.href ?? null, createdAt: now });
-    if (input.kind === "error" && process.env.EMAIL_NOTIFY && process.env.RESEND_API_KEY) {
+    // On Ida's phone, if she installed the dashboard app: orders, and anything that went wrong.
+    if (input.source === "orders" || input.kind === "error") {
+      const { sendPush } = await import("./push");
+      await sendPush({ title: input.title, body: input.detail?.slice(0, 160), url: input.href ?? "/admin/notifications" });
+    }
+    // By email, to the addresses and for the scenarios chosen under Settings & brand → Emails.
+    const scenario = scenarioOf(input);
+    const to = scenario && process.env.RESEND_API_KEY ? notifyAddresses(await getEmailSettings(), scenario) : [];
+    if (to.length) {
       const { sendMail } = await import("./notify");
       const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.prosjectflora.com").replace(/\/$/, "");
       await sendMail({
-        to: [process.env.EMAIL_NOTIFY],
-        subject: `Flöra needs attention: ${input.title}`,
+        to,
+        subject: scenario === "problems" ? `Flöra needs attention: ${input.title}` : `Flöra: ${input.title}`,
         html: `<p style="font-family:Helvetica,Arial,sans-serif;font-size:13px;color:#000;">${input.title}</p><p style="font-family:Helvetica,Arial,sans-serif;font-size:13px;color:#555;">${(input.detail ?? "").replace(/</g, "&lt;")}</p><p style="font-family:Helvetica,Arial,sans-serif;font-size:13px;"><a href="${base}/admin/notifications">Open notifications</a></p>`,
       }).catch(() => undefined);
     }
   } catch (err) {
     console.error("[notices] could not record a notification", err, input);
   }
+}
+
+/** Which of Ida's email choices a notice falls under; null for the ones she sees in the dashboard only. */
+function scenarioOf(n: { kind: NoticeKind; source: string; dedupeKey?: string }): NotifyScenario | null {
+  if (n.kind === "error") return "problems";
+  if (n.source === "payments") return "payments";
+  if (n.source === "orders" && n.dedupeKey?.startsWith("refund:")) return "refunds";
+  if (n.source === "newsletter") return "newsletters";
+  return null;
 }
 
 export type HealthCheck = { kind: NoticeKind; title: string; detail: string; href?: string };

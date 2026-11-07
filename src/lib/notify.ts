@@ -1,4 +1,5 @@
 import "server-only";
+import { fromHeader, getEmailSettings, notifyAddresses } from "./email-settings";
 import type { RecordedLine, RecordedOrder } from "./record-order";
 import { formatNok } from "./money";
 import type { Block as NewsletterBlock, L as NewsletterText } from "./newsletter-blocks";
@@ -11,13 +12,12 @@ const INSTAGRAM_URL = "https://www.instagram.com/prosject.flora";
  * reachable from the browser — the key would be, too.
  *
  *   RESEND_API_KEY   from resend.com → API Keys
- *   EMAIL_FROM       e.g. "Flöra <hello@prosjectflora.com>" — the domain must be verified in Resend
- *                    (Domains → Add → the DNS records go in at one.com). Until then Resend only
- *                    delivers to the account owner's own address, from onboarding@resend.dev.
- *   EMAIL_NOTIFY     optional: Ida's address, gets a copy of every order and sign-up
+ *   The sender, where replies go and who is told about orders come from Settings & brand → Emails
+ *   (see email-settings.ts). The sender's domain must be verified in Resend (Domains → Add → the
+ *   DNS records go in at one.com); until then Resend only delivers to the account owner's own
+ *   address, from onboarding@resend.dev.
  */
 export const emailConfigured = () => Boolean(process.env.RESEND_API_KEY);
-const from = () => process.env.EMAIL_FROM || "Flöra <onboarding@resend.dev>";
 const siteUrl = () => (process.env.NEXT_PUBLIC_SITE_URL || "https://www.prosjectflora.com").replace(/\/$/, "");
 
 type Lang = "en" | "no";
@@ -161,10 +161,12 @@ export async function sendMail(mail: Mail): Promise<boolean> {
     console.info(`[email] not configured — would send "${mail.subject}" to ${mail.to.join(", ")}`);
     return false;
   }
+  const settings = await getEmailSettings();
+  const replyTo = mail.replyTo ?? settings.replyTo;
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: from(), to: mail.to, subject: mail.subject, html: mail.html, ...(mail.replyTo ? { reply_to: mail.replyTo } : {}) }),
+    body: JSON.stringify({ from: fromHeader(settings), to: mail.to, subject: mail.subject, html: mail.html, ...(replyTo ? { reply_to: replyTo } : {}) }),
   });
   if (!res.ok) throw new Error(`Resend ${res.status}: ${(await res.text()).slice(0, 300)}`);
   return true;
@@ -192,9 +194,9 @@ export async function sendOrderConfirmation(order: Pick<RecordedOrder, "orderNum
       p(t.questions),
     SANS,
   );
-  const notify = process.env.EMAIL_NOTIFY;
-  const sent = await sendMail({ to: [order.customer.email], subject: t.confirmSubject(order.orderNumber), html, replyTo: notify || undefined });
-  if (sent && notify) await sendMail({ to: [notify], subject: `New order ${order.orderNumber} · ${formatNok(o.totalOre)}`, html }).catch((err) => console.error("[email] owner copy failed", err));
+  const sent = await sendMail({ to: [order.customer.email], subject: t.confirmSubject(order.orderNumber), html });
+  const owners = notifyAddresses(await getEmailSettings(), "orders");
+  if (sent && owners.length) await sendMail({ to: owners, subject: `New order ${order.orderNumber} · ${formatNok(o.totalOre)}`, html }).catch((err) => console.error("[email] owner copy failed", err));
   return sent;
 }
 
@@ -209,7 +211,7 @@ export async function sendShippingNotification(order: { orderNumber: string; ema
       rule +
       p(t.questions),
   );
-  return sendMail({ to: [order.email], subject: t.shippedSubject(order.orderNumber), html, replyTo: process.env.EMAIL_NOTIFY || undefined });
+  return sendMail({ to: [order.email], subject: t.shippedSubject(order.orderNumber), html });
 }
 
 export async function sendNewsletterWelcome(email: string, language: Lang): Promise<boolean> {

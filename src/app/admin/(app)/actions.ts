@@ -9,6 +9,8 @@ import { requireAdmin } from "@/lib/admin/session";
 import { readImageField, readVideoField, uploadImage, uploadVideo } from "@/lib/admin/media";
 import { FONT_CHOICES } from "@/lib/brand-shared";
 import { ORDER_STATUSES } from "@/lib/order-status";
+import { siteDomain } from "@/lib/email-settings";
+import { isEmail, SCENARIO_KEYS, type NotifyScenario } from "@/lib/email-shared";
 
 /*
  * Every action starts with requireAdmin(). Server actions are reachable by anyone who can POST to
@@ -203,6 +205,23 @@ export async function saveSettings(formData: FormData) {
   const freeFrom = kronerToOre(formData.get("freeShippingFrom"));
   const [signUpImage, footerImage] = await Promise.all([readImageField(formData, "signUpImage"), readImageField(formData, "footerImage")]);
 
+  // Emails: the sender must be at the verified domain, or Resend refuses every mail the shop sends.
+  const field = (k: string) => String(formData.get(k) ?? "").trim();
+  const fail = (msg: string) => redirect("/admin/settings?error=" + encodeURIComponent(msg));
+  const fromAddress = field("fromAddress").toLowerCase();
+  if (fromAddress && (!isEmail(fromAddress) || !fromAddress.endsWith(`@${siteDomain()}`))) fail(`The sender address has to end with @${siteDomain()}, the domain verified for sending. Nothing was saved.`);
+  const replyTo = field("replyTo").toLowerCase();
+  if (replyTo && !isEmail(replyTo)) fail("The reply-to address doesn't look like an email address. Nothing was saved.");
+  const notifyTo = field("notifyTo").split(/[,\s]+/).map((x) => x.toLowerCase()).filter(Boolean);
+  if (notifyTo.some((x) => !isEmail(x))) fail("One of the notification addresses doesn't look like an email address. Nothing was saved.");
+  const email = {
+    fromName: field("fromName") || null,
+    fromAddress: fromAddress || null,
+    replyTo: replyTo || null,
+    notifyTo: notifyTo.join(", ") || null,
+    notifyOn: formData.getAll("notifyOn").map(String).filter((k): k is NotifyScenario => SCENARIO_KEYS.includes(k as NotifyScenario)),
+  };
+
   const measurementFields: Record<string, unknown>[] = [];
   for (let i = 0; i < (Number(formData.get("measureCount")) || 0); i++) {
     if (formData.get(`measureRemove_${i}`) === "on") continue;
@@ -267,6 +286,7 @@ export async function saveSettings(formData: FormData) {
           footerText: readLocalizedString(formData, "footerText", "text"),
           instagram: String(formData.get("instagram") ?? "").trim() || null,
           contactEmail: String(formData.get("contactEmail") ?? "").trim() || null,
+          email,
           shippingOre: shippingOre ?? 0,
           freeShippingFromOre: freeFrom ?? null,
           signUpImage,
