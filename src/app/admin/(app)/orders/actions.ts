@@ -126,7 +126,8 @@ export async function resendConfirmation(formData: FormData) {
     `*[_id == $id][0]{ orderNumber, language, demo, customer, subtotalOre, shippingOre, discountOre, discountCode, vatIncludedOre, totalOre, items[]{ name, quantity, unitPriceOre, size, measurements, "image": product->images[0].asset->url } }`,
     { id },
   );
-  const back = (q: string): never => redirect(`/admin/orders/${id}?${q}`);
+  // Declared with an explicit type, so the checker knows nothing runs after a call to it.
+  const back: (q: string) => never = (q) => redirect(`/admin/orders/${id}?${q}`);
   if (!o || !o.orderNumber) back("error=" + encodeURIComponent("Order not found."));
   if (o.demo) back("error=" + encodeURIComponent("Test-mode orders have no real customer to email."));
   if (!o.customer?.email) back("error=" + encodeURIComponent("This order has no email address."));
