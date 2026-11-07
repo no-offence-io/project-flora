@@ -204,11 +204,12 @@ export function configureTreasureRenderer(
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = dark ? 1.05 : 1.25;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.setClearColor(new THREE.Color(dark ? 0x141414 : 0xffffff), 1);
+  renderer.setClearColor(new THREE.Color(dark ? 0x000000 : 0xffffff), 1);
 }
 
+/** The page colour behind the canvas: white, or the shop's dark mode (inverted white, so pure black). */
 export const TREASURE_BACKGROUND = (dark: boolean) =>
-  dark ? "#141414" : "#ffffff";
+  dark ? "#000000" : "#ffffff";
 
 export function createTreasureScene(
   renderer: THREE.WebGLRenderer,

@@ -9,7 +9,7 @@ import { isSoldOut, type Product } from "@/lib/catalog-types";
  * following the pointer when grabbed, with the piece's name and price under it. `dark` lights it on a
  * near-black screen instead of white.
  */
-export default function VintageHero({ product, labels, card, dark = false, children }: { product: Product; labels: { oneOfAKind: string; soldOut: string }; card: VintageCardSetting; dark?: boolean; children?: React.ReactNode }) {
+export default function VintageHero({ product, labels, card, dark, children }: { product: Product; labels: { oneOfAKind: string; soldOut: string }; card: VintageCardSetting; dark?: boolean; children?: React.ReactNode }) {
   const photo = product.images[0];
   const muted = dark ? "text-white/50" : "text-black/50";
   return (

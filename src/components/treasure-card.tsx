@@ -5,6 +5,12 @@ import * as THREE from "three";
 import { EXTEND, configureTreasureRenderer, createTreasureScene } from "./treasure-scene";
 import { DEFAULT_VINTAGE_CARD, type VintageCardSetting } from "@/lib/vintage-card-shared";
 
+/** The shop's dark mode: pinned with `theme-dark`, or `theme-auto` on a device set to dark. */
+function readThemeDark(): boolean {
+  const html = document.documentElement;
+  return html.classList.contains("theme-dark") || (html.classList.contains("theme-auto") && window.matchMedia("(prefers-color-scheme: dark)").matches);
+}
+
 /*
  * The treasure card on the page (the scene itself is in treasure-scene.ts). Left alone it turns
  * slowly, forever, and bobs; grab it (mouse or finger) and it turns with you, keeps a little
@@ -12,9 +18,27 @@ import { DEFAULT_VINTAGE_CARD, type VintageCardSetting } from "@/lib/vintage-car
  * or for people who prefer reduced motion, the plain photo is shown instead (still draggable
  * without motion in the latter case — the card simply doesn't move on its own).
  */
-export default function TreasureCard({ src, alt, dark = false, setting = DEFAULT_VINTAGE_CARD, className = "" }: { src: string; alt: string; dark?: boolean; setting?: VintageCardSetting; className?: string }) {
+export default function TreasureCard({ src, alt, dark: darkProp, setting = DEFAULT_VINTAGE_CARD, className = "" }: { src: string; alt: string; dark?: boolean; setting?: VintageCardSetting; className?: string }) {
   const host = useRef<HTMLDivElement>(null);
   const [fallback, setFallback] = useState(false);
+  // Left unset, dark follows the shop's theme: the dark mode inverts the page with a filter but
+  // leaves this canvas alone (like photos), so the scene lights itself for a black page instead.
+  const [themeDark, setThemeDark] = useState(() => (typeof window === "undefined" ? false : readThemeDark()));
+  useEffect(() => {
+    if (darkProp !== undefined) return;
+    const html = document.documentElement;
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
+    const read = () => setThemeDark(readThemeDark());
+    read();
+    const observer = new MutationObserver(read);
+    observer.observe(html, { attributes: true, attributeFilter: ["class"] });
+    mql.addEventListener("change", read);
+    return () => {
+      observer.disconnect();
+      mql.removeEventListener("change", read);
+    };
+  }, [darkProp]);
+  const dark = darkProp ?? themeDark;
   const { variant, sheetBack, depth, markColor } = setting;
   const glass = variant === "glass";
   // Depth, the print's back and the mark's colour change live, without rebuilding the scene; the

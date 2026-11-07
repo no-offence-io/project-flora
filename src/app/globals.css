@@ -726,7 +726,7 @@ html.theme-dark:not(:has(.coming-soon-gate)) .shop-fixed > * {
 html.theme-dark:not(:has(.coming-soon-gate)) .shop-fixed {
   background-color: #000000;
 }
-html.theme-dark:not(:has(.coming-soon-gate)) :is(.shop-content, .shop-fixed > *) :is(img, video, iframe, [style*="background-color"]):not(:where([data-keep-colors] *)) {
+html.theme-dark:not(:has(.coming-soon-gate)) :is(.shop-content, .shop-fixed > *) :is(img, video, iframe, canvas, [style*="background-color"]):not(:where([data-keep-colors] *)) {
   filter: invert(1) hue-rotate(180deg);
 }
 @media (prefers-color-scheme: dark) {
@@ -743,7 +743,7 @@ html.theme-dark:not(:has(.coming-soon-gate)) :is(.shop-content, .shop-fixed > *)
   html.theme-auto:not(:has(.coming-soon-gate)) .shop-fixed {
     background-color: #000000;
   }
-  html.theme-auto:not(:has(.coming-soon-gate)) :is(.shop-content, .shop-fixed > *) :is(img, video, iframe, [style*="background-color"]):not(:where([data-keep-colors] *)) {
+  html.theme-auto:not(:has(.coming-soon-gate)) :is(.shop-content, .shop-fixed > *) :is(img, video, iframe, canvas, [style*="background-color"]):not(:where([data-keep-colors] *)) {
     filter: invert(1) hue-rotate(180deg);
   }
 }
@@ -836,10 +836,10 @@ html:has(.admin-night) .admin-night-sheet :is(img, video, iframe) {
  * inside it is touched again, so nested inline backgrounds don't flip back.
  */
 .admin-night .admin-true-colors { filter: invert(1) hue-rotate(180deg); }
-.admin-night .admin-true-colors :is(img, video, iframe, [style*="background-color"]) { filter: none; }
+.admin-night .admin-true-colors :is(img, video, iframe, canvas, [style*="background-color"]) { filter: none; }
 @media (prefers-color-scheme: dark) {
   .admin-night-auto .admin-true-colors { filter: invert(1) hue-rotate(180deg); }
-  .admin-night-auto .admin-true-colors :is(img, video, iframe, [style*="background-color"]) { filter: none; }
+  .admin-night-auto .admin-true-colors :is(img, video, iframe, canvas, [style*="background-color"]) { filter: none; }
 }
 
 

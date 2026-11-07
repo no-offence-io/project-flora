@@ -26,7 +26,7 @@ export default async function VintageHeroLab({ searchParams }: { searchParams: P
 
   return (
     <div className="flex flex-col pb-[60px] md:pb-[120px]">
-      <div className={`full-bleed ${dark ? "bg-[#141414]" : "bg-white"}`}>
+      <div className={`full-bleed ${dark ? "bg-black" : "bg-white"}`}>
         <div className="mx-auto flex w-full max-w-[1600px] flex-col">
           <Navbar tone={dark ? "light" : "dark"} />
           <VintageHero product={product} dark={dark} card={card} labels={{ oneOfAKind: t("vintage.oneOfAKind"), soldOut: t("product.soldOut") }}>
