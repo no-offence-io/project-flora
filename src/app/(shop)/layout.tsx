@@ -16,6 +16,7 @@ import { parseTheme, THEME_COOKIE } from "@/lib/theme-shared";
 import { I18nProvider } from "@/components/i18n-provider";
 import VisitTracker from "@/components/visit-tracker";
 import AnalyticsConsent from "@/components/analytics-consent";
+import SmoothScroll from "@/components/smooth-scroll";
 
 /**
  * The shop's chrome: cart, menu, sticky navbar, footer and the intro animation. Everything a
@@ -41,6 +42,7 @@ export default async function ShopLayout({ children }: { children: ReactNode }) 
           <PageTransition setting={transition} logoSrc={logo} />
           <CartPill />
           <VisitTracker />
+          <SmoothScroll />
           <AnalyticsConsent measurementId={analyticsId} />
         </NavMenuProvider>
       </CartProvider>
