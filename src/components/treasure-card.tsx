@@ -42,25 +42,6 @@ function brandBackTexture(): THREE.CanvasTexture {
   return t;
 }
 
-function contactShadowTexture(): THREE.CanvasTexture {
-  const c = document.createElement("canvas");
-  c.width = 512;
-  c.height = 256;
-  const g = c.getContext("2d")!;
-  const grad = g.createRadialGradient(256, 128, 0, 256, 128, 256);
-  grad.addColorStop(0, "rgba(0,0,0,0.9)");
-  grad.addColorStop(0.5, "rgba(0,0,0,0.35)");
-  grad.addColorStop(1, "rgba(0,0,0,0)");
-  g.fillStyle = grad;
-  g.save();
-  g.scale(1, 0.5);
-  g.beginPath();
-  g.arc(256, 256, 256, 0, Math.PI * 2);
-  g.fill();
-  g.restore();
-  return new THREE.CanvasTexture(c);
-}
-
 export default function TreasureCard({ src, alt, dark = false, className = "" }: { src: string; alt: string; dark?: boolean; className?: string }) {
   const host = useRef<HTMLDivElement>(null);
   const [fallback, setFallback] = useState(false);
@@ -151,18 +132,13 @@ export default function TreasureCard({ src, alt, dark = false, className = "" }:
       },
     );
 
-    // The floor, only there to catch the card's shadow, plus a soft pool of contact shadow right
-    // under the card so it reads as standing on something even when the cast shadow swings away.
+    // The floor, invisible except where the card's shadow falls on it.
     const floorY = -CARD_H / 2 - 0.5;
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.ShadowMaterial({ opacity: dark ? 0.5 : 0.16 }));
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = floorY;
     floor.receiveShadow = true;
     scene.add(floor);
-    const pool = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 1.6), new THREE.MeshBasicMaterial({ map: contactShadowTexture(), transparent: true, depthWrite: false, opacity: dark ? 0.7 : 0.4 }));
-    pool.rotation.x = -Math.PI / 2;
-    pool.position.y = floorY + 0.01;
-    scene.add(pool);
 
     // Motion: a gentle sway and bob when idle; the pointer takes over while dragging.
     let dragging = false;
@@ -257,9 +233,6 @@ export default function TreasureCard({ src, alt, dark = false, className = "" }:
       }
       card.rotation.set(pitch, yaw, 0);
       card.position.y = reduced ? 0 : Math.sin(swayPhase * 1.6) * 0.12;
-      const lift = (card.position.y + 0.12) / 0.24; // 0 low … 1 high
-      pool.scale.setScalar(1 - lift * 0.12);
-      (pool.material as THREE.MeshBasicMaterial).opacity = (dark ? 0.7 : 0.4) * (1 - lift * 0.25);
       renderer.render(scene, camera);
     };
     frame = requestAnimationFrame(tick);
@@ -278,9 +251,6 @@ export default function TreasureCard({ src, alt, dark = false, className = "" }:
       }
       floor.geometry.dispose();
       (floor.material as THREE.Material).dispose();
-      pool.geometry.dispose();
-      (pool.material as THREE.MeshBasicMaterial).map?.dispose();
-      (pool.material as THREE.Material).dispose();
       renderer.dispose();
       renderer.domElement.remove();
     };
