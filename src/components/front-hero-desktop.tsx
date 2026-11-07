@@ -9,7 +9,6 @@ import { getLogoSrc } from "@/lib/brand";
 
 const NAV_LINKS = [
   { key: "nav.shop", href: "/shop" },
-  { key: "nav.vintage", href: "/vintage" },
   { key: "nav.values", href: "/values" },
   { key: "nav.about", href: "/about" },
 ] as const;
