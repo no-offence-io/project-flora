@@ -1,5 +1,4 @@
 import "server-only";
-import { fromHeader, getEmailSettings, notifyAddresses } from "./email-settings";
 import type { RecordedLine, RecordedOrder } from "./record-order";
 import { formatNok } from "./money";
 import type { Block as NewsletterBlock, L as NewsletterText } from "./newsletter-blocks";
@@ -161,6 +160,8 @@ export async function sendMail(mail: Mail): Promise<boolean> {
     console.info(`[email] not configured — would send "${mail.subject}" to ${mail.to.join(", ")}`);
     return false;
   }
+  // Loaded here, not at the top: the renderers in this file are pure and tested without a database.
+  const { fromHeader, getEmailSettings } = await import("./email-settings");
   const settings = await getEmailSettings();
   const replyTo = mail.replyTo ?? settings.replyTo;
   const res = await fetch("https://api.resend.com/emails", {
@@ -195,6 +196,7 @@ export async function sendOrderConfirmation(order: Pick<RecordedOrder, "orderNum
     SANS,
   );
   const sent = await sendMail({ to: [order.customer.email], subject: t.confirmSubject(order.orderNumber), html });
+  const { getEmailSettings, notifyAddresses } = await import("./email-settings");
   const owners = notifyAddresses(await getEmailSettings(), "orders");
   if (sent && owners.length) await sendMail({ to: owners, subject: `New order ${order.orderNumber} · ${formatNok(o.totalOre)}`, html }).catch((err) => console.error("[email] owner copy failed", err));
   return sent;
