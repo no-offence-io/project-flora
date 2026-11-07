@@ -17,7 +17,7 @@ export default function VintageHero({ product, labels, dark = false, children }:
         {photo && <TreasureCard src={photo.src} alt={photo.alt} dark={dark} />}
       </div>
 
-      <div className="flex flex-col items-center gap-[12px] text-center">
+      <div className="relative z-10 flex flex-col items-center gap-[12px] text-center">
         <p className={`m-0 font-gotham text-[11px] leading-normal tracking-[0.2em] uppercase ${muted}`}>{labels.oneOfAKind}</p>
         <h1 className="m-0 font-americana text-big-header-mobile uppercase tracking-[0.04em] md:text-big-header-desktop">{product.name}</h1>
         <p className={`m-0 flex items-center gap-[12px] font-gotham text-paragraph ${dark ? "text-white/70" : "text-black/70"}`}>
