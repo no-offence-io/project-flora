@@ -26,12 +26,15 @@ export default function ProductCard({
   product,
   className = "",
   wellClassName = "",
+  wellBackground = "bg-[#f7f7f7]",
   imageSizes = "(min-width: 768px) 33vw, 50vw",
   allowImageScroll = true,
 }: {
   product: SlideshowProduct;
   className?: string;
   wellClassName?: string;
+  /** The colour behind the photo: the shop's pale grey, or near-black for vintage pieces. */
+  wellBackground?: string;
   imageSizes?: string;
   /**
    * Set false to show only the default photo with no scroll strip. Used inside a horizontally
@@ -74,7 +77,7 @@ export default function ProductCard({
               {slides.map((image, i) => (
                 <div
                   key={`${image.src}-${i}`}
-                  className="flex h-full w-full shrink-0 snap-start items-center justify-center bg-[#f7f7f7] px-[24px] py-[42px]"
+                  className={`flex h-full w-full shrink-0 snap-start items-center justify-center ${wellBackground} px-[24px] py-[42px]`}
                 >
                   <div className="relative h-full w-full">
                     <Image src={image.src} alt={image.alt} fill sizes={imageSizes} className="object-contain" />
@@ -85,7 +88,7 @@ export default function ProductCard({
           ) : (
             // No scroll container at all — inside a slideshow row, a wheel/touch gesture here must
             // reach that row's own scroller untouched, not be captured or contained by this card.
-            <div className="flex h-full w-full items-center justify-center bg-[#f7f7f7] px-[24px] py-[42px]">
+            <div className={`flex h-full w-full items-center justify-center ${wellBackground} px-[24px] py-[42px]`}>
               <div className="relative h-full w-full">
                 <Image src={product.image.src} alt={product.image.alt} fill sizes={imageSizes} className="object-contain" />
               </div>
@@ -101,7 +104,7 @@ export default function ProductCard({
             <div
               key={color.hex}
               aria-hidden
-              className="pointer-events-none absolute inset-0 flex items-center justify-center bg-[#f7f7f7] px-[24px] py-[42px] transition-opacity duration-300"
+              className={`pointer-events-none absolute inset-0 flex items-center justify-center ${wellBackground} px-[24px] py-[42px] transition-opacity duration-300`}
               style={{ opacity: activeColor === i ? 1 : 0 }}
             >
               <div className="relative h-full w-full">
