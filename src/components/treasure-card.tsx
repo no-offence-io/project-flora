@@ -6,7 +6,7 @@ import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeom
 
 /*
  * A real 3D card, drawn with three.js: the photo on the front, the brand on the back, paper-coloured
- * edges with rounded corners, lit from the upper left with a soft cast shadow on the floor. Left
+ * edges with rounded corners, lit from the upper left, over a soft pool of shadow. Left
  * alone it sways gently and bobs; grab it (mouse or finger) and it turns with you, keeps a little
  * momentum when let go, then settles back into its sway. On a device without WebGL, or for people
  * who prefer reduced motion, the plain photo is shown instead (still draggable without motion in the
@@ -78,8 +78,6 @@ export default function TreasureCard({ src, alt, dark = false, className = "" }:
     }
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.VSMShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = dark ? 1.05 : 1.25;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -97,15 +95,6 @@ export default function TreasureCard({ src, alt, dark = false, className = "" }:
     scene.add(new THREE.AmbientLight(0xffffff, dark ? 0.55 : 1.3));
     const key = new THREE.DirectionalLight(0xffffff, dark ? 2.2 : 1.6);
     key.position.set(-2.5, 12, 4);
-    key.castShadow = true;
-    key.shadow.mapSize.set(2048, 2048);
-    key.shadow.camera.near = 1;
-    key.shadow.camera.far = 30;
-    key.shadow.camera.left = key.shadow.camera.bottom = -6;
-    key.shadow.camera.right = key.shadow.camera.top = 6;
-    key.shadow.radius = 24;
-    key.shadow.blurSamples = 25;
-    key.shadow.bias = -0.0005;
     scene.add(key);
     const fill = new THREE.DirectionalLight(0xdfe8ff, 0.5);
     fill.position.set(5, 1, 4);
@@ -120,8 +109,6 @@ export default function TreasureCard({ src, alt, dark = false, className = "" }:
     const back = new THREE.MeshStandardMaterial({ map: brandBackTexture(), roughness: 0.7, metalness: 0.05 });
     const geometry = new RoundedBoxGeometry(CARD_W, CARD_H, CARD_D, 6, RADIUS);
     const card = new THREE.Mesh(geometry, [edge, edge, edge, edge, front, back]);
-    card.castShadow = true;
-    card.receiveShadow = false;
     scene.add(card);
 
     // The photo, fitted to cover the front once it has loaded (the card is drawn white meanwhile).
@@ -151,14 +138,8 @@ export default function TreasureCard({ src, alt, dark = false, className = "" }:
       },
     );
 
-    // The floor, only there to catch the card's shadow, plus a soft pool of contact shadow right
-    // under the card so it reads as standing on something even when the cast shadow swings away.
+    // A soft pool of shadow under the card, so it reads as hanging just above a floor.
     const floorY = -CARD_H / 2 - 0.5;
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.ShadowMaterial({ opacity: dark ? 0.5 : 0.16 }));
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.y = floorY;
-    floor.receiveShadow = true;
-    scene.add(floor);
     const pool = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 1.6), new THREE.MeshBasicMaterial({ map: contactShadowTexture(), transparent: true, depthWrite: false, opacity: dark ? 0.7 : 0.4 }));
     pool.rotation.x = -Math.PI / 2;
     pool.position.y = floorY + 0.01;
@@ -276,8 +257,6 @@ export default function TreasureCard({ src, alt, dark = false, className = "" }:
         m.map?.dispose();
         m.dispose();
       }
-      floor.geometry.dispose();
-      (floor.material as THREE.Material).dispose();
       pool.geometry.dispose();
       (pool.material as THREE.MeshBasicMaterial).map?.dispose();
       (pool.material as THREE.Material).dispose();
