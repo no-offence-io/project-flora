@@ -24,10 +24,10 @@ export default async function VintageSection({ products, page }: { products: Pro
             {t("vintage.seeAll")}
           </Link>
         </header>
-        <div className="grid grid-cols-2 gap-[24px] md:grid-cols-3 md:gap-[42px]">
+        <div className="grid grid-cols-2 gap-[24px] md:grid-cols-4 md:gap-[42px]">
           {products.map((product) => (
             <div key={product.slug} className="flex flex-col gap-[12px]">
-              <ProductCard product={toSlideshowProduct(product)} wellClassName="h-[238px] md:h-[258px]" wellBackground="bg-[#1a1a1a]" imageSizes="(min-width: 768px) 30vw, 50vw" />
+              <ProductCard product={toSlideshowProduct(product)} wellClassName="h-[238px] md:h-[258px]" wellBackground="bg-[#1a1a1a]" imageSizes="(min-width: 768px) 25vw, 50vw" />
               <p className="m-0 font-gotham text-[11px] leading-normal tracking-[0.2em] uppercase text-black/50">{t("vintage.oneOfAKind")}</p>
             </div>
           ))}
