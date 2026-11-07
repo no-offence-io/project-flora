@@ -4,8 +4,8 @@ import { isSoldOut, type Product } from "@/lib/catalog-types";
 
 /**
  * The top of a vintage product page: the piece as a real 3D card (see treasure-card.tsx) hanging
- * in the middle of a full-height screen, swaying slowly like a found treasure in a game and
- * turning when grabbed, with the piece's name and price under it. `dark` lights it on a
+ * in the middle of a full-height screen, turning slowly like a found treasure in a game and
+ * following the pointer when grabbed, with the piece's name and price under it. `dark` lights it on a
  * near-black screen instead of white.
  */
 export default function VintageHero({ product, labels, dark = false, children }: { product: Product; labels: { oneOfAKind: string; soldOut: string }; dark?: boolean; children?: React.ReactNode }) {

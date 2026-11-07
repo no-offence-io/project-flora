@@ -7,8 +7,8 @@ import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeom
 /*
  * A real 3D card, drawn with three.js: the photo on the front, the brand on the back, paper-coloured
  * edges with rounded corners, lit from the upper left with a soft cast shadow on the floor. Left
- * alone it sways gently and bobs; grab it (mouse or finger) and it turns with you, keeps a little
- * momentum when let go, then settles back into its sway. On a device without WebGL, or for people
+ * alone it turns slowly, forever, and bobs; grab it (mouse or finger) and it turns with you, keeps
+ * a little momentum when let go, then the slow turn picks up again from there. On a device without WebGL, or for people
  * who prefer reduced motion, the plain photo is shown instead (still draggable without motion in the
  * latter case — the card simply doesn't move on its own).
  */
@@ -140,7 +140,8 @@ export default function TreasureCard({ src, alt, dark = false, className = "" }:
     floor.receiveShadow = true;
     scene.add(floor);
 
-    // Motion: a gentle sway and bob when idle; the pointer takes over while dragging.
+    // Motion: a slow, endless turn and a gentle bob when idle; the pointer takes over while
+    // dragging, and after a drag the turn resumes from wherever the card was left.
     let dragging = false;
     let lastX = 0;
     let lastY = 0;
@@ -150,8 +151,8 @@ export default function TreasureCard({ src, alt, dark = false, className = "" }:
     let yaw = 0;
     let pitch = 0.08;
     let idleSince = 0;
-    let swayPhase = 0;
-    const SWAY = 0.6;
+    let bobPhase = 0;
+    const TURN = 0.35; // radians per second: one full turn in about 18 seconds
 
     const onDown = (e: PointerEvent) => {
       dragging = true;
@@ -214,25 +215,20 @@ export default function TreasureCard({ src, alt, dark = false, className = "" }:
       const dt = Math.min(0.05, (now - prev) / 1000);
       prev = now;
       if (!dragging) {
-        // Momentum, then a soft return to the sway.
+        // Momentum from the drag fades out while the slow turn fades back in, so there is no jolt.
         yaw += velY * dt * 1000;
         pitch += velX * dt * 1000;
         velY *= Math.pow(0.02, dt);
         velX *= Math.pow(0.02, dt);
-        const settled = now - idleSince > 900;
-        if (!reduced) swayPhase += dt * 0.62;
-        const targetYaw = reduced ? 0 : Math.sin(swayPhase) * SWAY;
-        const targetPitch = reduced ? 0.08 : 0.08 - Math.sin(swayPhase) * 0.05;
-        if (settled) {
-          // Ease towards the sway along the shortest way round, so a card spun several times doesn't unwind.
-          const twoPi = Math.PI * 2;
-          const diff = ((targetYaw - yaw + Math.PI) % twoPi + twoPi) % twoPi - Math.PI;
-          yaw += diff * Math.min(1, dt * 1.8);
-          pitch += (targetPitch - pitch) * Math.min(1, dt * 1.8);
+        const resume = Math.min(1, Math.max(0, (now - idleSince - 300) / 1200));
+        if (!reduced) {
+          yaw += TURN * resume * dt;
+          bobPhase += dt;
+          pitch += (0.08 - pitch) * Math.min(1, dt * 1.5);
         }
       }
       card.rotation.set(pitch, yaw, 0);
-      card.position.y = reduced ? 0 : Math.sin(swayPhase * 1.6) * 0.12;
+      card.position.y = reduced ? 0 : Math.sin(bobPhase * 1.0) * 0.12;
       renderer.render(scene, camera);
     };
     frame = requestAnimationFrame(tick);
