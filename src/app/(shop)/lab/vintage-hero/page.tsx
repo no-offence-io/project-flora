@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import Navbar from "@/components/navbar";
 import VintageHero from "@/components/vintage-hero";
+import InstagramExport from "@/components/admin/instagram-export";
 import { getVintageCard, getVintageProducts } from "@/lib/catalog";
 import { getT } from "@/lib/i18n-server";
 import type { VintageCardSetting } from "@/lib/vintage-card-shared";
@@ -35,6 +36,11 @@ export default async function VintageHeroLab({ searchParams }: { searchParams: P
           </VintageHero>
         </div>
       </div>
+      {process.env.NODE_ENV === "development" && (
+        <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-[24px] px-[24px] pt-[60px] md:px-[42px]">
+          <InstagramExport pieces={products.flatMap((p) => (p.images[0] ? [{ slug: p.slug, name: { en: p.name, no: p.name }, priceOre: p.priceOre, src: p.images[0].src, alt: p.images[0].alt }] : []))} setting={card} oneOfAKind={{ en: "One of a kind", no: "Unikt plagg" }} />
+        </div>
+      )}
       <p className="mx-auto w-full max-w-[1600px] px-[24px] pt-[60px] font-gotham text-[11px] leading-normal tracking-[0.2em] uppercase text-black/50 md:px-[42px]">
         Test page · add ?bg=dark for the dark look · ?variant=glass or ?variant=card to force a look · ?slug= one of: {products.map((p) => p.slug).join(", ")}
       </p>

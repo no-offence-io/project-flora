@@ -44,7 +44,7 @@ export function Row({ children, href, className = "" }: { children: ReactNode; h
 }
 
 /** "Confirm order" button, verbatim. */
-export function Button({ children, type = "submit", className = "", ...rest }: { children: ReactNode; type?: "submit" | "button"; className?: string; name?: string; value?: string; formAction?: (formData: FormData) => void | Promise<void> }) {
+export function Button({ children, type = "submit", className = "", ...rest }: { children: ReactNode; type?: "submit" | "button"; className?: string; name?: string; value?: string; formAction?: (formData: FormData) => void | Promise<void>; onClick?: () => void; disabled?: boolean }) {
   return (
     <button
       type={type}
