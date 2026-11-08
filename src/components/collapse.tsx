@@ -6,10 +6,28 @@ const DURATION = 380;
 const EASING = "cubic-bezier(0.22, 1, 0.36, 1)";
 
 /**
- * Content that unfolds and folds away smoothly. The box's height is animated from its measured
- * content height (a plain height animation, which every engine has run smoothly for years) while
- * the content fades with it. Closed, it is also inert, so hidden fields and links can't be reached
- * from the keyboard. Visitors who prefer reduced motion get the change at once.
+ * Everything on the page that comes after the box: the rest of its row's list, the button under
+ * it, the sections below, the footer. Fixed elements are left out, and the walk stops at the page
+ * column, so nothing outside the page is moved.
+ */
+function following(box: HTMLElement): HTMLElement[] {
+  const out: HTMLElement[] = [];
+  for (let node: HTMLElement | null = box; node && node !== document.body && !node.classList.contains("shop-content"); node = node.parentElement) {
+    for (let sib = node.nextElementSibling; sib; sib = sib.nextElementSibling) {
+      if (sib instanceof HTMLElement && getComputedStyle(sib).position !== "fixed") out.push(sib);
+    }
+  }
+  return out;
+}
+
+/**
+ * Content that unfolds and folds away smoothly. The layout change itself happens at once; what
+ * moves is transforms only, which the compositor runs without laying the page out again: the
+ * content slides out from under the row's header while everything below the row is carried down
+ * by the same distance (and the reverse to close). A height animation re-laid-out and repainted
+ * the whole page beneath the row on every frame, which stuttered on phones. Closed, the box is
+ * inert, so hidden fields and links can't be reached from the keyboard. Visitors who prefer
+ * reduced motion get the change at once.
  */
 export default function Collapse({ open, children, className = "" }: { open: boolean; children: ReactNode; className?: string }) {
   const box = useRef<HTMLDivElement>(null);
@@ -20,13 +38,23 @@ export default function Collapse({ open, children, className = "" }: { open: boo
     const from = was.current;
     was.current = open;
     if (!el || from === open) return;
+    el.style.height = open ? "auto" : "0px";
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    // React has already set the final height (auto or 0); the animation overrides it on the way
-    // there and is dropped on arrival, leaving that final value in place.
     const full = el.scrollHeight;
-    const animation = el.animate([{ height: `${from ? full : 0}px` }, { height: `${open ? full : 0}px` }], { duration: DURATION, easing: EASING, fill: "forwards" });
-    animation.onfinish = () => animation.cancel();
-    return () => animation.cancel();
+    const inner = el.firstElementChild as HTMLElement | null;
+    if (!inner || full === 0) return;
+    // While closing the box keeps its full height, so the page below stays put in layout and is
+    // carried up by transform; the height drops to zero only once everything has arrived.
+    if (!open) el.style.height = `${full}px`;
+    const [start, end] = open ? [`translateY(${-full}px)`, "translateY(0)"] : ["translateY(0)", `translateY(${-full}px)`];
+    const options = { duration: DURATION, easing: EASING, fill: "forwards" as const };
+    const animations = [inner, ...following(el)].map((node) => node.animate([{ transform: start }, { transform: end }], options));
+    const finish = () => {
+      animations.forEach((a) => a.cancel());
+      if (!open) el.style.height = "0px";
+    };
+    animations[0].onfinish = finish;
+    return () => animations.forEach((a) => a.cancel());
   }, [open]);
 
   return (
