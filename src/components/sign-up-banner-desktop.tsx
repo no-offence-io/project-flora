@@ -40,7 +40,7 @@ export default async function SignUpBannerDesktop({
   return (
     <section
       data-keep-colors
-      className={`relative flex flex-col items-center justify-center overflow-hidden text-white ${
+      className={`relative flex flex-col items-center justify-center overflow-clip text-white ${
         isSmaller ? "mx-[42px] h-[673px] rounded-[24px]" : "h-[891px] w-full"
       } ${className}`}
     >

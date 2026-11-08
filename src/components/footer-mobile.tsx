@@ -13,7 +13,7 @@ export default async function FooterMobile({ parallax = true, className = "" }: 
   return (
     <footer
       data-keep-colors
-      className={`full-bleed relative flex h-svh flex-col items-center justify-end gap-[10px] overflow-hidden p-[24px] text-white ${className}`}
+      className={`full-bleed relative flex h-svh flex-col items-center justify-end gap-[10px] overflow-clip p-[24px] text-white ${className}`}
     >
       {/* Background: footer-bg-mobile.jpg is the part of the photo seen at the Figma crop, with the
           figure behind the wordmark. A pre-cut file, not the whole photo zoomed to 313% and clipped:

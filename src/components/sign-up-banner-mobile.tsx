@@ -34,7 +34,7 @@ export default async function SignUpBannerMobile({
   return (
     <section
       data-keep-colors
-      className={`relative mx-[24px] flex h-[607px] flex-col items-center justify-center gap-[24px] overflow-hidden rounded-[12px] bg-black p-[24px] text-white ${className}`}
+      className={`relative mx-[24px] flex h-[607px] flex-col items-center justify-center gap-[24px] overflow-clip rounded-[12px] bg-black p-[24px] text-white ${className}`}
     >
       {/* signup-bg-mobile.jpg is the mirrored part of the photo in the Figma crop, under a 41% black
           overlay. A pre-cut file, not the whole photo zoomed to 224% and clipped, which iPhone

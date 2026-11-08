@@ -26,7 +26,7 @@ export default async function Navbar({ tone = "dark", className = "" }: { tone?:
   const logoFilter = tone === "dark" ? "invert" : "";
 
   return (
-    <header className={`w-full ${color} ${className}`}>
+    <header data-site-nav className={`w-full ${color} ${className}`}>
       {/* Mobile: large wordmark, cart, burger */}
       <div className="flex items-start justify-between p-[24px] md:hidden">
         <Link href="/" aria-label="Flöra home">

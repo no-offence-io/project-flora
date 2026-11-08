@@ -13,7 +13,7 @@ export default async function FooterDesktop({ parallax = true, className = "" }:
   return (
     <footer
       data-keep-colors
-      className={`full-bleed relative flex h-svh flex-col items-center justify-end gap-[10px] overflow-hidden px-[42px] py-[24px] text-white ${className}`}
+      className={`full-bleed relative flex h-svh flex-col items-center justify-end gap-[10px] overflow-clip px-[42px] py-[24px] text-white ${className}`}
     >
       {/* Background image, drifting with parallax, under the dark overlays */}
       <div aria-hidden className="absolute inset-0">

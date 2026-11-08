@@ -57,6 +57,12 @@ body {
   font-family: var(--font-gotham), Arial, Helvetica, sans-serif;
 }
 
+/* While the fixed navbar copy is showing, the page's own navbar is kept out of sight (its space
+   intact), so the two never show together as the top of the page comes back; see sticky-navbar.tsx. */
+html.sticky-nav-shown .shop-content [data-site-nav] {
+  visibility: hidden;
+}
+
 /* The coming-soon gate covers the viewport; stop the page behind it from scrolling into view. */
 body:has(.coming-soon-gate) {
   overflow: hidden;
