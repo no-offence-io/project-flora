@@ -14,10 +14,14 @@ type ViewTimelineCtor = new (options: { subject: Element; axis?: "block" | "inli
  * past at their own pace instead of riding the slides like stickers, and settle centred as the
  * slide snaps in. Compositor-driven through a view timeline of each slide along the scroller's
  * inline axis where the browser has it (the same reasoning as parallax.tsx), a scroll listener on
- * the scroller otherwise. Still for visitors who prefer reduced motion. The slides clip with
- * overflow: hidden, the plain kind: iPhone Safari lost the photos, and the later slides' very
- * backgrounds, when they clipped with overflow: clip.
+ * the scroller otherwise. Still for visitors who prefer reduced motion.
+ *
+ * WebKit always gets the listener: on iPhone Safari a view-timeline animation on a layer inside
+ * this horizontal scroller left the photos unpainted altogether (the page's own vertical one on
+ * the hero is a different case: a block-axis timeline on the page scroller). The listener's
+ * transform is a plain style change, which Safari paints like anything else.
  */
+const isWebKit = () => typeof navigator !== "undefined" && navigator.vendor.startsWith("Apple");
 function useSwipeParallax(scroller: RefObject<HTMLDivElement | null>, count: number) {
   const photos = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -28,7 +32,7 @@ function useSwipeParallax(scroller: RefObject<HTMLDivElement | null>, count: num
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const ViewTimeline = (window as unknown as { ViewTimeline?: ViewTimelineCtor }).ViewTimeline;
-    if (ViewTimeline) {
+    if (ViewTimeline && !isWebKit()) {
       // Over a slide's trip across the scroller (entering from the right, leaving to the left) the
       // photo moves from a little left of centre to a little right of it: it is centred when the
       // slide is in place, and trails the finger on the way.
@@ -51,8 +55,9 @@ function useSwipeParallax(scroller: RefObject<HTMLDivElement | null>, count: num
         const slide = el.parentElement!;
         // Where the slide sits: 0 when in place, a slide's width when one slide to the right.
         const offset = slide.offsetLeft - track.scrollLeft;
+        // The same drift as the timeline's percent keyframes: a share of the photo's own width.
         const limit = DRIFT * el.clientWidth;
-        const shift = Math.max(-limit, Math.min(limit, -offset * DRIFT));
+        const shift = Math.max(-limit, Math.min(limit, (-offset / slide.offsetWidth) * limit));
         el.style.transform = `translateX(${shift.toFixed(2)}px)`;
       }
     };
