@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import Chevron from "./chevron";
+import Collapse from "./collapse";
 import type { ProductSpec } from "@/lib/catalog-types";
 
 /** A row the caller controls, opening below the label on every screen size (the measurements form). */
@@ -24,26 +25,22 @@ export default function ProductSpecs({ specs, extra, className = "" }: { specs: 
         const rowVisibility = spec.hideOnMobile ? "hidden md:flex" : "flex";
 
         return (
-          <div
-            key={spec.label}
-            className={`${rowVisibility} flex-col border-t border-black/20 last:border-b md:flex-row md:items-center md:gap-[10px] md:py-[5px]`}
-          >
+          <div key={spec.label} className={`${rowVisibility} flex-col border-t border-black/20 last:border-b md:flex-row md:items-center md:gap-[10px] md:py-[5px]`}>
             {spec.expandable ? (
               <>
                 {/* Mobile: toggle row */}
                 <dt className="md:hidden">
-                  <button
-                    type="button"
-                    aria-expanded={isOpen}
-                    onClick={() => setOpenIndex(isOpen ? null : index)}
-                    className="flex w-full items-center justify-between py-[12px] text-left"
-                  >
+                  <button type="button" aria-expanded={isOpen} onClick={() => setOpenIndex(isOpen ? null : index)} className="flex w-full items-center justify-between py-[12px] text-left">
                     {spec.label}
                     <Chevron open={isOpen} />
                   </button>
                 </dt>
                 {spec.value && (
-                  <dd className={`m-0 pb-[12px] md:hidden ${valueColor} ${isOpen ? "" : "hidden"}`}>{spec.value}</dd>
+                  <dd className={`m-0 md:hidden ${valueColor}`}>
+                    <Collapse open={isOpen}>
+                      <div className="pb-[12px]">{spec.value}</div>
+                    </Collapse>
+                  </dd>
                 )}
                 {/* Desktop: inline row */}
                 <dt className="hidden w-[220px] shrink-0 md:block">{spec.label}</dt>
@@ -69,7 +66,11 @@ export default function ProductSpecs({ specs, extra, className = "" }: { specs: 
               <Chevron open={extra.open} />
             </button>
           </dt>
-          {extra.open && <dd className="m-0 pt-[4px] pb-[18px] md:pt-[12px]">{extra.children}</dd>}
+          <dd className="m-0">
+            <Collapse open={extra.open}>
+              <div className="pt-[4px] pb-[18px] md:pt-[12px]">{extra.children}</div>
+            </Collapse>
+          </dd>
         </div>
       )}
     </dl>

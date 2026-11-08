@@ -113,7 +113,7 @@ export default function ProductCard({
             </div>
           ))}
         </div>
-        {product.compareAtPrice && <SaleBadge className="absolute top-[12px] right-[12px]" />}
+        {product.compareAtPrice && <SaleBadge className="absolute top-[16px] right-[16px]" />}
       </Link>
 
       <div className="flex min-w-0 items-start gap-[12px] md:gap-[24px]">

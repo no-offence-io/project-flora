@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { Busy } from "./busy";
 import { useCart } from "./cart-context";
 import Chevron from "./chevron";
+import Collapse from "./collapse";
 import RolloverText from "./rollover-text";
 import ProductSpecs from "./product-specs";
 import { isSoldOut, type Product, type ProductSpec } from "@/lib/catalog-types";
@@ -116,7 +117,7 @@ export default function ProductOptions({ product, sizing, specs = [], className 
                   {t("product.sizeGuide")}
                   <Chevron open={guideOpen} />
                 </button>
-                {guideOpen && (
+                <Collapse open={guideOpen}>
                   <div className="flex flex-col gap-[10px] pb-[12px] text-black/70">
                     {sizing.sizeGuide.split(/\n\s*\n/).map((para, i) => (
                       <p key={i} className="m-0">
@@ -124,7 +125,7 @@ export default function ProductOptions({ product, sizing, specs = [], className 
                       </p>
                     ))}
                   </div>
-                )}
+                </Collapse>
               </div>
             )}
           </div>
