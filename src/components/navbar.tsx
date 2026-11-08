@@ -35,7 +35,7 @@ export default async function Navbar({ tone = "dark", className = "" }: { tone?:
             alt="Flöra"
             width={486.544}
             height={109.193}
-            className={`h-auto w-[172px] ${logoFilter}`}
+            className={`h-auto w-[138px] ${logoFilter}`}
             style={{ height: "auto" }}
           />
         </Link>

@@ -5,7 +5,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import { brandStyle, getBrand } from "@/lib/brand";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { parseTheme, THEME_COOKIE } from "@/lib/theme-shared";
 
 const geistSans = Geist({
@@ -42,10 +42,16 @@ export const metadata: Metadata = {
  * Follows the visitor's Light/Dark/Auto choice; the admin sets its own in its layout.
  */
 export async function generateViewport(): Promise<Viewport> {
-  const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
-  if (theme === "dark") return { themeColor: "#000000", colorScheme: "dark" };
-  if (theme === "light") return { themeColor: "#ffffff", colorScheme: "light" };
+  const [jar, hdrs] = await Promise.all([cookies(), headers()]);
+  const theme = parseTheme(jar.get(THEME_COOKIE)?.value);
+  // iPhone Safari zooms the page in when a field with text under 16px takes focus; a maximum
+  // scale of 1 stops that, and iOS still lets people pinch past it. Other browsers are not sent
+  // it, since Android would take it as a ban on zooming.
+  const zoom = /iPhone|iPod/.test(hdrs.get("user-agent") ?? "") ? { maximumScale: 1 } : {};
+  if (theme === "dark") return { ...zoom, themeColor: "#000000", colorScheme: "dark" };
+  if (theme === "light") return { ...zoom, themeColor: "#ffffff", colorScheme: "light" };
   return {
+    ...zoom,
     themeColor: [
       { media: "(prefers-color-scheme: light)", color: "#ffffff" },
       { media: "(prefers-color-scheme: dark)", color: "#000000" },

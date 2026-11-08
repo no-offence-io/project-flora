@@ -48,7 +48,7 @@ export default async function FrontHeroMobile({
             height={109.193}
             preload
             loading="eager"
-            className="h-auto w-[172px]"
+            className="h-auto w-[138px]"
             style={{ height: "auto" }}
           />
         </Link>
