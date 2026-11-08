@@ -55,7 +55,8 @@ export default async function ProductPage({ params }: PageProps<"/shop/[slug]">)
   };
 
   if (product.vintage) {
-    const more = product.images.slice(1);
+    // Every attached photo, the one on the card included: a photo wrapped round a turning glass block is a hard read.
+    const more = product.images;
     return (
       <div className="flex flex-col gap-[60px] pb-[60px] md:gap-[120px] md:pb-[120px]">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
