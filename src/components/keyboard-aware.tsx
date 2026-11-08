@@ -7,9 +7,13 @@ import { useEffect } from "react";
  * view on its own, but often only just, with the field sitting right on the keyboard's edge or
  * under it. Once the browser has finished (the keyboard has risen and the page has stopped
  * moving) the page is corrected once: if the field isn't comfortably inside the visible part of
- * the screen (what the keyboard leaves of it, read from the visual viewport) it is scrolled so
- * the field sits in the middle of that. One correction only, after everything else has settled,
- * so it never fights the browser's own scrolling.
+ * the screen it is scrolled so the field sits in the middle of that. One correction only, after
+ * everything else has settled, so it never fights the browser's own scrolling.
+ *
+ * The visible part is what the keyboard leaves of the screen. Some browsers report it through
+ * the visual viewport; iPhone Safari doesn't always shrink it, so on a touch screen where the
+ * viewport hasn't shrunk the keyboard is assumed to take the lower half, and the field goes to
+ * the middle of the upper half.
  */
 export default function KeyboardAware() {
   useEffect(() => {
@@ -36,7 +40,10 @@ export default function KeyboardAware() {
         stop();
         const rect = field.getBoundingClientRect();
         const top = vv?.offsetTop ?? 0;
-        const height = vv?.height ?? window.innerHeight;
+        const reported = vv?.height ?? window.innerHeight;
+        const shrunk = reported < window.innerHeight - 100;
+        const touch = window.matchMedia("(pointer: coarse)").matches;
+        const height = touch && !shrunk ? reported * 0.5 : reported;
         const margin = Math.min(120, height * 0.2);
         if (rect.top >= top + margin && rect.bottom <= top + height - margin) return;
         window.scrollBy({ top: rect.top + rect.height / 2 - (top + height / 2), behavior: "smooth" });
