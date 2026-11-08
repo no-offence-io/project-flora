@@ -48,23 +48,46 @@ function useSwipeParallax(scroller: RefObject<HTMLDivElement | null>, count: num
       }
     }
 
+    // Scroll events arrive a frame behind the compositor's scrolling, and on iPhone irregularly,
+    // so a transform set straight from each one jumps back and forth as the finger moves. The
+    // photo instead eases towards where it should be with a short lag (a time constant of about
+    // 80ms): the jumps are smoothed away and the photo feels as if it has a little weight.
+    const LAG = 0.08;
+    const current = layers.map(() => 0);
     let frame = 0;
-    const update = () => {
-      frame = 0;
-      for (const el of layers) {
-        const slide = el.parentElement!;
-        // Where the slide sits: 0 when in place, a slide's width when one slide to the right.
-        const offset = slide.offsetLeft - track.scrollLeft;
-        // The same drift as the timeline's percent keyframes: a share of the photo's own width.
-        const limit = DRIFT * el.clientWidth;
-        const shift = Math.max(-limit, Math.min(limit, (-offset / slide.offsetWidth) * limit));
-        el.style.transform = `translateX(${shift.toFixed(2)}px)`;
-      }
+    let last = 0;
+    const wanted = (el: HTMLDivElement) => {
+      const slide = el.parentElement!;
+      // Where the slide sits: 0 when in place, a slide's width when one slide to the right. The
+      // drift is the same share of the photo's width as the timeline's percent keyframes.
+      const offset = slide.offsetLeft - track.scrollLeft;
+      const limit = DRIFT * el.clientWidth;
+      return Math.max(-limit, Math.min(limit, (-offset / slide.offsetWidth) * limit));
+    };
+    const tick = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      const k = 1 - Math.exp(-dt / LAG);
+      let settled = true;
+      layers.forEach((el, i) => {
+        const target = wanted(el);
+        current[i] += (target - current[i]) * k;
+        if (Math.abs(target - current[i]) < 0.05) current[i] = target;
+        else settled = false;
+        el.style.transform = `translateX(${current[i].toFixed(2)}px)`;
+      });
+      frame = settled ? 0 : requestAnimationFrame(tick);
     };
     const schedule = () => {
-      if (!frame) frame = requestAnimationFrame(update);
+      if (frame) return;
+      last = performance.now();
+      frame = requestAnimationFrame(tick);
     };
-    update();
+    // Settle into place at once on arrival; a reload can land mid-track.
+    layers.forEach((el, i) => {
+      current[i] = wanted(el);
+      el.style.transform = `translateX(${current[i].toFixed(2)}px)`;
+    });
     track.addEventListener("scroll", schedule, { passive: true });
     window.addEventListener("resize", schedule);
     return () => {
