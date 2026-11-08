@@ -1,14 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Chevron from "./chevron";
 import type { ProductSpec } from "@/lib/catalog-types";
 
+/** A row the caller controls, opening below the label on every screen size (the measurements form). */
+export type SpecsExtraRow = { label: string; open: boolean; onToggle: () => void; children: ReactNode };
+
 /**
  * Specification rows from the Figma product page. Desktop shows label and value side by side;
- * mobile turns expandable rows into an accordion, with the first one open.
+ * mobile turns expandable rows into an accordion, with the first one open. An `extra` row, if
+ * given, closes the list: it looks like the others but holds whatever the caller puts in it.
  */
-export default function ProductSpecs({ specs, className = "" }: { specs: ProductSpec[]; className?: string }) {
+export default function ProductSpecs({ specs, extra, className = "" }: { specs: ProductSpec[]; extra?: SpecsExtraRow; className?: string }) {
   const firstExpandable = specs.findIndex((spec) => spec.expandable);
   const [openIndex, setOpenIndex] = useState<number | null>(firstExpandable === -1 ? null : firstExpandable);
 
@@ -57,6 +61,17 @@ export default function ProductSpecs({ specs, className = "" }: { specs: Product
           </div>
         );
       })}
+      {extra && (
+        <div className="flex flex-col border-t border-black/20 last:border-b">
+          <dt>
+            <button type="button" aria-expanded={extra.open} onClick={extra.onToggle} className="flex w-full items-center justify-between py-[12px] text-left md:py-[5px]">
+              {extra.label}
+              <Chevron open={extra.open} />
+            </button>
+          </dt>
+          {extra.open && <dd className="m-0 pt-[4px] pb-[18px] md:pt-[12px]">{extra.children}</dd>}
+        </div>
+      )}
     </dl>
   );
 }

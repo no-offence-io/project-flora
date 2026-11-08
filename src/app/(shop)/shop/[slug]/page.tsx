@@ -6,7 +6,6 @@ import PhotoSlideshow from "@/components/photo-slideshow";
 import ProductDetails from "@/components/product-details";
 import ProductGallery from "@/components/product-gallery";
 import ProductOptions from "@/components/product-options";
-import ProductSpecs from "@/components/product-specs";
 import ProductsSlideshow from "@/components/products-slideshow";
 import { CareInstructions } from "@/components/care-icons";
 import VintageHero from "@/components/vintage-hero";
@@ -68,8 +67,7 @@ export default async function ProductPage({ params }: PageProps<"/shop/[slug]">)
 
         <section id="details" className="mx-auto flex w-full max-w-[521px] flex-col gap-[42px] px-[24px] text-black md:px-0">
           <p className="m-0 whitespace-pre-line font-gotham text-paragraph text-black/70">{product.description}</p>
-          {product.specs.length > 0 && <ProductSpecs specs={product.specs} />}
-          <ProductOptions product={product} sizing={sizing} />
+          <ProductOptions product={product} sizing={sizing} specs={product.specs} />
           <CareInstructions layout="responsive" className="text-black/50 md:text-black" />
         </section>
 

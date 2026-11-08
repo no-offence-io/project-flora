@@ -1,6 +1,5 @@
 import ProductOptions from "./product-options";
 import { CareInstructions } from "./care-icons";
-import ProductSpecs from "./product-specs";
 import { formatNok } from "@/lib/money";
 import { isSoldOut, type Product } from "@/lib/catalog-types";
 import type { SizingSettings } from "@/lib/catalog";
@@ -25,8 +24,7 @@ export default function ProductDetails({ product, sizing, soldOutLabel, classNam
 
       <div className="flex flex-col gap-[42px] md:gap-[24px]">
         <div className="flex flex-col gap-[24px]">
-          <ProductSpecs specs={product.specs} />
-          <ProductOptions product={product} sizing={sizing} />
+          <ProductOptions product={product} sizing={sizing} specs={product.specs} />
         </div>
         <CareInstructions layout="responsive" className="text-black/50 md:text-black" />
       </div>
