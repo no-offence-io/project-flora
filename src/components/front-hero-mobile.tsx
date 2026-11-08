@@ -23,7 +23,7 @@ export default async function FrontHeroMobile({
   return (
     <section
       data-keep-colors
-      className={`full-bleed relative flex h-svh flex-col items-center justify-between overflow-clip p-[24px] text-white ${className}`}
+      className={`full-bleed relative flex h-svh flex-col items-center justify-between overflow-hidden p-[24px] text-white ${className}`}
     >
       {/* Background video with parallax (photo as poster) under the vertical darkening gradient */}
       {/* Dark under the video, so it fades in from black and the white text is readable before it does */}

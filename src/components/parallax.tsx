@@ -23,17 +23,26 @@ const viewTimelineCtor = (): ViewTimelineCtor | undefined => (window as unknown 
 const limitFor = (el: HTMLElement, parent: HTMLElement, maxShift?: number) => maxShift ?? Math.max(0, (el.offsetHeight - parent.offsetHeight) / 2);
 
 /**
- * True when the page itself scrolls the element. A view timeline measures against the nearest
- * scroll container, and `overflow: hidden` makes one, so a host section clipping its oversized
- * layer that way would leave the timeline inert; the hosts clip with `overflow: clip` instead,
- * and anything else gets the listener.
+ * What the view timeline should watch. A view timeline measures its subject against the subject's
+ * nearest scroll container, and `overflow: hidden` makes one, so with the layer's parent as the
+ * subject a host section clipping its oversized layer would leave the timeline measuring against
+ * the section itself and never moving. (`overflow: clip` would avoid that, but iPhone Safari
+ * mis-clips composited layers inside it.) So the subject is the outermost clipping ancestor that
+ * frames the same box as the parent — the hero section round its full-bleed video wrapper — and
+ * if some clipping ancestor frames a different box there is no good subject, and the listener
+ * takes over.
  */
-function scrolledByPage(el: HTMLElement): boolean {
-  for (let node = el.parentElement; node && node !== document.body && node !== document.documentElement; node = node.parentElement) {
+function timelineSubject(parent: HTMLElement): HTMLElement | null {
+  let subject = parent;
+  for (let node = parent.parentElement; node && node !== document.body && node !== document.documentElement; node = node.parentElement) {
     const { overflowX, overflowY } = getComputedStyle(node);
-    if (/auto|scroll|hidden|overlay/.test(overflowX + overflowY)) return false;
+    if (!/auto|scroll|hidden|overlay/.test(overflowX + overflowY)) continue;
+    const a = subject.getBoundingClientRect();
+    const b = node.getBoundingClientRect();
+    if (Math.abs(a.top - b.top) > 1 || Math.abs(a.height - b.height) > 1) return null;
+    subject = node;
   }
-  return true;
+  return subject;
 }
 
 const shiftBy = (px: number) => ({ transform: `translate3d(0, ${px.toFixed(2)}px, 0)` });
@@ -71,7 +80,8 @@ export function useParallax<T extends HTMLElement>(speed = 0.15, maxShift?: numb
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const ViewTimeline = viewTimelineCtor();
-    if (ViewTimeline && scrolledByPage(parent)) {
+    const subject = ViewTimeline ? timelineSubject(parent) : null;
+    if (ViewTimeline && subject) {
       // Compositor-driven: rebuilt only when a size it depends on changes (the phone's toolbar
       // collapsing, a rotation, the layer's media arriving).
       el.style.transform = "";
@@ -84,7 +94,7 @@ export function useParallax<T extends HTMLElement>(speed = 0.15, maxShift?: numb
         if (key === built) return;
         built = key;
         animation?.cancel();
-        animation = el.animate(keyframesFor(speed, limit, viewport, parent.offsetHeight), { timeline: new ViewTimeline({ subject: parent, axis: "block" }), fill: "both" });
+        animation = el.animate(keyframesFor(speed, limit, viewport, parent.offsetHeight), { timeline: new ViewTimeline({ subject, axis: "block" }), fill: "both" });
       };
       try {
         build();

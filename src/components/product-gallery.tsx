@@ -14,7 +14,9 @@ type ViewTimelineCtor = new (options: { subject: Element; axis?: "block" | "inli
  * past at their own pace instead of riding the slides like stickers, and settle centred as the
  * slide snaps in. Compositor-driven through a view timeline of each slide along the scroller's
  * inline axis where the browser has it (the same reasoning as parallax.tsx), a scroll listener on
- * the scroller otherwise. Still for visitors who prefer reduced motion.
+ * the scroller otherwise. Still for visitors who prefer reduced motion. The slides clip with
+ * overflow: hidden, the plain kind: iPhone Safari lost the photos, and the later slides' very
+ * backgrounds, when they clipped with overflow: clip.
  */
 function useSwipeParallax(scroller: RefObject<HTMLDivElement | null>, count: number) {
   const photos = useRef<(HTMLDivElement | null)[]>([]);
@@ -93,13 +95,14 @@ export default function ProductGallery({
         {images.map((image, i) => (
           <div
             key={`${image.src}-${i}`}
-            className="flex h-full w-full shrink-0 snap-start items-center justify-center overflow-clip bg-[#f7f7f7] px-[24px] py-[24px] md:py-[120px]"
+            className="flex h-full w-full shrink-0 snap-start items-center justify-center overflow-hidden bg-[#f7f7f7] px-[24px] py-[24px] md:py-[120px]"
           >
             <div
               ref={(el) => {
                 photos.current[i] = el;
               }}
-              className="relative h-full w-full will-change-transform"
+              data-swipe-photo
+              className="relative h-full w-full"
             >
               <Image
                 src={image.src}
