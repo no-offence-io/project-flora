@@ -57,6 +57,15 @@ body {
   font-family: var(--font-gotham), Arial, Helvetica, sans-serif;
 }
 
+/* Phones: form fields keep their text at 16px, the size under which iPhone Safari zooms the whole
+   page in when a field takes focus (a viewport scale cap no longer stops it). Checkboxes and
+   radios have no text to speak of and keep their size. */
+@media (max-width: 767px) {
+  .shop-content :is(input:not([type="checkbox"], [type="radio"]), select, textarea) {
+    font-size: 16px;
+  }
+}
+
 /* While the fixed navbar copy is showing, the page's own navbar is kept out of sight (its space
    intact), so the two never show together as the top of the page comes back; see sticky-navbar.tsx. */
 html.sticky-nav-shown .shop-content [data-site-nav] {
