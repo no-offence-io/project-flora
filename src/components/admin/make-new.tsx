@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 
 /*
@@ -47,7 +47,14 @@ export default function MakeNew() {
   const showing = phase !== "closed";
   const settled = phase === "open";
 
-  const open = () => setPhase("opening");
+  // Where the sticky button sits on screen when opened: the sheet and the button's fixed twin take that spot.
+  const stickyButton = useRef<HTMLButtonElement>(null);
+  const [anchor, setAnchor] = useState({ right: 24, bottom: 24 });
+  const open = () => {
+    const r = stickyButton.current?.getBoundingClientRect();
+    if (r) setAnchor({ right: Math.round(window.innerWidth - r.right), bottom: Math.round(window.innerHeight - r.bottom) });
+    setPhase("opening");
+  };
   const close = () => setPhase((p) => (p === "closed" ? p : "closing"));
 
   // Opening: mount in the start pose, then let the next frame carry it to the end pose. Closing: the reverse, then unmount.
@@ -88,13 +95,15 @@ export default function MakeNew() {
       */}
       <div className="pointer-events-none sticky z-[60] mt-auto flex h-0 justify-end" style={{ bottom: "calc(24px + env(safe-area-inset-bottom, 0px))" }}>
         <button
+          ref={stickyButton}
           type="button"
-          onClick={showing ? close : open}
-          aria-expanded={showing}
-          aria-label={showing ? "Close" : "Make new"}
+          onClick={open}
+          aria-label="Make new"
+          aria-hidden={showing}
+          tabIndex={showing ? -1 : 0}
           data-make-new="button"
           className="pointer-events-auto absolute right-0 bottom-0 flex h-[56px] w-[56px] items-center justify-center rounded-full bg-black text-white shadow-[0_12px_32px_rgba(0,0,0,0.28)] will-change-transform"
-          style={{ transform: `translateZ(0) rotate(${settled ? 45 : 0}deg)`, transition: `transform ${ms}ms ${EASE}` }}
+          style={{ transform: "translateZ(0)", visibility: showing ? "hidden" : "visible" }}
         >
           <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
             <path d="M11 2v18M2 11h18" />
@@ -128,9 +137,10 @@ export default function MakeNew() {
                 aria-modal="true"
                 aria-label="Make new"
                 data-make-new="sheet"
-                className="admin-night-portal fixed right-[24px] z-[91] w-[min(340px,calc(100vw-48px))] border border-black bg-white font-gotham text-paragraph text-black shadow-[0_30px_80px_rgba(0,0,0,0.18)]"
+                className="admin-night-portal fixed z-[91] w-[min(340px,calc(100vw-48px))] border border-black bg-white font-gotham text-paragraph text-black shadow-[0_30px_80px_rgba(0,0,0,0.18)]"
                 style={{
-                  bottom: "calc(24px + 56px + 16px + env(safe-area-inset-bottom, 0px))",
+                  right: anchor.right,
+                  bottom: anchor.bottom + 56 + 16,
                   opacity: settled ? 1 : 0,
                   transform: settled ? "translateY(0) scale(1)" : "translateY(18px) scale(0.98)",
                   transformOrigin: "100% 100%",
@@ -169,6 +179,19 @@ export default function MakeNew() {
                 </ul>
               </div>
             )}
+            {/* The button's twin, above the backdrop, exactly where the sticky one was; the plus turns into a cross. While the sheet is up the page cannot scroll, so fixed is safe here. */}
+            <button
+              type="button"
+              onClick={close}
+              aria-label="Close"
+              data-make-new="close"
+              className="admin-night-portal fixed z-[92] flex h-[56px] w-[56px] items-center justify-center rounded-full text-white shadow-[0_12px_32px_rgba(0,0,0,0.28)]"
+              style={{ background: "#000", right: anchor.right, bottom: anchor.bottom, transform: `rotate(${settled ? 45 : 0}deg)`, transition: `transform ${ms}ms ${EASE}` }}
+            >
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                <path d="M11 2v18M2 11h18" />
+              </svg>
+            </button>
           </>,
           document.body,
         )}
