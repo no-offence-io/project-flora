@@ -879,3 +879,17 @@ html:has(.admin-night) .admin-night-sheet :is(img, video, iframe) {
 @media (prefers-reduced-motion: reduce) {
   .film-grain { animation: none; }
 }
+
+/* Dashboard on a phone: Safari gives inputs, selects and file pickers an intrinsic width that flex and grid
+   items would otherwise refuse to shrink below, pushing cards past the screen edge. */
+[data-admin-root] main input,
+[data-admin-root] main select,
+[data-admin-root] main textarea,
+[data-admin-root] main video,
+[data-admin-root] main img {
+  max-width: 100%;
+  min-width: 0;
+}
+[data-admin-root] main input[type="file"] {
+  width: 100%;
+}

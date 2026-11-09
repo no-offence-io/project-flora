@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { mediaStyle } from "@/lib/media-transform";
 import Link from "next/link";
 import { FooterOverlay, NAV_LINKS, SocialLinks } from "./footer-shared";
 import { ParallaxLayer } from "./parallax";
@@ -19,7 +20,7 @@ export default async function FooterDesktop({ parallax = true, className = "" }:
       <div aria-hidden className="absolute inset-0">
         <ParallaxLayer speed={0.15} enabled={parallax} className="-top-[20%] h-[140%]">
           {copy.footerImage ? (
-            <Image src={copy.footerImage} alt="" fill sizes="100vw" className="object-cover" />
+            <Image src={copy.footerImage} alt="" fill sizes="100vw" className="object-cover" style={mediaStyle(copy.footerImageFit)} />
           ) : (
             <Image
               src="/footer/footer-bg.jpg"

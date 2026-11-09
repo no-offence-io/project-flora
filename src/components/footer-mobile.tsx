@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { mediaStyle } from "@/lib/media-transform";
 import Link from "next/link";
 import { FooterOverlay, NAV_LINKS, SocialLinks } from "./footer-shared";
 import { ParallaxLayer } from "./parallax";
@@ -23,7 +24,7 @@ export default async function FooterMobile({ parallax = true, className = "" }: 
         {/* The crop runs well past the footer top and bottom, so 150px is a safe shift limit */}
         <ParallaxLayer speed={0.15} maxShift={150} enabled={parallax} className="inset-0 h-full">
           {copy.footerImage ? (
-            <Image src={copy.footerImage} alt="" fill sizes="100vw" className="object-cover" />
+            <Image src={copy.footerImage} alt="" fill sizes="100vw" className="object-cover" style={mediaStyle(copy.footerImageFit)} />
           ) : (
             <div className="absolute left-0 aspect-[768/2536] w-full" style={{ top: "-55.6vw" }}>
               <Image src="/footer/footer-bg-mobile.jpg" alt="" fill sizes="100vw" className="object-cover" />

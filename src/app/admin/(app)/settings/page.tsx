@@ -1,6 +1,6 @@
 import { saveSettings } from "../actions";
 import { Bilingual, Button, Card, Checkbox, Heading, Input, Labelled, Muted, Select, Subheading, Textarea, TextLink } from "@/components/admin/ui";
-import { ImageField } from "@/components/admin/media-field";
+import { ImageField, WIDE_FRAME } from "@/components/admin/media-field";
 import { getText, type LocalizedString } from "@/lib/admin/localized";
 import { FONTS } from "@/lib/brand-shared";
 import { DEFAULT_LOGO } from "@/lib/brand";
@@ -22,7 +22,7 @@ type Settings = {
   brand?: { logo?: Pic; headingFont?: string; bodyFont?: string; headingSizeDesktop?: number; headingSizeMobile?: number; bannerSize?: number; paragraphSize?: number; backgroundColor?: string; textColor?: string; photoBackground?: string; vintageBackground?: string; vintagePhotoBackground?: string };
 };
 type Pic = { _ref: string; url: string } | null;
-const PIC = (f: string) => `"${f}": select(defined(${f}.asset) => { "_ref": ${f}.asset._ref, "url": ${f}.asset->url })`;
+const PIC = (f: string) => `"${f}": select(defined(${f}.asset) => { "_ref": ${f}.asset._ref, "url": ${f}.asset->url, "alt": ${f}.alt, "scale": ${f}.scale, "x": ${f}.x, "y": ${f}.y })`;
 
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string }> }) {
   const { saved, error } = await searchParams;
@@ -75,7 +75,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <Subheading>Brand</Subheading>
           <div className="h-px w-full bg-black/25" />
           <Muted>The look of the whole site. What you see here is what the site uses right now — the built-in design unless you have changed it. Edit anything and save.</Muted>
-          <ImageField name="brandLogo" label="Logo" hint="White on a transparent background, SVG or PNG. The site darkens it where it sits on white." current={b.logo} placeholder={DEFAULT_LOGO} dark />
+          <ImageField name="brandLogo" label="Logo" hint="White on a transparent background, SVG or PNG. The site darkens it where it sits on white." current={b.logo} placeholder={DEFAULT_LOGO} dark crop={false} alt={false} frame={{ aspect: 3, fit: "contain", pad: [0.1, 0.25] }} />
           <Muted className="text-[11px]">The browser-tab and home-screen icon has its own page: <TextLink href="/admin/icon">Icon</TextLink>.</Muted>
           <div className="flex flex-col gap-[24px] md:flex-row">
             <Labelled label="Heading font" className="flex-1">
@@ -144,7 +144,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <Bilingual name="signUpTitle" label="Title" en={getText(s.signUpTitle, "en")} no={getText(s.signUpTitle, "no")} />
             <Bilingual name="signUpText" label="Text" en={getText(s.signUpText, "en")} no={getText(s.signUpText, "no")} multiline rows={3} />
             <Bilingual name="signUpButton" label="Button label" en={getText(s.signUpButton, "en")} no={getText(s.signUpButton, "no")} />
-            <ImageField name="signUpImage" label="Background photo" current={s.signUpImage} placeholder="/signup/signup-bg.jpg" />
+            <ImageField name="signUpImage" label="Background photo" current={s.signUpImage} placeholder="/signup/signup-bg.jpg" frame={WIDE_FRAME} />
           </div>
         </Card>
         <Card>
@@ -172,7 +172,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <div className="h-px w-full bg-black/25" />
           <div className="flex flex-col gap-[24px]">
             <Bilingual name="footerText" label="Footer text" en={getText(s.footerText, "en")} no={getText(s.footerText, "no")} multiline rows={3} />
-            <ImageField name="footerImage" label="Background photo" current={s.footerImage} placeholder="/footer/footer-bg.jpg" />
+            <ImageField name="footerImage" label="Background photo" current={s.footerImage} placeholder="/footer/footer-bg.jpg" frame={WIDE_FRAME} />
             <div className="flex flex-col gap-[24px] md:flex-row">
               <Labelled label="Instagram URL" className="flex-1"><Input name="instagram" type="url" defaultValue={s.instagram ?? ""} /></Labelled>
               <Labelled label="Contact email" className="flex-1"><Input name="contactEmail" type="email" defaultValue={s.contactEmail ?? ""} /></Labelled>

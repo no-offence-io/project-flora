@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { mediaStyle, type MediaTransform } from "@/lib/media-transform";
 import { CareInstructions } from "./care-icons";
 import { ParallaxLayer } from "./parallax";
 import {
@@ -23,10 +24,13 @@ export default async function SignUpBannerDesktop({
   description = SIGN_UP_DESCRIPTION,
   buttonLabel,
   image,
+  imageFit,
 }: {
   variant?: SignUpBannerVariant;
   /** A photo uploaded in the admin; the built-in one otherwise. */
   image?: string;
+  /** How the uploaded photo sits in the banner, from the media editor. */
+  imageFit?: MediaTransform;
   /** Let the photo drift as you scroll. */
   parallax?: boolean;
   className?: string;
@@ -52,7 +56,7 @@ export default async function SignUpBannerDesktop({
           className="-top-[20%] h-[140%]"
         >
           {image ? (
-            <Image src={image} alt="" fill sizes="100vw" className="object-cover" />
+            <Image src={image} alt="" fill sizes="100vw" className="object-cover" style={mediaStyle(imageFit)} />
           ) : (
             <Image
               src="/signup/signup-bg.jpg"

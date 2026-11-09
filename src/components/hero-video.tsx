@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { preload } from "react-dom";
 import { useParallax } from "./parallax";
+import { mediaStyle, type MediaTransform } from "@/lib/media-transform";
 
 /**
  * Looping, muted background video filling the hero. With `parallax` on it is oversized by 30% and
@@ -19,11 +20,14 @@ export default function HeroVideo({
   src,
   speed = 0.15,
   parallax = true,
+  fit,
   className = "",
 }: {
   src: string;
   speed?: number;
   parallax?: boolean;
+  /** How the video sits in the hero, from the dashboard's media editor; on a wrapper, since the parallax owns the video's own transform. */
+  fit?: MediaTransform;
   className?: string;
 }) {
   const ref = useParallax<HTMLVideoElement>(speed, undefined, parallax);
@@ -37,6 +41,7 @@ export default function HeroVideo({
   }, [ref, src]);
 
   return (
+    <div aria-hidden className="absolute inset-0 overflow-hidden" style={mediaStyle(fit)}>
     <video
       ref={ref}
       src={src}
@@ -51,5 +56,6 @@ export default function HeroVideo({
         parallax ? "-top-[15%] h-[130%] will-change-transform" : "inset-0 h-full"
       } ${className}`}
     />
+    </div>
   );
 }

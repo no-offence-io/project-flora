@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { mediaStyle } from "@/lib/media-transform";
 import Image from "next/image";
 import Link from "next/link";
 import Navbar from "@/components/navbar";
@@ -29,7 +30,7 @@ export default async function JournalPage() {
           {posts.map((post) => (
             <article key={post.slug} className="flex flex-col gap-[12px] font-gotham text-paragraph text-black">
               <Link href={`/journal/${post.slug}`} className="relative block aspect-[4/5] w-full overflow-hidden bg-[#f7f7f7]">
-                {post.image && <Image src={post.image.src} alt={post.image.alt} fill sizes="(min-width: 768px) 33vw, 100vw" className="object-cover" />}
+                {post.image && <Image src={post.image.src} alt={post.image.alt} fill sizes="(min-width: 768px) 33vw, 100vw" className="object-cover" style={mediaStyle(post.image)} />}
               </Link>
               <p className="m-0 text-[11px] leading-normal text-black/50">{when(post.date, t("nav.shop") === "Butikk" ? "no" : "en")}</p>
               <Link href={`/journal/${post.slug}`} className="font-americana text-big-header-mobile capitalize">

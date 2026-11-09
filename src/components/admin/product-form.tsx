@@ -1,10 +1,9 @@
 import Image from "next/image";
 import { deleteProduct, makeGif, removeGif, saveProduct } from "@/app/admin/(app)/actions";
-import { ImageField } from "@/components/admin/media-field";
+import { ImageField, PRODUCT_FRAME } from "@/components/admin/media-field";
 import { Bilingual, Button, Card, Checkbox, Input, Labelled, Muted, Select, Subheading } from "@/components/admin/ui";
 import { getText, type LocalizedString } from "@/lib/admin/localized";
 import { oreToKroner } from "@/lib/admin/sanity";
-import { photoScale } from "@/lib/photo-scale";
 
 export type ProductDoc = {
   _id: string;
@@ -16,7 +15,7 @@ export type ProductDoc = {
   compareAtPriceOre?: number;
   stock?: number;
   visible?: boolean;
-  images?: { _key: string; asset?: { _ref: string }; url?: string; alt?: unknown; scale?: number }[];
+  images?: { _key: string; asset?: { _ref: string }; url?: string; alt?: LocalizedString | null; scale?: number | null; x?: number | null; y?: number | null }[];
   sizing?: string;
   sizes?: { _key: string; label?: string; stock?: number }[];
   gif?: string | null;
@@ -30,11 +29,11 @@ export type ProductDoc = {
 /** The admin's view of a product: images, colours and their photos resolved to URLs for the previews. */
 export const PRODUCT_ADMIN_PROJECTION = `{
   ...,
-  "images": images[]{ _key, asset, alt, scale, "url": asset->url },
+  "images": images[]{ _key, asset, alt, scale, x, y, "url": asset->url },
   "sizes": sizes[]{ _key, label, stock },
   "gif": gif.asset->url,
   "gifSources": array::compact([images[0].asset->url] + colors[].image.asset->url),
-  "colors": colors[]{ _key, name, hex, "image": select(defined(image.asset) => { "_ref": image.asset._ref, "url": image.asset->url }) },
+  "colors": colors[]{ _key, name, hex, "image": select(defined(image.asset) => { "_ref": image.asset._ref, "url": image.asset->url, "alt": image.alt, "scale": image.scale, "x": image.x, "y": image.y }) },
   "specs": specs[]{ _key, label, value, emphasis, expandable, hideOnMobile }
 }`;
 
@@ -43,7 +42,7 @@ const CATEGORIES = ["Tops", "Skirts", "Pants", "Sets", "Accessories"];
 /** The product editor: the checkout form's fields, grouped the way the product page shows them. */
 export default function ProductForm({ product }: { product: ProductDoc | null }) {
   const p = product;
-  const existing = (p?.images ?? []).filter((img) => img.asset?._ref).map((img) => ({ _key: img._key, asset: { _ref: img.asset!._ref }, alt: img.alt ?? null }));
+  const photos = (p?.images ?? []).filter((img) => img.asset?._ref && img.url);
   const colorSlots = [...(p?.colors ?? []), null];
   const sizeSlots = [...(p?.sizes ?? []), null, null];
   const sizing = p?.sizing === "sizes" || p?.sizing === "none" ? p.sizing : "measurements";
@@ -52,7 +51,6 @@ export default function ProductForm({ product }: { product: ProductDoc | null })
   return (
     <form action={saveProduct} className="grid gap-[42px] md:grid-cols-[minmax(0,1fr)_420px]">
       {p && <input type="hidden" name="id" value={p._id} />}
-      <input type="hidden" name="existingImages" value={JSON.stringify(existing)} />
 
       <div className="flex flex-col gap-[42px]">
         <Card>
@@ -63,7 +61,7 @@ export default function ProductForm({ product }: { product: ProductDoc | null })
               <Input name="name.en" defaultValue={getText(p?.name, "en")} required />
             </Labelled>
             <Labelled label="Web address" hint="Lowercase letters, numbers and dashes, e.g. wrap-skirt. Changing it breaks old links.">
-              <Input name="slug" defaultValue={p?.slug?.current ?? ""} required pattern="[a-z0-9-]+" />
+              <Input name="slug" defaultValue={p?.slug?.current ?? ""} required pattern="[a-z0-9\-]+" />
             </Labelled>
             <Labelled label="Category">
               <Select name="category" defaultValue={p?.category ?? ""} required>
@@ -99,7 +97,7 @@ export default function ProductForm({ product }: { product: ProductDoc | null })
             <input type="hidden" name="sizeCount" value={sizeSlots.length} />
             <div className="flex flex-col gap-[12px]">
               {sizeSlots.map((sz, i) => (
-                <div key={sz?._key ?? `new-${i}`} className="flex items-end gap-[12px]">
+                <div key={sz?._key ?? `new-${i}`} className="flex min-w-0 flex-wrap items-end gap-[12px]">
                   <input type="hidden" name={`sizeKey_${i}`} value={sz?._key ?? ""} />
                   <Labelled label="Size" className="flex-1">
                     <Input name={`sizeLabel_${i}`} defaultValue={sz?.label ?? ""} placeholder="e.g. S, M, 38" />
@@ -121,31 +119,20 @@ export default function ProductForm({ product }: { product: ProductDoc | null })
         <Card>
           <Subheading>Photos</Subheading>
           <div className="h-px w-full bg-black/25" />
-          {/* Each photo as the shop draws it: whole, on a light box, at its chosen size. The first one is the thumbnail. */}
-          {p?.images?.length ? (
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-[12px]">
-              {p.images.map((img, i) => (
-                <div key={img._key} className="flex flex-col gap-[6px]">
-                  <span className="relative flex aspect-[4/5] w-full items-center justify-center overflow-hidden bg-[#f7f7f7] p-[12px]">
-                    <span className="relative block h-full w-full shrink-0" style={photoScale((img.scale ?? 100) / 100)}>
-                      {img.url && <Image src={img.url} alt="" fill sizes="160px" className="object-contain" />}
-                    </span>
-                  </span>
-                  <label className="flex items-center gap-[6px] text-[11px] leading-normal text-black/50">
-                    <span className="whitespace-nowrap">{i === 0 ? "Thumbnail size" : "Size"} %</span>
-                    <input type="number" name={`imageScale_${img._key}`} defaultValue={img.scale ?? 100} min={20} max={200} step={5} className="h-[28px] w-[64px] border border-black/20 bg-transparent px-[6px] font-gotham text-[11px] text-black" />
-                  </label>
-                  <label className="flex cursor-pointer items-center gap-[6px] text-[11px] leading-normal text-black/50">
-                    <input type="checkbox" name="removeImage" value={img._key} className="accent-black" /> Remove
-                  </label>
+          {/* Each photo as the shop's card draws it, with an Edit view: place it in the box, swap it, name it, remove it. The first is the thumbnail. */}
+          {photos.length ? (
+            <div className="flex flex-col gap-[24px]">
+              {photos.map((img, i) => (
+                <div key={img._key}>
+                  <input type="hidden" name="imageKey" value={img._key} />
+                  <ImageField name={`image_${img._key}`} label={i === 0 ? "Thumbnail (first photo)" : `Photo ${i + 1}`} current={{ _ref: img.asset!._ref, url: img.url!, alt: img.alt, scale: img.scale, x: img.x, y: img.y }} frame={PRODUCT_FRAME} />
                 </div>
               ))}
             </div>
           ) : (
             <Muted>No photos yet.</Muted>
           )}
-          {p?.images?.length ? <Muted className="text-[11px]">Size: 100 is the usual fit, the whole photo inside its box with a margin. Bigger fills more of the box, smaller leaves more room; the box itself keeps its shape. Photos added below start at 100.</Muted> : null}
-          <Labelled label="Add photos" hint="JPG or PNG, up to 15 MB each. The first photo is the one shown in the shop.">
+          <Labelled label="Add photos" hint="JPG or PNG, up to 15 MB each. The first photo is the one shown in the shop. Once saved, each photo gets an Edit button to place it in its box.">
             <input type="file" name="newImages" accept="image/*" multiple className="font-gotham text-paragraph file:mr-[12px] file:border file:border-black/20 file:bg-transparent file:px-[12px] file:py-[8px] file:font-gotham file:text-paragraph file:text-black" />
           </Labelled>
         </Card>
@@ -188,7 +175,7 @@ export default function ProductForm({ product }: { product: ProductDoc | null })
                   <Input name={`colorHex_${i}`} defaultValue={c?.hex ?? ""} pattern="#([0-9a-fA-F]{3}){1,2}" className="md:max-w-[160px]" />
                 </div>
               </Labelled>
-              <ImageField name={`colorImage_${i}`} label="Photo in this colour" current={c?.image} />
+              <ImageField name={`colorImage_${i}`} label="Photo in this colour" current={c?.image} frame={PRODUCT_FRAME} />
               {c && <Checkbox name={`colorRemove_${i}`} label="Remove this colour" />}
             </div>
           ))}

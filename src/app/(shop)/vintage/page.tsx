@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { mediaStyle } from "@/lib/media-transform";
 import Image from "next/image";
 import Navbar from "@/components/navbar";
 import ProductCard from "@/components/product-card";
@@ -30,7 +31,7 @@ export default async function VintagePage() {
             </div>
             {page.image && (
               <div className="relative aspect-[4/5] w-full overflow-hidden md:aspect-[3/4] md:max-h-[560px]">
-                <Image src={page.image.src} alt={page.image.alt} fill sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" />
+                <Image src={page.image.src} alt={page.image.alt} fill sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" style={mediaStyle(page.image)} />
               </div>
             )}
           </header>

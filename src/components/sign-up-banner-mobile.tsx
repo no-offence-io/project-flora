@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { mediaStyle, type MediaTransform } from "@/lib/media-transform";
 import { ParallaxLayer } from "./parallax";
 import {
   SIGN_UP_DESCRIPTION,
@@ -20,10 +21,13 @@ export default async function SignUpBannerMobile({
   description = SIGN_UP_DESCRIPTION,
   buttonLabel,
   image,
+  imageFit,
 }: {
   variant?: SignUpBannerVariant;
   /** A photo uploaded in the admin; the built-in one otherwise. It gets a plain cover crop, not the Figma zoom tuned to the built-in photo. */
   image?: string;
+  /** How the uploaded photo sits in the banner, from the media editor. */
+  imageFit?: MediaTransform;
   /** Let the photo drift as you scroll. */
   parallax?: boolean;
   className?: string;
@@ -48,7 +52,7 @@ export default async function SignUpBannerMobile({
           className="inset-0 h-full"
         >
           {image ? (
-            <Image src={image} alt="" fill sizes="100vw" className="object-cover" />
+            <Image src={image} alt="" fill sizes="100vw" className="object-cover" style={mediaStyle(imageFit)} />
           ) : (
           <div className="absolute top-0 left-0 aspect-[1085/2828] w-full -translate-y-[5.9%]">
             <Image src="/signup/signup-bg-mobile.jpg" alt="" fill sizes="100vw" className="object-cover" />

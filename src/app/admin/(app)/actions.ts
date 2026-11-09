@@ -7,7 +7,7 @@ import { z } from "zod";
 import { readLocalizedBlocks, readLocalizedString } from "@/lib/admin/localized";
 import { adminClient, kronerToOre } from "@/lib/admin/sanity";
 import { requireAdmin } from "@/lib/admin/session";
-import { readImageField, readVideoField, uploadImage, uploadVideo } from "@/lib/admin/media";
+import { type ImageValue, readFit, readImageField, readVideoField, uploadImage, uploadVideo } from "@/lib/admin/media";
 import { FONT_CHOICES } from "@/lib/brand-shared";
 import { ORDER_STATUSES } from "@/lib/order-status";
 import { siteDomain } from "@/lib/email-settings";
@@ -132,21 +132,16 @@ export async function saveProduct(formData: FormData) {
   }
   if (sizing === "sizes" && sizes.length === 0) throw new Error("Add at least one size, or choose another way of sizing");
 
-  // Photos: keep the ones not ticked for removal, then append any new uploads.
-  const removed = new Set(formData.getAll("removeImage").map(String));
-  const kept = JSON.parse(String(formData.get("existingImages") ?? "[]")) as { _key: string; asset: { _ref: string }; alt?: unknown }[];
-  // Each photo's size in its box, in percent; 100 (the usual fit) is stored as nothing at all.
-  const scaleOf = (key: string): number | null => {
-    const n = Number(formData.get(`imageScale_${key}`));
-    return Number.isFinite(n) && n >= 20 && n <= 200 && Math.round(n) !== 100 ? Math.round(n) : null;
-  };
-  const images: { _key: string; _type: "localizedImage"; asset: { _type: "reference"; _ref: string }; alt?: unknown; scale: number | null }[] = kept
-    .filter((img) => !removed.has(img._key))
-    .map((img) => ({ _key: img._key, _type: "localizedImage", asset: { _type: "reference", _ref: img.asset._ref }, ...(img.alt ? { alt: img.alt } : {}), scale: scaleOf(img._key) }));
+  // Photos: each existing one is a media-editor field (`image_<key>`: kept, replaced, placed, named or removed), then any new uploads.
+  const images: ImageValue[] = [];
+  for (const key of formData.getAll("imageKey").map(String)) {
+    const value = await readImageField(formData, `image_${key}`);
+    if (value) images.push({ _key: key, ...value });
+  }
   for (const file of formData.getAll("newImages")) {
     if (!(file instanceof File) || file.size === 0) continue;
     const assetId = await uploadImage(file);
-    images.push({ _key: assetId.slice(-8), _type: "localizedImage", asset: { _type: "reference", _ref: assetId }, scale: null });
+    images.push({ _key: assetId.slice(-8), _type: "localizedImage", asset: { _type: "reference", _ref: assetId } });
   }
 
   // Colours and detail rows come as numbered slots (see ProductForm); empty or ticked-off slots are dropped.
@@ -320,6 +315,7 @@ export async function saveSettings(formData: FormData) {
 export async function saveFrontPage(formData: FormData) {
   await requireAdmin();
   const video = await readVideoField(formData, "heroVideo");
+  const videoFit = readFit(formData, "heroVideo");
 
   // The values: one slot per existing item plus an empty one; a slot with no English title is dropped.
   const count = Number(formData.get("valueCount") ?? 0) || 0;
@@ -342,6 +338,9 @@ export async function saveFrontPage(formData: FormData) {
     .patch("homePage")
     .set({
       "hero.video": video,
+      "hero.videoScale": video ? videoFit.scale : null,
+      "hero.videoX": video ? videoFit.x : null,
+      "hero.videoY": video ? videoFit.y : null,
       "hero.videoUrl": String(formData.get("videoUrl") ?? "").trim() || null,
       "hero.logoPosition": formData.get("logoPosition") === "center" ? "center" : "left",
       productsTitle: readLocalizedString(formData, "productsTitle"),

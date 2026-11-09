@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { isDefaultTransform, mediaStyle, type MediaTransform } from "@/lib/media-transform";
 import { useId, useState } from "react";
 import Chevron from "./chevron";
 
@@ -9,7 +10,7 @@ export type DropdownListItem = {
   /** Body copy. Pass an array to render several paragraphs with the Figma 10px gap. */
   content: string | string[];
   /** Optional photo shown under the body copy, as in the Figma "With photo" variant. */
-  image?: { src: string; alt: string };
+  image?: { src: string; alt: string } & MediaTransform;
 };
 
 /**
@@ -65,10 +66,15 @@ export default function DropdownList({
                 ))}
                 {item.image && (
                   <div className="relative aspect-[459/517] w-full overflow-hidden bg-[#f7f7f7]">
-                    {/* Figma zooms the photo to 182% of the box width; the wrapper reproduces that crop. */}
-                    <div className="absolute top-0 left-[-40.82%] aspect-[2432/3626] w-[181.56%] -translate-y-[19.3%]">
-                      <Image src={item.image.src} alt={item.image.alt} fill sizes="(min-width: 768px) 521px, 100vw" className="object-cover" />
-                    </div>
+                    {isDefaultTransform(item.image) ? (
+                      /* Figma zooms the photo to 182% of the box width; the wrapper reproduces that crop. */
+                      <div className="absolute top-0 left-[-40.82%] aspect-[2432/3626] w-[181.56%] -translate-y-[19.3%]">
+                        <Image src={item.image.src} alt={item.image.alt} fill sizes="(min-width: 768px) 521px, 100vw" className="object-cover" />
+                      </div>
+                    ) : (
+                      /* Placed in the dashboard's media editor: drawn as the editor showed it, the whole box as the frame. */
+                      <Image src={item.image.src} alt={item.image.alt} fill sizes="(min-width: 768px) 521px, 100vw" className="object-cover" style={mediaStyle(item.image)} />
+                    )}
                   </div>
                 )}
               </div>

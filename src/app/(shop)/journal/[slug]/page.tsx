@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { mediaStyle } from "@/lib/media-transform";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -26,7 +27,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
         <article className="flex flex-col gap-[42px] px-[24px] md:grid md:grid-cols-2 md:items-start md:gap-[42px] md:px-[42px]">
           {post.image && (
             <div className="relative aspect-[4/5] w-full overflow-hidden md:sticky md:top-[42px]">
-              <Image src={post.image.src} alt={post.image.alt} fill sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" priority />
+              <Image src={post.image.src} alt={post.image.alt} fill sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" style={mediaStyle(post.image)} priority />
             </div>
           )}
           <div className="flex flex-col gap-[24px] font-gotham text-paragraph text-black">

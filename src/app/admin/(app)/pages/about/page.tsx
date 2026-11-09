@@ -8,7 +8,7 @@ type About = { title?: LocalizedString; intro?: LocalizedString; body?: Localize
 
 export default async function AboutEditor({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
   const { saved } = await searchParams;
-  const d = (await adminClient().fetch<About | null>(`*[_id == "aboutPage"][0]{ ..., "image": select(defined(image.asset) => { "_ref": image.asset._ref, "url": image.asset->url }) }`)) ?? {};
+  const d = (await adminClient().fetch<About | null>(`*[_id == "aboutPage"][0]{ ..., "image": select(defined(image.asset) => { "_ref": image.asset._ref, "url": image.asset->url, "alt": image.alt, "scale": image.scale, "x": image.x, "y": image.y }) }`)) ?? {};
   return (
     <>
       <div className="flex flex-col gap-[12px]">

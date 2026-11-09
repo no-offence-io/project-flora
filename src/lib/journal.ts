@@ -1,19 +1,20 @@
 import "server-only";
 import { defineQuery } from "next-sanity";
 import { CONTENT_TAG } from "./catalog";
+import { toImage, type SiteImage } from "./catalog-types";
 import { getLanguage } from "./language";
 import { sanityFetch } from "@/sanity/lib/live";
 
 const L = (field: string) => `coalesce(${field}[_key == $lang][0].value, ${field}[_key == "en"][0].value)`;
-const IMG = (field: string) => `{ "src": ${field}.asset->url, "alt": ${L(`${field}.alt`)} }`;
+const IMG = (field: string) => `{ "src": ${field}.asset->url, "alt": ${L(`${field}.alt`)}, "scale": ${field}.scale, "x": ${field}.x, "y": ${field}.y }`;
 const FIELDS = `"slug": slug.current, "title": ${L("title")}, date, "intro": ${L("intro")}, "body": ${L("body")}, "image": ${IMG("image")}`;
 
 const POSTS_QUERY = defineQuery(`*[_type == "post" && published == true && defined(slug.current)] | order(date desc, _createdAt desc){ ${FIELDS} }`);
 const POST_QUERY = defineQuery(`*[_type == "post" && published == true && slug.current == $slug][0]{ ${FIELDS} }`);
 
 type Block = { children?: { text?: string }[] };
-type Raw = { slug: string; title?: string | null; date?: string | null; intro?: string | null; body?: Block[] | null; image?: { src?: string | null; alt?: string | null } | null };
-export type Post = { slug: string; title: string; date?: string; intro: string; paragraphs: string[]; image?: { src: string; alt: string } };
+type Raw = { slug: string; title?: string | null; date?: string | null; intro?: string | null; body?: Block[] | null; image?: { src?: string | null; alt?: string | null; scale?: number | null; x?: number | null; y?: number | null } | null };
+export type Post = { slug: string; title: string; date?: string; intro: string; paragraphs: string[]; image?: SiteImage };
 
 const toPost = (r: Raw): Post => ({
   slug: r.slug,
@@ -21,7 +22,7 @@ const toPost = (r: Raw): Post => ({
   date: r.date ?? undefined,
   intro: r.intro ?? "",
   paragraphs: (r.body ?? []).map((b) => (b.children ?? []).map((c) => c.text ?? "").join("")).filter(Boolean),
-  ...(r.image?.src ? { image: { src: r.image.src, alt: r.image.alt ?? r.title ?? "" } } : {}),
+  ...(r.image?.src ? { image: toImage(r.image, r.title ?? "") } : {}),
 });
 
 export async function getPosts(): Promise<Post[]> {

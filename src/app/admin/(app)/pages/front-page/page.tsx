@@ -15,8 +15,8 @@ type Home = {
 
 const QUERY = `*[_id == "homePage"][0]{
   ...,
-  "hero": { ...hero, "video": select(defined(hero.video.asset) => { "_ref": hero.video.asset._ref, "url": hero.video.asset->url, "filename": hero.video.asset->originalFilename }) },
-  "values": { ...values, "items": values.items[]{ _key, title, description, "image": select(defined(image.asset) => { "_ref": image.asset._ref, "url": image.asset->url }) } }
+  "hero": { ...hero, "video": select(defined(hero.video.asset) => { "_ref": hero.video.asset._ref, "url": hero.video.asset->url, "scale": hero.videoScale, "x": hero.videoX, "y": hero.videoY, "filename": hero.video.asset->originalFilename }) },
+  "values": { ...values, "items": values.items[]{ _key, title, description, "image": select(defined(image.asset) => { "_ref": image.asset._ref, "url": image.asset->url, "alt": image.alt, "scale": image.scale, "x": image.x, "y": image.y }) } }
 }`;
 
 export default async function FrontPageEditor({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
@@ -37,7 +37,7 @@ export default async function FrontPageEditor({ searchParams }: { searchParams: 
           <Subheading>Top video</Subheading>
           <div className="h-px w-full bg-black/25" />
           <div className="flex flex-col gap-[24px]">
-            <VideoField name="heroVideo" label="Video" hint="MP4 or WebM, muted, ideally under 10 MB — it loops on every visit. Without one, the site uses its built-in video." current={h.hero?.video} />
+            <VideoField name="heroVideo" label="Video" hint="MP4 or WebM, muted, ideally under 10 MB — it loops on every visit. Without one, the site uses its built-in video." current={h.hero?.video} placeholder="/hero/front-hero-1080.mp4" />
             <Labelled label="Or a video URL" hint="Used only when no video is uploaded above.">
               <Input name="videoUrl" type="url" defaultValue={h.hero?.videoUrl ?? ""} />
             </Labelled>

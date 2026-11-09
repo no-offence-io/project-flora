@@ -49,6 +49,8 @@ export type LocalizedImage = {
   crop?: SanityImageCrop;
   alt?: InternationalizedArrayString;
   scale?: number;
+  x?: number;
+  y?: number;
 };
 
 export type Notification = {
@@ -326,6 +328,9 @@ export type HomePage = {
       _type: "file";
     };
     videoUrl?: string;
+    videoScale?: number;
+    videoX?: number;
+    videoY?: number;
     logoPosition?: "left" | "center";
   };
   productsTitle?: InternationalizedArrayString;

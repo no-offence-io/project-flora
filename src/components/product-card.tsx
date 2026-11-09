@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { photoScale } from "@/lib/photo-scale";
+import { mediaStyle } from "@/lib/media-transform";
 import Link from "next/link";
 import { useState } from "react";
 import SaleBadge from "./sale-badge";
@@ -80,7 +80,7 @@ export default function ProductCard({
                   key={`${image.src}-${i}`}
                   className={`flex h-full w-full shrink-0 snap-start items-center justify-center ${wellBackground} px-[24px] py-[42px]`}
                 >
-                  <div className="relative h-full w-full shrink-0" style={photoScale(image.scale)}>
+                  <div className="relative h-full w-full shrink-0" style={mediaStyle(image)}>
                     <Image src={image.src} alt={image.alt} fill sizes={imageSizes} className="object-contain" />
                   </div>
                 </div>
@@ -90,7 +90,7 @@ export default function ProductCard({
             // No scroll container at all — inside a slideshow row, a wheel/touch gesture here must
             // reach that row's own scroller untouched, not be captured or contained by this card.
             <div className={`flex h-full w-full items-center justify-center ${wellBackground} px-[24px] py-[42px]`}>
-              <div className="relative h-full w-full shrink-0" style={photoScale(product.image.scale)}>
+              <div className="relative h-full w-full shrink-0" style={mediaStyle(product.image)}>
                 <Image src={product.image.src} alt={product.image.alt} fill sizes={imageSizes} className="object-contain" />
               </div>
             </div>
@@ -108,7 +108,7 @@ export default function ProductCard({
               className={`pointer-events-none absolute inset-0 flex items-center justify-center ${wellBackground} px-[24px] py-[42px] transition-opacity duration-300`}
               style={{ opacity: activeColor === i ? 1 : 0 }}
             >
-              <div className="relative h-full w-full">
+              <div className="relative h-full w-full shrink-0" style={mediaStyle(color.image)}>
                 {wanted.has(i) && <Image src={color.image.src} alt="" fill sizes={imageSizes} className="object-contain" />}
               </div>
             </div>

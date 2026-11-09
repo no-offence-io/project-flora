@@ -5,7 +5,7 @@ import { getBlocksText, getText, type LocalizedBlocks, type LocalizedString } fr
 
 export type PostDoc = { _id: string; title?: LocalizedString; slug?: { current?: string }; date?: string; intro?: LocalizedString; body?: LocalizedBlocks; image?: { _ref: string; url: string } | null; published?: boolean };
 
-export const POST_PROJECTION = `{ ..., "image": select(defined(image.asset) => { "_ref": image.asset._ref, "url": image.asset->url }) }`;
+export const POST_PROJECTION = `{ ..., "image": select(defined(image.asset) => { "_ref": image.asset._ref, "url": image.asset->url, "alt": image.alt, "scale": image.scale, "x": image.x, "y": image.y }) }`;
 
 export default function PostForm({ post }: { post: PostDoc | null }) {
   const p = post;
@@ -17,7 +17,7 @@ export default function PostForm({ post }: { post: PostDoc | null }) {
           <Bilingual name="title" label="Title" en={getText(p?.title, "en")} no={getText(p?.title, "no")} required />
           <div className="flex flex-col gap-[24px] md:flex-row">
             <Labelled label="Web address" hint="Lowercase letters, numbers and dashes." className="flex-1">
-              <Input name="slug" defaultValue={p?.slug?.current ?? ""} required pattern="[a-z0-9-]+" />
+              <Input name="slug" defaultValue={p?.slug?.current ?? ""} required pattern="[a-z0-9\-]+" />
             </Labelled>
             <Labelled label="Date" className="md:w-[200px]">
               <Input name="date" type="date" defaultValue={p?.date ?? new Date().toISOString().slice(0, 10)} />

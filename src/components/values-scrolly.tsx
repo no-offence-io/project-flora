@@ -1,12 +1,13 @@
 "use client";
 
 import Image from "next/image";
+import { mediaStyle, type MediaTransform } from "@/lib/media-transform";
 import { useEffect, useRef, useState } from "react";
 
 export type ScrollyValue = {
   title: string;
   description: string;
-  image: { src: string; alt: string };
+  image: { src: string; alt: string } & MediaTransform;
 };
 
 /**
@@ -83,7 +84,7 @@ export default function ValuesScrolly({
                 className="absolute inset-0 [will-change:opacity] transition-opacity duration-700 ease-out"
                 style={{ opacity: activeIndex === i ? 1 : 0 }}
               >
-                <Image src={value.image.src} alt="" fill sizes="50vw" className="object-cover" />
+                <Image src={value.image.src} alt="" fill sizes="50vw" className="object-cover" style={mediaStyle(value.image)} />
               </div>
             ))}
           </div>
@@ -102,7 +103,7 @@ export default function ValuesScrolly({
             >
               {/* Mobile keeps each value's image with its own text instead of pinning it */}
               <div className="relative aspect-[4/5] w-full overflow-hidden bg-[#f7f7f7] md:hidden">
-                <Image src={value.image.src} alt={value.image.alt} fill sizes="100vw" className="object-cover" />
+                <Image src={value.image.src} alt={value.image.alt} fill sizes="100vw" className="object-cover" style={mediaStyle(value.image)} />
               </div>
 
               {/* Desktop: the title sits at the very top left of the block, while the

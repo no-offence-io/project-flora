@@ -1,4 +1,5 @@
 import "server-only";
+import { parseTransform, type MediaTransform } from "./media-transform";
 import { parseVintageCard, type VintageCardSetting } from "./vintage-card-shared";
 import { defineQuery } from "next-sanity";
 import { client } from "@/sanity/lib/client";
@@ -6,7 +7,7 @@ import { sanityFetch } from "@/sanity/lib/live";
 import type { DropdownListItem } from "@/components/dropdown-list";
 import type { ScrollyValue } from "@/components/values-scrolly";
 import type { ProductSize, Sizing } from "./catalog-types";
-import { CATEGORIES, type Category, type Product } from "./catalog-types";
+import { CATEGORIES, type Category, type Product, toImage, type SiteImage } from "./catalog-types";
 import { getLanguage, type Lang } from "./language";
 import { DEFAULT_RULES, type ShippingRules } from "./pricing";
 
@@ -21,13 +22,13 @@ export const CONTENT_TAG = "sanity-content";
 
 /** A translated field: the visitor's language if it has a value, otherwise English. */
 const L = (field: string) => `coalesce(${field}[_key == $lang][0].value, ${field}[_key == "en"][0].value)`;
-const IMG = (field: string) => `{ "src": ${field}.asset->url, "alt": ${L(`${field}.alt`)} }`;
+const IMG = (field: string) => `{ "src": ${field}.asset->url, "alt": ${L(`${field}.alt`)}, "scale": ${field}.scale, "x": ${field}.x, "y": ${field}.y }`;
 
 const PRODUCT_FIELDS = `
   "slug": slug.current, category, "name": name[_key == "en"][0].value, priceOre, compareAtPriceOre, stock, sizing, "sizes": sizes[]{ label, stock }, vintage, vintageLayout, "gif": gif.asset->url,
   "description": ${L("description")},
   "colors": colors[]{ hex, "name": ${L("name")}, "image": ${IMG("image")} },
-  "images": images[]{ "src": @.asset->url, "alt": ${L("@.alt")}, scale },
+  "images": images[]${IMG("@")},
   "specs": specs[]{ "label": ${L("label")}, "value": ${L("value")}, emphasis, expandable, hideOnMobile }
 `;
 
@@ -35,7 +36,7 @@ const PRODUCTS_QUERY = defineQuery(`*[_type == "product" && visible != false && 
 const VINTAGE_QUERY = defineQuery(`*[_type == "product" && visible != false && vintage == true && defined(slug.current)] | order(_createdAt desc) { ${PRODUCT_FIELDS} }`);
 const PRODUCT_QUERY = defineQuery(`*[_type == "product" && slug.current == $slug][0] { ${PRODUCT_FIELDS} }`);
 
-type RawImage = { src?: string | null; alt?: string | null; scale?: number | null };
+type RawImage = { src?: string | null; alt?: string | null; scale?: number | null; x?: number | null; y?: number | null };
 type RawProduct = {
   slug: string; category?: string | null; name?: string | null; priceOre?: number | null; compareAtPriceOre?: number | null; stock?: number | null;
   sizing?: string | null; sizes?: { label?: string | null; stock?: number | null }[] | null; vintage?: boolean | null; vintageLayout?: string | null; gif?: string | null;
@@ -45,13 +46,8 @@ type RawProduct = {
   specs?: { label?: string | null; value?: string | null; emphasis?: boolean | null; expandable?: boolean | null; hideOnMobile?: boolean | null }[] | null;
 };
 
-/** The dashboard stores a percent; 100 or anything odd means the usual fit, which the components get as no factor at all. */
-function imageScale(percent: number | null | undefined): number | undefined {
-  return typeof percent === "number" && percent >= 20 && percent <= 200 && percent !== 100 ? percent / 100 : undefined;
-}
-
 function toProduct(raw: RawProduct): Product {
-  const images = (raw.images ?? []).filter((i): i is RawImage & { src: string } => Boolean(i?.src)).map((i) => ({ src: i.src, alt: i.alt ?? raw.name ?? "", ...(imageScale(i.scale) !== undefined ? { scale: imageScale(i.scale) } : {}) }));
+  const images = (raw.images ?? []).filter((i): i is RawImage & { src: string } => Boolean(i?.src)).map((i) => toImage(i, raw.name ?? ""));
   const fallback = images[0] ?? { src: "", alt: "" };
   return {
     slug: raw.slug,
@@ -68,7 +64,7 @@ function toProduct(raw: RawProduct): Product {
     description: raw.description ?? "",
     colors: (raw.colors ?? [])
       .filter((c) => c?.hex)
-      .map((c) => ({ hex: c.hex!, name: c.name ?? "", image: c.image?.src ? { src: c.image.src, alt: c.image.alt ?? c.name ?? "" } : fallback })),
+      .map((c) => ({ hex: c.hex!, name: c.name ?? "", image: c.image?.src ? toImage(c.image, c.name ?? "") : fallback })),
     images,
     specs: (raw.specs ?? []).map((s) => ({ label: s.label ?? "", value: s.value ?? undefined, emphasis: !!s.emphasis, expandable: !!s.expandable, hideOnMobile: !!s.hideOnMobile })),
   };
@@ -163,25 +159,25 @@ export async function getSizingSettings(): Promise<SizingSettings> {
 // ---- pages ------------------------------------------------------------------------------------
 
 const HOME_QUERY = defineQuery(`*[_id == "homePage"][0]{
-  "hero": { "videoSrc": coalesce(hero.video.asset->url, hero.videoUrl), "logoPosition": hero.logoPosition },
+  "hero": { "videoSrc": coalesce(hero.video.asset->url, hero.videoUrl), "logoPosition": hero.logoPosition, "videoFit": { "scale": hero.videoScale, "x": hero.videoX, "y": hero.videoY } },
   "productsTitle": ${L("productsTitle")},
   "values": { "title": ${L("values.title")}, "intro": ${L("values.intro")},
     "items": values.items[]{ "title": ${L("title")}, "description": ${L("description")}, "image": ${IMG("image")} } }
 }`);
 
-export type HomeHero = { /** An uploaded or linked video; `undefined` means the site's built-in one. */ videoSrc?: string; logoPosition: "left" | "center" };
+export type HomeHero = { /** An uploaded or linked video; `undefined` means the site's built-in one. */ videoSrc?: string; /** How the uploaded video sits in the hero, from the media editor. */ videoFit?: MediaTransform; logoPosition: "left" | "center" };
 
 export async function getHomePage(): Promise<{ hero: HomeHero; productsTitle: string; values: { title: string; intro: string; items: ScrollyValue[] } }> {
   const lang = await getLanguage();
   const { data } = await sanityFetch({ query: HOME_QUERY, params: { lang }, stega: false, tags: [CONTENT_TAG] });
-  const d = (data ?? {}) as { hero?: { videoSrc?: string | null; logoPosition?: string | null } | null; productsTitle?: string | null; values?: { title?: string | null; intro?: string | null; items?: { title?: string | null; description?: string | null; image?: RawImage | null }[] | null } | null };
+  const d = (data ?? {}) as { hero?: { videoSrc?: string | null; logoPosition?: string | null; videoFit?: { scale?: number | null; x?: number | null; y?: number | null } | null } | null; productsTitle?: string | null; values?: { title?: string | null; intro?: string | null; items?: { title?: string | null; description?: string | null; image?: RawImage | null }[] | null } | null };
   return {
-    hero: { videoSrc: d.hero?.videoSrc ?? undefined, logoPosition: d.hero?.logoPosition === "center" ? "center" : "left" },
+    hero: { videoSrc: d.hero?.videoSrc ?? undefined, videoFit: d.hero?.videoSrc ? parseTransform(d.hero?.videoFit) : undefined, logoPosition: d.hero?.logoPosition === "center" ? "center" : "left" },
     productsTitle: d.productsTitle ?? "All items",
     values: {
       title: d.values?.title ?? "Values",
       intro: d.values?.intro ?? "",
-      items: (d.values?.items ?? []).filter((v) => v?.image?.src).map((v) => ({ title: v.title ?? "", description: v.description ?? "", image: { src: v.image!.src!, alt: v.image?.alt ?? v.title ?? "" } })),
+      items: (d.values?.items ?? []).filter((v) => v?.image?.src).map((v) => ({ title: v.title ?? "", description: v.description ?? "", image: toImage(v.image!, v.title ?? "") })),
     },
   };
 }
@@ -197,7 +193,7 @@ export async function getFaq(): Promise<DropdownListItem[]> {
   return ((data ?? []) as { title?: string | null; answer?: Block[] | null; image?: RawImage | null }[]).map((f) => ({
     title: f.title ?? "",
     content: paragraphs(f.answer),
-    ...(f.image?.src ? { image: { src: f.image.src, alt: f.image.alt ?? "" } } : {}),
+    ...(f.image?.src ? { image: toImage(f.image, "") } : {}),
   }));
 }
 
@@ -221,18 +217,20 @@ export async function getPolicy(page: string): Promise<PolicyContent | null> {
   return { title: d.title ?? "", intro: d.intro ?? "", items };
 }
 
-const SETTINGS_QUERY = defineQuery(`*[_id == "siteSettings"][0]{ siteName, "announcement": ${L("announcement")}, "signUpTitle": ${L("signUpTitle")}, "signUpText": ${L("signUpText")}, "signUpButton": ${L("signUpButton")}, "footerText": ${L("footerText")}, instagram, contactEmail, "signUpImage": signUpImage.asset->url, "footerImage": footerImage.asset->url }`);
+const SETTINGS_QUERY = defineQuery(`*[_id == "siteSettings"][0]{ siteName, "announcement": ${L("announcement")}, "signUpTitle": ${L("signUpTitle")}, "signUpText": ${L("signUpText")}, "signUpButton": ${L("signUpButton")}, "footerText": ${L("footerText")}, instagram, contactEmail, "signUpImage": signUpImage.asset->url, "footerImage": footerImage.asset->url, "signUpImageFit": signUpImage{ scale, x, y }, "footerImageFit": footerImage{ scale, x, y } }`);
 
 export type SiteCopy = {
   siteName: string; announcement: string; signUpTitle: string; signUpText: string; signUpButton: string; footerText: string; instagram: string; contactEmail: string;
   /** Uploaded background photos; `undefined` means the built-in one. */
   signUpImage?: string; footerImage?: string;
+  /** How the uploaded photos sit in their banners, from the media editor. */
+  signUpImageFit?: MediaTransform; footerImageFit?: MediaTransform;
 };
 
 export async function getSiteCopy(): Promise<SiteCopy> {
   const lang: Lang = await getLanguage();
   const { data } = await sanityFetch({ query: SETTINGS_QUERY, params: { lang }, stega: false, tags: [CONTENT_TAG] });
-  const d = (data ?? {}) as Partial<Record<keyof SiteCopy, string | null>>;
+  const d = (data ?? {}) as Partial<Record<Exclude<keyof SiteCopy, "signUpImageFit" | "footerImageFit">, string | null>> & { signUpImageFit?: RawImage | null; footerImageFit?: RawImage | null };
   return {
     siteName: d.siteName ?? "Flöra",
     announcement: d.announcement ?? "",
@@ -244,20 +242,22 @@ export async function getSiteCopy(): Promise<SiteCopy> {
     contactEmail: d.contactEmail ?? "",
     signUpImage: d.signUpImage ?? undefined,
     footerImage: d.footerImage ?? undefined,
+    signUpImageFit: d.signUpImage ? parseTransform(d.signUpImageFit) : undefined,
+    footerImageFit: d.footerImage ? parseTransform(d.footerImageFit) : undefined,
   };
 }
 
 // ---- about & vintage --------------------------------------------------------------------------
 
 const ABOUT_QUERY = defineQuery(`*[_id == "aboutPage"][0]{ "title": ${L("title")}, "intro": ${L("intro")}, "body": ${L("body")}, "image": ${IMG("image")} }`);
-export type AboutContent = { title: string; intro: string; paragraphs: string[]; image?: { src: string; alt: string } };
+export type AboutContent = { title: string; intro: string; paragraphs: string[]; image?: SiteImage };
 
 export async function getAboutPage(): Promise<AboutContent | null> {
   const lang = await getLanguage();
   const { data } = await sanityFetch({ query: ABOUT_QUERY, params: { lang }, stega: false, tags: [CONTENT_TAG] });
   const d = data as { title?: string | null; intro?: string | null; body?: Block[] | null; image?: RawImage | null } | null;
   if (!d) return null;
-  return { title: d.title ?? "About", intro: d.intro ?? "", paragraphs: paragraphs(d.body), ...(d.image?.src ? { image: { src: d.image.src, alt: d.image.alt ?? "" } } : {}) };
+  return { title: d.title ?? "About", intro: d.intro ?? "", paragraphs: paragraphs(d.body), ...(d.image?.src ? { image: toImage(d.image, "") } : {}) };
 }
 
 const VINTAGE_CARD_QUERY = defineQuery(`*[_id == "siteSettings"][0].vintageCard`);
@@ -268,7 +268,7 @@ export async function getVintageCard(): Promise<VintageCardSetting> {
 }
 
 const VINTAGE_PAGE_QUERY = defineQuery(`*[_id == "vintagePage"][0]{ "title": ${L("title")}, "intro": ${L("intro")}, "emptyText": ${L("emptyText")}, "image": ${IMG("image")} }`);
-export type VintageContent = { title: string; intro: string; emptyText: string; image?: { src: string; alt: string } };
+export type VintageContent = { title: string; intro: string; emptyText: string; image?: SiteImage };
 
 export async function getVintagePage(): Promise<VintageContent> {
   const lang = await getLanguage();
@@ -278,6 +278,6 @@ export async function getVintagePage(): Promise<VintageContent> {
     title: d.title ?? "Vintage",
     intro: d.intro ?? "",
     emptyText: d.emptyText ?? (lang === "no" ? "Ingen vintageplagg til salgs akkurat nå." : "No vintage pieces for sale right now."),
-    ...(d.image?.src ? { image: { src: d.image.src, alt: d.image.alt ?? "" } } : {}),
+    ...(d.image?.src ? { image: toImage(d.image, "") } : {}),
   };
 }

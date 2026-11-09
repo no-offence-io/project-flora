@@ -210,9 +210,9 @@ export default async function IconPage({ searchParams }: { searchParams: Promise
           <Subheading>Your own pictures</Subheading>
           <div className="h-px w-full bg-black/25" />
           <Muted className="text-[11px]">Square PNG or JPG, at least 512 × 512 px. Keep the picture simple — it is shown as small as 16 px. Leave a place empty to use the mark, or the icon above it in this list.</Muted>
-          <ImageField name="tabIcon" label="Browser tab, Google results, bookmarks" hint="Shown tiny, usually on white. Transparent background is fine here." current={s.tabIcon ?? null} />
-          <ImageField name="homeIcon" label="iPhone and iPad home screen" hint="iOS rounds the corners and fills transparency with white. Empty = the tab icon." current={s.homeIcon ?? null} />
-          <ImageField name="androidIcon" label="Android home screen" hint="Android cuts a circle out of the middle, so keep the subject centred. Empty = the home-screen icon." current={s.androidIcon ?? null} />
+          <ImageField name="tabIcon" label="Browser tab, Google results, bookmarks" hint="Shown tiny, usually on white. Transparent background is fine here." current={s.tabIcon ?? null} crop={false} alt={false} frame={{ aspect: 1, fit: "contain", pad: [0.15, 0.15] }} />
+          <ImageField name="homeIcon" label="iPhone and iPad home screen" hint="iOS rounds the corners and fills transparency with white. Empty = the tab icon." current={s.homeIcon ?? null} crop={false} alt={false} frame={{ aspect: 1, fit: "contain", pad: [0.15, 0.15] }} />
+          <ImageField name="androidIcon" label="Android home screen" hint="Android cuts a circle out of the middle, so keep the subject centred. Empty = the home-screen icon." current={s.androidIcon ?? null} crop={false} alt={false} frame={{ aspect: 1, fit: "contain", pad: [0.15, 0.15] }} />
         </Card>
 
         <Button className="md:max-w-[320px]">Save</Button>

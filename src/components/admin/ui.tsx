@@ -28,7 +28,7 @@ export function Muted({ children, className = "" }: { children: ReactNode; class
 
 /** The order-summary card: hairline border and 24px padding on desktop, flush on mobile. */
 export function Card({ children, className = "", id }: { children: ReactNode; className?: string; id?: string }) {
-  return <section id={id} className={`flex flex-col gap-[12px] bg-white font-gotham text-paragraph text-black md:border-[0.5px] md:border-black/25 md:p-[24px] ${className}`}>{children}</section>;
+  return <section id={id} className={`min-w-0 max-w-full flex flex-col gap-[12px] bg-white font-gotham text-paragraph text-black md:border-[0.5px] md:border-black/25 md:p-[24px] ${className}`}>{children}</section>;
 }
 
 /** The cart's bordered row. */
@@ -67,7 +67,7 @@ export function TextLink({ href, children, className = "" }: { href: string; chi
 /** A labelled field. The label sits above in 11px like the cart's measurement rows, not inside. */
 export function Labelled({ label, children, hint, className = "" }: { label: string; children: ReactNode; hint?: string; className?: string }) {
   return (
-    <label className={`flex min-w-0 flex-col gap-[6px] ${className}`}>
+    <label className={`min-w-0 flex min-w-0 flex-col gap-[6px] ${className}`}>
       <span className="font-gotham text-[11px] leading-normal text-black">{label}</span>
       {children}
       {hint && <span className="font-gotham text-[11px] leading-normal text-black/50">{hint}</span>}
@@ -76,17 +76,17 @@ export function Labelled({ label, children, hint, className = "" }: { label: str
 }
 
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={`${FIELD} truncate ${props.className ?? ""}`} />;
+  return <input {...props} className={`min-w-0 max-w-full ${FIELD} truncate ${props.className ?? ""}`} />;
 }
 
 export function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea rows={4} {...props} className={`${FIELD} resize-y ${props.className ?? ""}`} />;
+  return <textarea rows={4} {...props} className={`min-w-0 max-w-full ${FIELD} resize-y ${props.className ?? ""}`} />;
 }
 
 /** The checkout's country select: native select with the Figma chevron over it. */
 export function Select({ children, className = "", ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <span className={`relative block ${className}`}>
+    <span className={`min-w-0 max-w-full relative block ${className}`}>
       <select {...props} className={`${FIELD} appearance-none pr-[36px]`}>
         {children}
       </select>
@@ -127,7 +127,7 @@ export function Bilingual({
 }) {
   const Control = multiline ? Textarea : Input;
   return (
-    <div className="flex flex-col gap-[6px]">
+    <div className="min-w-0 flex flex-col gap-[6px]">
       <span className="font-gotham text-[11px] leading-normal text-black">{label}</span>
       <div className="flex flex-col gap-[12px] md:flex-row md:gap-[24px]">
         <Labelled label="English" className="flex-1">

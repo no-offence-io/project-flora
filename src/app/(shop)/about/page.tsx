@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { mediaStyle } from "@/lib/media-transform";
 import Image from "next/image";
 import Navbar from "@/components/navbar";
 import SignUpBanner from "@/components/sign-up-banner";
@@ -21,7 +22,7 @@ export default async function AboutPage() {
         <section className="flex flex-col gap-[42px] px-[24px] md:grid md:grid-cols-2 md:items-start md:gap-[42px] md:px-[42px]">
           {about?.image && (
             <div className="relative aspect-[4/5] w-full overflow-hidden md:sticky md:top-[42px]">
-              <Image src={about.image.src} alt={about.image.alt} fill sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" />
+              <Image src={about.image.src} alt={about.image.alt} fill sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" style={mediaStyle(about.image)} />
             </div>
           )}
           <div className="flex flex-col gap-[24px] font-gotham text-paragraph text-black">

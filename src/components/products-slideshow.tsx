@@ -5,6 +5,7 @@ import ProductCard from "./product-card";
 import { PrevNextControls, useScroller } from "./use-scroller";
 import { useT } from "@/components/i18n-provider";
 import RolloverText from "./rollover-text";
+import type { MediaTransform } from "@/lib/media-transform";
 
 export type ProductColor = {
   /** Swatch colour, drawn as an 8px square. */
@@ -12,7 +13,7 @@ export type ProductColor = {
   /** Accessible name for the swatch, e.g. "Terracotta". */
   name: string;
   /** Image shown in the card's thumbnail while this swatch is hovered or focused. */
-  image: { src: string; alt: string };
+  image: { src: string; alt: string } & MediaTransform;
 };
 
 export type SlideshowProduct = {
@@ -27,9 +28,9 @@ export type SlideshowProduct = {
   /** Colour options; hovering or focusing a swatch previews its image in the thumbnail. */
   colors?: ProductColor[];
   /** Default photo, shown before any hover and used when `images` has nothing else to slide through. */
-  image: { src: string; alt: string; scale?: number };
+  image: { src: string; alt: string } & MediaTransform;
   /** The product's own photographed angles — what the well's slide gesture moves between, never the colour variants. */
-  images?: { src: string; alt: string; scale?: number }[];
+  images?: ({ src: string; alt: string } & MediaTransform)[];
   href: string;
 };
 

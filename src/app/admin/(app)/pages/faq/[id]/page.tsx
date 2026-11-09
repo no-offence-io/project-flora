@@ -6,7 +6,7 @@ import { adminClient } from "@/lib/admin/sanity";
 export default async function FaqPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string }> }) {
   const { id } = await params;
   const { saved } = await searchParams;
-  const item = await adminClient().fetch<FaqDoc | null>(`*[_type == "faqItem" && _id == $id][0]{ ..., "image": select(defined(image.asset) => { "_ref": image.asset._ref, "url": image.asset->url }) }`, { id });
+  const item = await adminClient().fetch<FaqDoc | null>(`*[_type == "faqItem" && _id == $id][0]{ ..., "image": select(defined(image.asset) => { "_ref": image.asset._ref, "url": image.asset->url, "alt": image.alt, "scale": image.scale, "x": image.x, "y": image.y }) }`, { id });
   if (!item) notFound();
   return (
     <>

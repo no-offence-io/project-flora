@@ -38,7 +38,7 @@ export default function DiscountForm({ discount }: { discount: DiscountDoc | nul
         <div className="flex flex-col gap-[24px]">
           <div className="flex flex-col gap-[24px] md:flex-row">
             <Labelled label="Code" hint="What the customer types. Saved in capitals." className="flex-1">
-              <Input name="code" defaultValue={d?.code ?? ""} required pattern="[A-Za-z0-9-]{2,30}" className="uppercase" />
+              <Input name="code" defaultValue={d?.code ?? ""} required pattern="[A-Za-z0-9\-]{2,30}" className="uppercase" />
             </Labelled>
             <Labelled label="Internal note" className="flex-1">
               <Input name="description" defaultValue={d?.description ?? ""} placeholder="e.g. Instagram launch" />

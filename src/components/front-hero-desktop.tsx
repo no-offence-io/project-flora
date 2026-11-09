@@ -1,4 +1,5 @@
 import Image from "next/image";
+import type { MediaTransform } from "@/lib/media-transform";
 import Link from "next/link";
 import CartLink from "./cart-link";
 import HeroVideo from "./hero-video";
@@ -43,10 +44,12 @@ export default async function FrontHeroDesktop({
   logoPosition = "left",
   className = "",
   videoSrc = "/hero/front-hero-1080.mp4",
+  videoFit,
 }: {
   /** Let the background video drift as you scroll. */
   parallax?: boolean;
   videoSrc?: string;
+  videoFit?: MediaTransform;
   /** "left" is the Figma layout with all links right; "center" puts the wordmark between two links each side. */
   logoPosition?: HeroLogoPosition;
   className?: string;
@@ -61,7 +64,7 @@ export default async function FrontHeroDesktop({
       {/* Background video with parallax (photo as poster) under the vertical darkening gradient */}
       {/* Dark under the video, so it fades in from black and the white text is readable before it does */}
       <div aria-hidden className="absolute inset-0 bg-black">
-        <HeroVideo src={videoSrc} parallax={parallax} />
+        <HeroVideo src={videoSrc} parallax={parallax} fit={videoFit} />
         <div
           className="absolute inset-0"
           style={{

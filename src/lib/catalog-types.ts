@@ -1,4 +1,5 @@
 import type { ProductColor, SlideshowProduct } from "@/components/products-slideshow";
+import { parseTransform, type MediaTransform } from "./media-transform";
 import { formatNok } from "@/lib/money";
 
 /*
@@ -22,8 +23,14 @@ export const CATEGORIES = ["Tops", "Skirts", "Pants", "Sets", "Accessories"] as 
 export type Category = (typeof CATEGORIES)[number];
 
 /** How a product is sized: made to the customer's measurements (the default), a fixed size list, or one size. */
-/** A product photo in its box. `scale` is a factor on the usual fit (1 = whole photo with its margin); missing means 1. */
-export type ProductImage = { src: string; alt: string; scale?: number };
+/** A picture the site draws in a box of its own shape, with how it sits there (see media-transform.ts). */
+export type SiteImage = { src: string; alt: string } & MediaTransform;
+export type ProductImage = SiteImage;
+
+/** From a GROQ image projection (`src`, `alt`, `scale`, `x`, `y`) to a SiteImage; `alt` falls back to the given text. */
+export function toImage(raw: { src?: string | null; alt?: string | null; scale?: number | null; x?: number | null; y?: number | null }, alt: string): SiteImage {
+  return { src: raw.src ?? "", alt: raw.alt ?? alt, ...parseTransform(raw) };
+}
 
 export type Sizing = "measurements" | "sizes" | "none";
 export type VintageLayout = "card" | "plain";

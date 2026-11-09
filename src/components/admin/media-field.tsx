@@ -1,13 +1,15 @@
 import Image from "next/image";
-import { Labelled } from "./ui";
+import MediaEditor, { PORTRAIT_FRAME, WIDE_FRAME, type CurrentMedia, type Frame } from "./media-editor";
 
 /*
- * Image and video fields for the admin forms: what's there now, a way to replace it, a way to
- * remove it. They post plain form fields; src/lib/admin/media.ts turns those into Sanity values.
+ * Image and video fields for the admin forms. Each is the media editor (media-editor.tsx): a
+ * preview, an Edit view with crop/placement, replace from upload or the media bank, a name, and
+ * remove. They post plain form fields; src/lib/admin/media.ts turns those into Sanity values.
  */
 
-export type CurrentImage = { _ref: string; url: string } | null | undefined;
-export type CurrentVideo = { _ref: string; url: string; filename?: string } | null | undefined;
+export type CurrentImage = CurrentMedia;
+export type CurrentVideo = CurrentMedia;
+export { PORTRAIT_FRAME, WIDE_FRAME, PRODUCT_FRAME, type Frame } from "./media-editor";
 
 /** The cart's thumbnail treatment: the whole photo on a light box, never cropped. */
 export function Thumb({ url, alt = "", className = "", dark = false }: { url?: string | null; alt?: string; className?: string; dark?: boolean }) {
@@ -21,48 +23,13 @@ export function Thumb({ url, alt = "", className = "", dark = false }: { url?: s
 /**
  * `placeholder` is the picture the site uses when nothing is uploaded (the built-in logo, say), shown
  * so the field never looks empty while something is in fact in use. `dark` frames a white-on-
- * transparent picture on black so it can be seen.
+ * transparent picture on black so it can be seen. `frame` is the shape of the box the site draws
+ * the picture in; `crop` false for pictures the site never crops; `alt` false for fields without a name of their own.
  */
-export function ImageField({ name, label, current, hint, placeholder, dark = false }: { name: string; label: string; current: CurrentImage; hint?: string; placeholder?: string; dark?: boolean }) {
-  return (
-    <Labelled label={label} hint={hint}>
-      <div className="flex gap-[12px]">
-        <span className="w-[120px] shrink-0">
-          <Thumb url={current?.url ?? placeholder} dark={dark} />
-        </span>
-        <div className="flex min-w-0 flex-1 flex-col gap-[12px] font-gotham text-paragraph">
-          {!current && placeholder && <span className="text-[11px] text-black/50">Built-in — in use now. Upload a file to replace it.</span>}
-          <input type="hidden" name={`${name}.existing`} value={current?._ref ?? ""} />
-          <input type="file" name={name} accept="image/*" className="text-paragraph file:mr-[12px] file:border file:border-black/20 file:bg-transparent file:px-[12px] file:py-[8px] file:font-gotham file:text-paragraph file:text-black" />
-          {current && (
-            <label className="flex items-center gap-[6px] text-[11px] text-black/50">
-              <input type="checkbox" name={`${name}.remove`} className="accent-black" /> Remove this photo
-            </label>
-          )}
-        </div>
-      </div>
-    </Labelled>
-  );
+export function ImageField({ name, label, current, hint, placeholder, dark = false, frame = PORTRAIT_FRAME, crop = true, alt = true }: { name: string; label: string; current: CurrentImage; hint?: string; placeholder?: string; dark?: boolean; frame?: Frame; crop?: boolean; alt?: boolean }) {
+  return <MediaEditor name={name} label={label} kind="image" current={current} hint={hint} placeholder={placeholder} dark={dark} frame={frame} crop={crop} alt={alt} />;
 }
 
-export function VideoField({ name, label, current, hint }: { name: string; label: string; current: CurrentVideo; hint?: string }) {
-  return (
-    <Labelled label={label} hint={hint}>
-      <div className="flex flex-col gap-[12px] font-gotham text-paragraph">
-        {current ? (
-          <video src={current.url} controls muted playsInline preload="metadata" className="aspect-video w-full max-w-[520px] bg-[#f7f7f7]" />
-        ) : (
-          <span className="flex aspect-video w-full max-w-[520px] items-center justify-center bg-[#f7f7f7] text-[11px] text-black/50">No video uploaded — the site shows its built-in one</span>
-        )}
-        {current?.filename && <span className="text-[11px] text-black/50">{current.filename}</span>}
-        <input type="hidden" name={`${name}.existing`} value={current?._ref ?? ""} />
-        <input type="file" name={name} accept="video/mp4,video/webm" className="text-paragraph file:mr-[12px] file:border file:border-black/20 file:bg-transparent file:px-[12px] file:py-[8px] file:font-gotham file:text-paragraph file:text-black" />
-        {current && (
-          <label className="flex items-center gap-[6px] text-[11px] text-black/50">
-            <input type="checkbox" name={`${name}.remove`} className="accent-black" /> Remove this video
-          </label>
-        )}
-      </div>
-    </Labelled>
-  );
+export function VideoField({ name, label, current, hint, placeholder, frame = WIDE_FRAME }: { name: string; label: string; current: CurrentVideo; hint?: string; placeholder?: string; frame?: Frame }) {
+  return <MediaEditor name={name} label={label} kind="video" current={current} hint={hint} placeholder={placeholder} placeholderNote="Built-in video — in use now. Replace it to use your own." frame={frame} alt={false} />;
 }

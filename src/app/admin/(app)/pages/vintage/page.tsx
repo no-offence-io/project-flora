@@ -8,7 +8,7 @@ type Vintage = { title?: LocalizedString; intro?: LocalizedString; emptyText?: L
 
 export default async function VintageEditor({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
   const { saved } = await searchParams;
-  const d = (await adminClient().fetch<Vintage | null>(`*[_id == "vintagePage"][0]{ ..., "image": select(defined(image.asset) => { "_ref": image.asset._ref, "url": image.asset->url }) }`)) ?? {};
+  const d = (await adminClient().fetch<Vintage | null>(`*[_id == "vintagePage"][0]{ ..., "image": select(defined(image.asset) => { "_ref": image.asset._ref, "url": image.asset->url, "alt": image.alt, "scale": image.scale, "x": image.x, "y": image.y }) }`)) ?? {};
   return (
     <>
       <div className="flex flex-col gap-[12px]">
@@ -23,7 +23,7 @@ export default async function VintageEditor({ searchParams }: { searchParams: Pr
             <Bilingual name="title" label="Title" en={getText(d.title, "en")} no={getText(d.title, "no")} required />
             <Bilingual name="intro" label="Intro" en={getText(d.intro, "en")} no={getText(d.intro, "no")} multiline rows={4} />
             <Bilingual name="emptyText" label="Text when nothing is for sale" en={getText(d.emptyText, "en")} no={getText(d.emptyText, "no")} multiline rows={2} />
-            <ImageField name="image" label="Top photo" current={d.image} />
+            <ImageField name="image" label="Top photo" current={d.image} frame={{ aspect: 3 / 4, fit: "cover" }} />
           </div>
         </Card>
         <Button className="md:max-w-[320px]">Save</Button>

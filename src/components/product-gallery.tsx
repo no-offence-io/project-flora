@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useScroller } from "./use-scroller";
-import { photoScale } from "@/lib/photo-scale";
+import { mediaStyle, type MediaTransform } from "@/lib/media-transform";
 
 /**
  * Product image well from the Figma product page, with the black "current image" line beneath.
@@ -12,7 +12,7 @@ export default function ProductGallery({
   images,
   className = "",
 }: {
-  images: { src: string; alt: string; scale?: number }[];
+  images: ({ src: string; alt: string } & MediaTransform)[];
   className?: string;
 }) {
   const { ref, index } = useScroller(0);
@@ -28,7 +28,7 @@ export default function ProductGallery({
             key={`${image.src}-${i}`}
             className="flex h-full w-full shrink-0 snap-start items-center justify-center bg-[var(--photo-bg,#f7f7f7)] px-[24px] py-[24px] md:py-[120px]"
           >
-            <div className="relative h-full w-full shrink-0" style={photoScale(image.scale)}>
+            <div className="relative h-full w-full shrink-0" style={mediaStyle(image)}>
               <Image
                 src={image.src}
                 alt={image.alt}
