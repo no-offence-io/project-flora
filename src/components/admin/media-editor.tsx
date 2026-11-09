@@ -436,18 +436,30 @@ function EditDialog({
   };
   const centerOfFrame = (): Pt => ({ x: (size?.w ?? 0) / 2, y: (size?.h ?? 0) / 2 });
 
-  /** Fill: the picture covers the whole frame, margin included, centred. Fit: back to the usual fit. */
+  /**
+   * Fill: the picture covers the whole box, margin included, centred, in every box this field is
+   * drawn in, not only the one previewed. One placement serves them all, and the usual fit differs
+   * from box to box (a wide box fits the photo by height, a narrow one by width), so the scale is
+   * the largest any of them needs; the others get a little more than cover rather than a stripe.
+   */
   const fill = () => {
-    const g = geometry();
-    if (!g) return;
-    const base = { scale: 1, x: 0, y: 0 };
-    let iw = g.box.w;
-    let ih = g.box.h;
-    if (frame.fit === "contain" && aspect) {
-      iw = Math.min(g.box.w, g.box.h * aspect);
-      ih = iw / aspect;
+    if (!aspect && frame.fit === "contain") return;
+    let needed = 0;
+    for (const f of frames) {
+      const w = 1;
+      const h = 1 / f.aspect;
+      const [padX, padY] = f.pad ?? [0, 0];
+      const bw = w * (1 - 2 * padX);
+      const bh = h * (1 - 2 * padY);
+      let iw = bw;
+      let ih = bh;
+      if (f.fit === "contain" && aspect) {
+        iw = Math.min(bw, bh * aspect);
+        ih = iw / aspect;
+      }
+      needed = Math.max(needed, w / iw, h / ih);
     }
-    setT({ ...base, scale: clamp(Math.max(g.frame.width / iw, g.frame.height / ih), SCALE_MIN, SCALE_MAX) });
+    setT({ scale: clamp(needed, SCALE_MIN, SCALE_MAX), x: 0, y: 0 });
   };
 
   const openPicker = async () => {
@@ -541,7 +553,7 @@ function EditDialog({
                 <button type="button" onClick={() => setT(DEFAULT_T)} className={btn} disabled={!src || removed}>
                   Fit
                 </button>
-                <button type="button" onClick={fill} className={btn} disabled={!src || removed || (frame.fit === "contain" && !aspect)}>
+                <button type="button" onClick={fill} className={btn} disabled={!src || removed || (frame.fit === "contain" && !aspect)} title={frames.length > 1 ? "Covers every box this photo is shown in" : undefined}>
                   Fill
                 </button>
                 <button type="button" onClick={() => setT(initial)} className={btn} disabled={!src || removed}>
