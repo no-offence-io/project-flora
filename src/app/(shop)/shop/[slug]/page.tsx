@@ -13,6 +13,7 @@ import { getProduct, getProducts, getSizingSettings, getVintageCard, getVintageP
 import { isSoldOut } from "@/lib/catalog-types";
 import { LIFESTYLE_PHOTOS, toSlideshowProduct } from "@/lib/catalog-types";
 import { getT } from "@/lib/i18n-server";
+import { photoScale } from "@/lib/photo-scale";
 
 export async function generateMetadata({ params }: PageProps<"/shop/[slug]">): Promise<Metadata> {
   const { slug } = await params;
@@ -76,8 +77,10 @@ export default async function ProductPage({ params }: PageProps<"/shop/[slug]">)
         {more.length > 0 && (
           <div id="photos" className="grid grid-cols-1 gap-[24px] px-[24px] md:grid-cols-4 md:gap-[42px] md:px-[42px]">
             {more.map((image) => (
-              <div key={image.src} className="relative aspect-[4/5] w-full bg-[var(--photo-bg,#f7f7f7)]">
-                <Image src={image.src} alt={image.alt} fill sizes="(min-width: 768px) 25vw, 100vw" className="object-contain p-[24px]" />
+              <div key={image.src} className="flex aspect-[4/5] w-full items-center justify-center overflow-hidden bg-[var(--photo-bg,#f7f7f7)] p-[24px]">
+                <div className="relative h-full w-full shrink-0" style={photoScale(image.scale)}>
+                  <Image src={image.src} alt={image.alt} fill sizes="(min-width: 768px) 25vw, 100vw" className="object-contain" />
+                </div>
               </div>
             ))}
           </div>

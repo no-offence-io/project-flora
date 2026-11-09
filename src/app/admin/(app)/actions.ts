@@ -134,14 +134,19 @@ export async function saveProduct(formData: FormData) {
 
   // Photos: keep the ones not ticked for removal, then append any new uploads.
   const removed = new Set(formData.getAll("removeImage").map(String));
-  const kept = JSON.parse(String(formData.get("existingImages") ?? "[]")) as { _key: string; asset: { _ref: string } }[];
-  const images: { _key: string; _type: "localizedImage"; asset: { _type: "reference"; _ref: string } }[] = kept
+  const kept = JSON.parse(String(formData.get("existingImages") ?? "[]")) as { _key: string; asset: { _ref: string }; alt?: unknown }[];
+  // Each photo's size in its box, in percent; 100 (the usual fit) is stored as nothing at all.
+  const scaleOf = (key: string): number | null => {
+    const n = Number(formData.get(`imageScale_${key}`));
+    return Number.isFinite(n) && n >= 20 && n <= 200 && Math.round(n) !== 100 ? Math.round(n) : null;
+  };
+  const images: { _key: string; _type: "localizedImage"; asset: { _type: "reference"; _ref: string }; alt?: unknown; scale: number | null }[] = kept
     .filter((img) => !removed.has(img._key))
-    .map((img) => ({ _key: img._key, _type: "localizedImage", asset: { _type: "reference", _ref: img.asset._ref } }));
+    .map((img) => ({ _key: img._key, _type: "localizedImage", asset: { _type: "reference", _ref: img.asset._ref }, ...(img.alt ? { alt: img.alt } : {}), scale: scaleOf(img._key) }));
   for (const file of formData.getAll("newImages")) {
     if (!(file instanceof File) || file.size === 0) continue;
     const assetId = await uploadImage(file);
-    images.push({ _key: assetId.slice(-8), _type: "localizedImage", asset: { _type: "reference", _ref: assetId } });
+    images.push({ _key: assetId.slice(-8), _type: "localizedImage", asset: { _type: "reference", _ref: assetId }, scale: null });
   }
 
   // Colours and detail rows come as numbered slots (see ProductForm); empty or ticked-off slots are dropped.

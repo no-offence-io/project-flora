@@ -22,6 +22,9 @@ export const CATEGORIES = ["Tops", "Skirts", "Pants", "Sets", "Accessories"] as 
 export type Category = (typeof CATEGORIES)[number];
 
 /** How a product is sized: made to the customer's measurements (the default), a fixed size list, or one size. */
+/** A product photo in its box. `scale` is a factor on the usual fit (1 = whole photo with its margin); missing means 1. */
+export type ProductImage = { src: string; alt: string; scale?: number };
+
 export type Sizing = "measurements" | "sizes" | "none";
 export type VintageLayout = "card" | "plain";
 export type ProductSize = { label: string; stock: number };
@@ -47,7 +50,7 @@ export type Product = {
   stock: number;
   description: string;
   colors: ProductColor[];
-  images: { src: string; alt: string }[];
+  images: ProductImage[];
   specs: ProductSpec[];
 };
 

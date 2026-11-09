@@ -27,7 +27,7 @@ const PRODUCT_FIELDS = `
   "slug": slug.current, category, "name": name[_key == "en"][0].value, priceOre, compareAtPriceOre, stock, sizing, "sizes": sizes[]{ label, stock }, vintage, vintageLayout, "gif": gif.asset->url,
   "description": ${L("description")},
   "colors": colors[]{ hex, "name": ${L("name")}, "image": ${IMG("image")} },
-  "images": images[]${IMG("@")},
+  "images": images[]{ "src": @.asset->url, "alt": ${L("@.alt")}, scale },
   "specs": specs[]{ "label": ${L("label")}, "value": ${L("value")}, emphasis, expandable, hideOnMobile }
 `;
 
@@ -35,7 +35,7 @@ const PRODUCTS_QUERY = defineQuery(`*[_type == "product" && visible != false && 
 const VINTAGE_QUERY = defineQuery(`*[_type == "product" && visible != false && vintage == true && defined(slug.current)] | order(_createdAt desc) { ${PRODUCT_FIELDS} }`);
 const PRODUCT_QUERY = defineQuery(`*[_type == "product" && slug.current == $slug][0] { ${PRODUCT_FIELDS} }`);
 
-type RawImage = { src?: string | null; alt?: string | null };
+type RawImage = { src?: string | null; alt?: string | null; scale?: number | null };
 type RawProduct = {
   slug: string; category?: string | null; name?: string | null; priceOre?: number | null; compareAtPriceOre?: number | null; stock?: number | null;
   sizing?: string | null; sizes?: { label?: string | null; stock?: number | null }[] | null; vintage?: boolean | null; vintageLayout?: string | null; gif?: string | null;
@@ -45,8 +45,13 @@ type RawProduct = {
   specs?: { label?: string | null; value?: string | null; emphasis?: boolean | null; expandable?: boolean | null; hideOnMobile?: boolean | null }[] | null;
 };
 
+/** The dashboard stores a percent; 100 or anything odd means the usual fit, which the components get as no factor at all. */
+function imageScale(percent: number | null | undefined): number | undefined {
+  return typeof percent === "number" && percent >= 20 && percent <= 200 && percent !== 100 ? percent / 100 : undefined;
+}
+
 function toProduct(raw: RawProduct): Product {
-  const images = (raw.images ?? []).filter((i): i is RawImage & { src: string } => Boolean(i?.src)).map((i) => ({ src: i.src, alt: i.alt ?? raw.name ?? "" }));
+  const images = (raw.images ?? []).filter((i): i is RawImage & { src: string } => Boolean(i?.src)).map((i) => ({ src: i.src, alt: i.alt ?? raw.name ?? "", ...(imageScale(i.scale) !== undefined ? { scale: imageScale(i.scale) } : {}) }));
   const fallback = images[0] ?? { src: "", alt: "" };
   return {
     slug: raw.slug,

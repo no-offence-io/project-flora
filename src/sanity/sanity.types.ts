@@ -48,6 +48,7 @@ export type LocalizedImage = {
   hotspot?: SanityImageHotspot;
   crop?: SanityImageCrop;
   alt?: InternationalizedArrayString;
+  scale?: number;
 };
 
 export type Notification = {

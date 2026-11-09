@@ -4,6 +4,7 @@ import { ImageField } from "@/components/admin/media-field";
 import { Bilingual, Button, Card, Checkbox, Input, Labelled, Muted, Select, Subheading } from "@/components/admin/ui";
 import { getText, type LocalizedString } from "@/lib/admin/localized";
 import { oreToKroner } from "@/lib/admin/sanity";
+import { photoScale } from "@/lib/photo-scale";
 
 export type ProductDoc = {
   _id: string;
@@ -15,7 +16,7 @@ export type ProductDoc = {
   compareAtPriceOre?: number;
   stock?: number;
   visible?: boolean;
-  images?: { _key: string; asset?: { _ref: string }; url?: string }[];
+  images?: { _key: string; asset?: { _ref: string }; url?: string; alt?: unknown; scale?: number }[];
   sizing?: string;
   sizes?: { _key: string; label?: string; stock?: number }[];
   gif?: string | null;
@@ -29,7 +30,7 @@ export type ProductDoc = {
 /** The admin's view of a product: images, colours and their photos resolved to URLs for the previews. */
 export const PRODUCT_ADMIN_PROJECTION = `{
   ...,
-  "images": images[]{ _key, asset, "url": asset->url },
+  "images": images[]{ _key, asset, alt, scale, "url": asset->url },
   "sizes": sizes[]{ _key, label, stock },
   "gif": gif.asset->url,
   "gifSources": array::compact([images[0].asset->url] + colors[].image.asset->url),
@@ -42,7 +43,7 @@ const CATEGORIES = ["Tops", "Skirts", "Pants", "Sets", "Accessories"];
 /** The product editor: the checkout form's fields, grouped the way the product page shows them. */
 export default function ProductForm({ product }: { product: ProductDoc | null }) {
   const p = product;
-  const existing = (p?.images ?? []).filter((img) => img.asset?._ref).map((img) => ({ _key: img._key, asset: { _ref: img.asset!._ref } }));
+  const existing = (p?.images ?? []).filter((img) => img.asset?._ref).map((img) => ({ _key: img._key, asset: { _ref: img.asset!._ref }, alt: img.alt ?? null }));
   const colorSlots = [...(p?.colors ?? []), null];
   const sizeSlots = [...(p?.sizes ?? []), null, null];
   const sizing = p?.sizing === "sizes" || p?.sizing === "none" ? p.sizing : "measurements";
@@ -120,23 +121,30 @@ export default function ProductForm({ product }: { product: ProductDoc | null })
         <Card>
           <Subheading>Photos</Subheading>
           <div className="h-px w-full bg-black/25" />
-          {/* The cart's thumbnail treatment: whole photo on a light box, never cropped or blown up. */}
+          {/* Each photo as the shop draws it: whole, on a light box, at its chosen size. The first one is the thumbnail. */}
           {p?.images?.length ? (
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-[12px]">
-              {p.images.map((img) => (
-                <label key={img._key} className="flex cursor-pointer flex-col gap-[6px]">
-                  <span className="relative flex aspect-[4/5] w-full items-center justify-center bg-[#f7f7f7] p-[12px]">
-                    {img.url && <Image src={img.url} alt="" fill sizes="160px" className="object-contain p-[12px]" />}
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-[12px]">
+              {p.images.map((img, i) => (
+                <div key={img._key} className="flex flex-col gap-[6px]">
+                  <span className="relative flex aspect-[4/5] w-full items-center justify-center overflow-hidden bg-[#f7f7f7] p-[12px]">
+                    <span className="relative block h-full w-full shrink-0" style={photoScale((img.scale ?? 100) / 100)}>
+                      {img.url && <Image src={img.url} alt="" fill sizes="160px" className="object-contain" />}
+                    </span>
                   </span>
-                  <span className="flex items-center gap-[6px] text-[11px] leading-normal text-black/50">
+                  <label className="flex items-center gap-[6px] text-[11px] leading-normal text-black/50">
+                    <span className="whitespace-nowrap">{i === 0 ? "Thumbnail size" : "Size"} %</span>
+                    <input type="number" name={`imageScale_${img._key}`} defaultValue={img.scale ?? 100} min={20} max={200} step={5} className="h-[28px] w-[64px] border border-black/20 bg-transparent px-[6px] font-gotham text-[11px] text-black" />
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-[6px] text-[11px] leading-normal text-black/50">
                     <input type="checkbox" name="removeImage" value={img._key} className="accent-black" /> Remove
-                  </span>
-                </label>
+                  </label>
+                </div>
               ))}
             </div>
           ) : (
             <Muted>No photos yet.</Muted>
           )}
+          {p?.images?.length ? <Muted className="text-[11px]">Size: 100 is the usual fit, the whole photo inside its box with a margin. Bigger fills more of the box, smaller leaves more room; the box itself keeps its shape. Photos added below start at 100.</Muted> : null}
           <Labelled label="Add photos" hint="JPG or PNG, up to 15 MB each. The first photo is the one shown in the shop.">
             <input type="file" name="newImages" accept="image/*" multiple className="font-gotham text-paragraph file:mr-[12px] file:border file:border-black/20 file:bg-transparent file:px-[12px] file:py-[8px] file:font-gotham file:text-paragraph file:text-black" />
           </Labelled>

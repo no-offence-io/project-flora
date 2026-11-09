@@ -27,9 +27,9 @@ export type SlideshowProduct = {
   /** Colour options; hovering or focusing a swatch previews its image in the thumbnail. */
   colors?: ProductColor[];
   /** Default photo, shown before any hover and used when `images` has nothing else to slide through. */
-  image: { src: string; alt: string };
+  image: { src: string; alt: string; scale?: number };
   /** The product's own photographed angles — what the well's slide gesture moves between, never the colour variants. */
-  images?: { src: string; alt: string }[];
+  images?: { src: string; alt: string; scale?: number }[];
   href: string;
 };
 
