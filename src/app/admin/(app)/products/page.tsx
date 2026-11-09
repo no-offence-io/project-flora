@@ -29,7 +29,7 @@ export default async function ProductsPage() {
         <ul className="m-0 grid list-none grid-cols-2 gap-[12px] p-0 md:gap-[24px]">
           {products.map((p) => (
             <li key={p._id} className="flex min-w-0">
-              <Link href={`/admin/products/${p._id}`} className="flex h-full flex-col gap-[8px] border-[0.25px] border-black/25 p-[12px] font-gotham text-paragraph text-black transition-colors hover:bg-[#fafbfc]">
+              <Link href={`/admin/products/${p._id}`} className="flex h-full w-full min-w-0 flex-col gap-[8px] border-[0.25px] border-black/25 p-[12px] font-gotham text-paragraph text-black transition-colors hover:bg-[#fafbfc]">
                 <span className={`relative flex aspect-[159/238] w-full items-center justify-center overflow-hidden px-[15%] py-[17.6%] ${p.vintage ? "bg-[#1a1a1a]" : "bg-[#f7f7f7]"}`}>
                   <span className="relative block h-full w-full shrink-0" style={mediaStyle(parseTransform(p.image))}>
                     {p.image?.src && <Image src={p.image.src} alt="" fill sizes="(min-width: 768px) 25vw, 50vw" className="object-contain" />}
