@@ -53,12 +53,12 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           </p>
         )}
         {children}
+        {/* The floating "+" that starts anything new: sticky at the end of the page's flow (see make-new.tsx). */}
+        <MakeNew />
       </main>
     </div>
     {/* Outside the wrapper: night mode's filter there would pin "fixed" to the wrapper, not the screen. */}
     <PageTransition area="admin" />
-    {/* The floating "+" that starts anything new; also outside the wrapper, for the same reason. */}
-    <MakeNew />
     </>
   );
 }
