@@ -34,7 +34,8 @@ function saveNightPreference(next: "auto" | "on" | "off") {
   });
 }
 
-export default function AdminNav({ email, unread = 0, logo, signOut, demo = false, toggleDemo, night: nightInitial = "auto" }: { email: string; unread?: number; logo: string; signOut: () => Promise<void>; demo?: boolean; toggleDemo: () => Promise<void>; night?: "auto" | "on" | "off" }) {
+export default function AdminNav({ email, unread = 0, logo, signOut, demo = false, toggleDemo, night: nightInitial = "auto", hidden = [] }: { email: string; unread?: number; logo: string; signOut: () => Promise<void>; demo?: boolean; toggleDemo: () => Promise<void>; night?: "auto" | "on" | "off"; /** Links left out of the sidebar for now, e.g. a tool nothing on the site uses. */ hidden?: string[] }) {
+  const groups = hidden.length ? GROUPS.map((g) => ({ ...g, links: g.links.filter((l) => !hidden.includes(l.href)) })).filter((g) => g.links.length > 0) : GROUPS;
   // From the live path: the layout stays mounted between admin pages, so a value it passed down would go stale.
   const current = sectionOf(usePathname());
   const [switching, setSwitching] = useState(false);
@@ -104,11 +105,11 @@ export default function AdminNav({ email, unread = 0, logo, signOut, demo = fals
       window.removeEventListener("keydown", onKey);
     };
   }, [open]);
-  const currentLabel = GROUPS.flatMap((g) => g.links).find((l) => l.href === current)?.label ?? "Dashboard";
+  const currentLabel = groups.flatMap((g) => g.links).find((l) => l.href === current)?.label ?? "Dashboard";
 
   const list = (
     <nav aria-label="Admin" className="flex flex-col gap-[24px] font-gotham text-paragraph">
-      {GROUPS.map((g) => (
+      {groups.map((g) => (
         <div key={g.title} className="flex flex-col gap-[6px]">
           <span className="text-[11px] leading-normal tracking-[0.2em] uppercase text-black/50">{g.title}</span>
           <ul className="m-0 flex list-none flex-col gap-[6px] p-0">
