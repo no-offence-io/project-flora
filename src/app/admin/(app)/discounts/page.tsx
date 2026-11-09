@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Heading, Muted, Row, Tag } from "@/components/admin/ui";
 import { adminClient, kr } from "@/lib/admin/sanity";
 
@@ -11,14 +10,11 @@ export default async function DiscountsPage() {
   const codes = await adminClient().fetch<Row_[]>(`*[_type == "discount"] | order(_createdAt desc){ _id, code, description, kind, value, freeShipping, active, uses, maxUses, "expired": defined(endsAt) && endsAt < now() }`);
   return (
     <>
-      <div className="flex flex-col gap-[12px] md:flex-row md:items-end md:justify-between">
+      <div className="flex flex-col gap-[12px]">
         <div className="flex flex-col gap-[12px]">
           <Heading>Discount codes</Heading>
           <Muted>Typed at checkout. The site works out what a code is worth; the customer only sends the code.</Muted>
         </div>
-        <Link href="/admin/discounts/new" className="flex items-center justify-center bg-black px-[24px] py-[12px] font-gotham text-paragraph text-white hover:opacity-80 transition-opacity md:w-auto">
-          New code
-        </Link>
       </div>
       {codes.length === 0 ? (
         <Muted>No codes yet.</Muted>

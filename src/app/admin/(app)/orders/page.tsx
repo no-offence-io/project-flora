@@ -32,12 +32,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   return (
     <>
       <div className="flex flex-col gap-[12px]">
-        <div className="flex flex-wrap items-end justify-between gap-[12px]">
-          <Heading>Orders</Heading>
-          <Link href="/admin/orders/new" className="border border-black px-[18px] py-[10px] font-gotham text-paragraph text-black hover:bg-black hover:text-white transition-colors">
-            Add order
-          </Link>
-        </div>
+        <Heading>Orders</Heading>
         <Muted>Newest first. Shop orders appear by themselves when a payment goes through; add one yourself for PR gifts or sales outside the shop.</Muted>
       </div>
 

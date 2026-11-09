@@ -10,6 +10,7 @@ import { isDemoOn } from "@/lib/admin/demo";
 import { adminClient } from "@/lib/admin/sanity";
 import { toggleDemoMode } from "./actions";
 import PageTransition from "@/components/page-transition";
+import MakeNew from "@/components/admin/make-new";
 
 export const metadata = { robots: { index: false, follow: false } };
 
@@ -56,6 +57,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     </div>
     {/* Outside the wrapper: night mode's filter there would pin "fixed" to the wrapper, not the screen. */}
     <PageTransition area="admin" />
+    {/* The floating "+" that starts anything new; also outside the wrapper, for the same reason. */}
+    <MakeNew />
     </>
   );
 }

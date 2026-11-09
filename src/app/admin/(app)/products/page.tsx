@@ -13,14 +13,11 @@ export default async function ProductsPage() {
   );
   return (
     <>
-      <div className="flex flex-col gap-[12px] md:flex-row md:items-end md:justify-between">
+      <div className="flex flex-col gap-[12px]">
         <div className="flex flex-col gap-[12px]">
           <Heading>Products</Heading>
           <Muted>{products.length} products. Tap one to edit it.</Muted>
         </div>
-        <Link href="/admin/products/new" className="flex items-center justify-center bg-black px-[24px] py-[12px] font-gotham text-paragraph text-white hover:opacity-80 transition-opacity md:w-auto">
-          New product
-        </Link>
       </div>
       {products.length === 0 ? (
         <Muted>No products yet.</Muted>

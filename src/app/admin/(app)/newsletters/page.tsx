@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Heading, Muted, Row, Tag } from "@/components/admin/ui";
 import { adminClient } from "@/lib/admin/sanity";
 
@@ -11,14 +10,11 @@ export default async function NewslettersPage() {
   ]);
   return (
     <>
-      <div className="flex flex-col gap-[12px] md:flex-row md:items-end md:justify-between">
+      <div className="flex flex-col gap-[12px]">
         <div className="flex flex-col gap-[12px]">
           <Heading>Newsletters</Heading>
           <Muted>{subscribers} subscribers on the list. Write a draft, send yourself a test, then send to everyone.</Muted>
         </div>
-        <Link href="/admin/newsletters/new" className="flex items-center justify-center bg-black px-[24px] py-[12px] font-gotham text-paragraph text-white hover:opacity-80 transition-opacity md:w-auto">
-          New newsletter
-        </Link>
       </div>
       {rows.length === 0 ? (
         <Muted>Nothing written yet.</Muted>
