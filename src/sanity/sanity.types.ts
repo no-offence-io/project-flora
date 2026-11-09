@@ -238,6 +238,7 @@ export type SiteSettings = {
   _updatedAt: string;
   _rev: string;
   demoMode?: boolean;
+  comingSoon?: boolean;
   siteName?: string;
   announcement?: InternationalizedArrayString;
   signUpTitle?: InternationalizedArrayString;
@@ -281,6 +282,9 @@ export type SiteSettings = {
     paragraphSize?: number;
     backgroundColor?: string;
     textColor?: string;
+    photoBackground?: string;
+    vintageBackground?: string;
+    vintagePhotoBackground?: string;
   };
   sizeGuide?: InternationalizedArrayText;
 };

@@ -76,7 +76,7 @@ export default async function ProductPage({ params }: PageProps<"/shop/[slug]">)
         {more.length > 0 && (
           <div id="photos" className="grid grid-cols-1 gap-[24px] px-[24px] md:grid-cols-4 md:gap-[42px] md:px-[42px]">
             {more.map((image) => (
-              <div key={image.src} className="relative aspect-[4/5] w-full bg-[#f7f7f7]">
+              <div key={image.src} className="relative aspect-[4/5] w-full bg-[var(--photo-bg,#f7f7f7)]">
                 <Image src={image.src} alt={image.alt} fill sizes="(min-width: 768px) 25vw, 100vw" className="object-contain p-[24px]" />
               </div>
             ))}

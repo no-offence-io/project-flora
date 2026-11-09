@@ -25,7 +25,7 @@ export default function ProductGallery({
         {images.map((image, i) => (
           <div
             key={`${image.src}-${i}`}
-            className="flex h-full w-full shrink-0 snap-start items-center justify-center bg-[#f7f7f7] px-[24px] py-[24px] md:py-[120px]"
+            className="flex h-full w-full shrink-0 snap-start items-center justify-center bg-[var(--photo-bg,#f7f7f7)] px-[24px] py-[24px] md:py-[120px]"
           >
             <div className="relative h-full w-full">
               <Image

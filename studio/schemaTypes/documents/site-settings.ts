@@ -20,6 +20,13 @@ export const siteSettings = defineType({
     defineField({name: 'demoMode', title: 'Admin test mode', type: 'boolean', readOnly: true, hidden: true}),
     defineField({name: 'siteName', title: 'Site name', type: 'string', group: 'general', initialValue: 'Flöra'}),
     defineField({
+      name: 'comingSoon',
+      title: 'Coming-soon page',
+      description: 'On: visitors see the coming-soon page and nothing else (the dashboard and the preview link keep working). Off: the shop is open to everyone. Set on the dashboard under Settings → Shop status.',
+      type: 'boolean',
+      group: 'general',
+    }),
+    defineField({
       name: 'loadingStyle',
       title: 'Photo loading look',
       description: 'Set on the dashboard, under Page transitions.',
@@ -200,6 +207,9 @@ export const siteSettings = defineType({
         defineField({name: 'paragraphSize', title: 'Paragraph size (px)', type: 'number', validation: (rule) => rule.min(10).max(24)}),
         defineField({name: 'backgroundColor', title: 'Background colour', description: 'Hex, e.g. #ffffff', type: 'string'}),
         defineField({name: 'textColor', title: 'Text colour', description: 'Hex, e.g. #000000', type: 'string'}),
+        defineField({name: 'photoBackground', title: 'Behind product photos', description: 'Hex. The colour behind the photos in product cards, slideshows and the product gallery. Empty = light grey (#f7f7f7).', type: 'string'}),
+        defineField({name: 'vintageBackground', title: 'Vintage section background', description: 'Hex. The paper colour of the vintage section and the Vintage page. Empty = #f4f1ea.', type: 'string'}),
+        defineField({name: 'vintagePhotoBackground', title: 'Behind vintage photos', description: 'Hex. The colour behind each vintage piece\'s photo. Empty = near-black (#1a1a1a).', type: 'string'}),
         defineField({
           name: 'favicon',
           title: 'Browser-tab icon',

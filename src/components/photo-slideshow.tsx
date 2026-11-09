@@ -123,7 +123,7 @@ export default function PhotoSlideshow({
         {photos.map((photo, i) => (
           <div
             key={photo.src}
-            className="relative h-full w-[244px] shrink-0 snap-start overflow-hidden bg-[#f7f7f7] md:w-[calc((100%-20px)/3)]"
+            className="relative h-full w-[244px] shrink-0 snap-start overflow-hidden bg-[var(--photo-bg,#f7f7f7)] md:w-[calc((100%-20px)/3)]"
           >
             {/* Wider than the card by the drift on each side, so no edge shows as it slides. */}
             <div

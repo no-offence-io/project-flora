@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { isComingSoon } from "@/lib/gate";
 
 /** Name of the cookie that marks a browser as allowed past the gate. */
 const PREVIEW_COOKIE = "flora-preview";
@@ -7,7 +8,8 @@ const PREVIEW_COOKIE = "flora-preview";
 /**
  * Holds the whole site behind the coming-soon page until launch.
  *
- * Switched on by `COMING_SOON=true`; set it to anything else (or remove it) to open the site. To
+ * Switched on the dashboard (Settings → Shop status); until something is saved there, the
+ * `COMING_SOON=true` environment variable decides (see lib/gate.ts). To
  * look at the real site while it's closed, visit any URL with `?preview=<PREVIEW_TOKEN>` — that
  * swaps the token for a cookie and drops the token from the address bar, so the link can be shared
  * with the client without the token ending up in their browser history or screenshots.
@@ -21,10 +23,10 @@ const PREVIEW_COOKIE = "flora-preview";
  *   - `/api/revalidate`, which Sanity calls after a publish; it has its own secret.
  * See the matcher below, which also lets static assets through so this page can render at all.
  */
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // The admin is never gated; it has its own login.
   if (request.nextUrl.pathname.startsWith("/admin")) return NextResponse.next();
-  if (process.env.COMING_SOON !== "true") return NextResponse.next();
+  if (!(await isComingSoon())) return NextResponse.next();
 
   const token = process.env.PREVIEW_TOKEN;
   const offered = request.nextUrl.searchParams.get("preview");

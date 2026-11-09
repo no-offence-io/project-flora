@@ -28,6 +28,12 @@ export type Brand = {
   paragraphSize?: number;
   backgroundColor?: string;
   textColor?: string;
+  /** Behind product photos in cards, slideshows and the gallery (default #f7f7f7). */
+  photoBackground?: string;
+  /** The vintage section's and Vintage page's paper (default #f4f1ea). */
+  vintageBackground?: string;
+  /** Behind each vintage piece's photo (default #1a1a1a). */
+  vintagePhotoBackground?: string;
   /** Browser-tab icon colourway: black disc with white mark, or the reverse. */
   favicon?: "black" | "white";
   /** Uploaded icons per place (Sanity image URLs); the built-in mark is used where empty. */

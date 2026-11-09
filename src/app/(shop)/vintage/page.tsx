@@ -20,7 +20,7 @@ export default async function VintagePage() {
   const [products, page, t] = await Promise.all([getVintageProducts(), getVintagePage(), getT()]);
   return (
     <div className="flex flex-col gap-[60px] pb-[60px] md:gap-[120px] md:pb-[120px]">
-      <div className="full-bleed bg-[#f4f1ea] text-black">
+      <div className="full-bleed bg-[var(--vintage-bg,#f4f1ea)] text-black">
         <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-[60px] md:gap-0">
           <Navbar tone="dark" />
           <header className="flex flex-col gap-[24px] px-[24px] pb-[60px] md:grid md:grid-cols-2 md:items-end md:gap-[42px] md:px-[42px] md:pt-[42px] md:pb-[120px]">
@@ -44,7 +44,7 @@ export default async function VintagePage() {
           <div className="grid grid-cols-1 gap-[42px] md:grid-cols-2 md:gap-[60px]">
             {products.map((product) => (
               <div key={product.slug} className="flex flex-col gap-[12px]">
-                <ProductCard product={toSlideshowProduct(product)} wellClassName="h-[420px] md:h-[640px]" wellBackground="bg-[#1a1a1a]" imageSizes="(min-width: 768px) 50vw, 100vw" />
+                <ProductCard product={toSlideshowProduct(product)} wellClassName="h-[420px] md:h-[640px]" wellBackground="bg-[var(--vintage-photo-bg,#1a1a1a)]" imageSizes="(min-width: 768px) 50vw, 100vw" />
                 <p className="m-0 font-gotham text-[11px] leading-normal tracking-[0.2em] uppercase text-black/50">{t("vintage.oneOfAKind")}</p>
               </div>
             ))}

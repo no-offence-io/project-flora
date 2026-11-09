@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { forgetComingSoon } from "@/lib/gate";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { readLocalizedBlocks, readLocalizedString } from "@/lib/admin/localized";
@@ -253,6 +254,9 @@ export async function saveSettings(formData: FormData) {
     paragraphSize: num("paragraphSize", 10, 24),
     backgroundColor: hex("backgroundColor"),
     textColor: hex("textColor"),
+    photoBackground: hex("photoBackground"),
+    vintageBackground: hex("vintageBackground"),
+    vintagePhotoBackground: hex("vintagePhotoBackground"),
   };
   const shippingZones: Record<string, unknown>[] = [];
   for (let i = 0; i < (Number(formData.get("zoneCount")) || 0); i++) {
@@ -277,6 +281,8 @@ export async function saveSettings(formData: FormData) {
       adminClient()
         .patch("siteSettings")
         .set({
+          // The gate: the proxy reads this (lib/gate.ts). Only the two values the select offers.
+          comingSoon: formData.get("comingSoon") === "closed",
           siteName: String(formData.get("siteName") ?? "Flöra").trim(),
           gaMeasurementId,
           gaPropertyId,
@@ -301,6 +307,7 @@ export async function saveSettings(formData: FormData) {
         })
         .commit(),
     );
+  forgetComingSoon();
   revalidatePath("/admin/settings");
   redirect("/admin/settings?saved=1");
 }

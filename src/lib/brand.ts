@@ -7,7 +7,7 @@ import { parseTransition, type TransitionSetting } from "./page-transition-share
 import { CONTENT_TAG } from "./catalog";
 import { sanityFetch } from "@/sanity/lib/live";
 
-const BRAND_QUERY = defineQuery(`*[_id == "siteSettings"][0].brand{ "logo": logo.asset->url, headingFont, bodyFont, headingSizeDesktop, headingSizeMobile, bannerSize, paragraphSize, backgroundColor, textColor, favicon, "tabIcon": tabIcon.asset->url, "homeIcon": homeIcon.asset->url, "androidIcon": androidIcon.asset->url }`);
+const BRAND_QUERY = defineQuery(`*[_id == "siteSettings"][0].brand{ "logo": logo.asset->url, headingFont, bodyFont, headingSizeDesktop, headingSizeMobile, bannerSize, paragraphSize, backgroundColor, textColor, photoBackground, vintageBackground, vintagePhotoBackground, favicon, "tabIcon": tabIcon.asset->url, "homeIcon": homeIcon.asset->url, "androidIcon": androidIcon.asset->url }`);
 
 export const DEFAULT_LOGO = "/footer/flora-logo.svg";
 
@@ -26,6 +26,9 @@ export async function getBrand(): Promise<Brand> {
     paragraphSize: num("paragraphSize"),
     backgroundColor: str("backgroundColor"),
     textColor: str("textColor"),
+    photoBackground: str("photoBackground"),
+    vintageBackground: str("vintageBackground"),
+    vintagePhotoBackground: str("vintagePhotoBackground"),
     favicon: parseFaviconStyle(d.favicon),
     tabIcon: str("tabIcon"),
     homeIcon: str("homeIcon"),
@@ -80,6 +83,9 @@ export function brandStyle(b: Brand): { style: Record<string, string>; fontHref?
   if (b.paragraphSize) style["--text-paragraph"] = `${b.paragraphSize}px`;
   if (b.backgroundColor) style["--background"] = b.backgroundColor;
   if (b.textColor) style["--foreground"] = b.textColor;
+  if (b.photoBackground) style["--photo-bg"] = b.photoBackground;
+  if (b.vintageBackground) style["--vintage-bg"] = b.vintageBackground;
+  if (b.vintagePhotoBackground) style["--vintage-photo-bg"] = b.vintagePhotoBackground;
   return { style, ...(families.length ? { fontHref: `https://fonts.googleapis.com/css2?${families.map((f) => `family=${f}`).join("&")}&display=swap` } : {}) };
 }
 

@@ -8,8 +8,10 @@ import { getEmailSettings, siteDomain } from "@/lib/email-settings";
 import { NOTIFY_SCENARIOS } from "@/lib/email-shared";
 import { emailConfigured } from "@/lib/notify";
 import { adminClient, oreToKroner } from "@/lib/admin/sanity";
+import { isComingSoon } from "@/lib/gate";
 
 type Settings = {
+  comingSoon?: boolean;
   siteName?: string; gaMeasurementId?: string; gaPropertyId?: string; announcement?: LocalizedString; signUpTitle?: LocalizedString; signUpText?: LocalizedString; signUpButton?: LocalizedString;
   footerText?: LocalizedString; instagram?: string; contactEmail?: string; shippingOre?: number; freeShippingFromOre?: number;
   signUpImage?: Pic; footerImage?: Pic;
@@ -17,7 +19,7 @@ type Settings = {
   sizeGuide?: LocalizedString;
   shippingZones?: { _key: string; name?: string; countries?: string[]; shippingOre?: number; freeShippingFromOre?: number | null }[];
   shipsTo?: string[];
-  brand?: { logo?: Pic; headingFont?: string; bodyFont?: string; headingSizeDesktop?: number; headingSizeMobile?: number; bannerSize?: number; paragraphSize?: number; backgroundColor?: string; textColor?: string };
+  brand?: { logo?: Pic; headingFont?: string; bodyFont?: string; headingSizeDesktop?: number; headingSizeMobile?: number; bannerSize?: number; paragraphSize?: number; backgroundColor?: string; textColor?: string; photoBackground?: string; vintageBackground?: string; vintagePhotoBackground?: string };
 };
 type Pic = { _ref: string; url: string } | null;
 const PIC = (f: string) => `"${f}": select(defined(${f}.asset) => { "_ref": ${f}.asset._ref, "url": ${f}.asset->url })`;
@@ -27,6 +29,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const s = (await adminClient().fetch<Settings | null>(`*[_id == "siteSettings"][0]{ ..., ${PIC("signUpImage")}, ${PIC("footerImage")}, "brand": { ...brand, ${PIC("logo").replace('"logo"', '"logo"').replace("logo.asset", "brand.logo.asset")} } }`)) ?? {};
   const b = s.brand ?? {};
   const mail = await getEmailSettings();
+  const closed = await isComingSoon();
   const measureSlots = [...(s.measurementFields ?? []), null];
   const zoneSlots = [...(s.shippingZones ?? []), null];
   return (
@@ -41,6 +44,19 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         )}
       </div>
       <form action={saveSettings} className="flex max-w-[860px] flex-col gap-[42px]">
+        <Card>
+          <Subheading>Shop status</Subheading>
+          <div className="h-px w-full bg-black/25" />
+          <Labelled
+            label={closed ? "Visitors see the coming-soon page right now" : "The shop is open to everyone right now"}
+            hint="Closed: every address shows the coming-soon page, while the dashboard and the preview link keep working. Open: the real site, for everyone. Save, and it takes effect within about a minute."
+          >
+            <Select name="comingSoon" defaultValue={closed ? "closed" : "open"}>
+              <option value="closed">Closed — show the coming-soon page</option>
+              <option value="open">Open — show the shop to everyone</option>
+            </Select>
+          </Labelled>
+        </Card>
         <Card>
           <Subheading>General</Subheading>
           <div className="h-px w-full bg-black/25" />
@@ -96,6 +112,26 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               <div className="flex items-center gap-[12px]">
                 <span aria-hidden className="h-[24px] w-[24px] shrink-0 rounded-full border border-black/20" style={{ backgroundColor: b.textColor ?? "#000000" }} />
                 <Input name="textColor" defaultValue={b.textColor ?? "#000000"} pattern="#([0-9a-fA-F]{3}){1,2}" />
+              </div>
+            </Labelled>
+          </div>
+          <div className="flex flex-col gap-[24px] md:flex-row">
+            <Labelled label="Behind product photos" hint="Product cards, slideshows and the product gallery." className="flex-1">
+              <div className="flex items-center gap-[12px]">
+                <span aria-hidden className="h-[24px] w-[24px] shrink-0 rounded-full border border-black/20" style={{ backgroundColor: b.photoBackground ?? "#f7f7f7" }} />
+                <Input name="photoBackground" defaultValue={b.photoBackground ?? "#f7f7f7"} pattern="#([0-9a-fA-F]{3}){1,2}" />
+              </div>
+            </Labelled>
+            <Labelled label="Vintage section" hint="The paper behind the vintage section and the Vintage page." className="flex-1">
+              <div className="flex items-center gap-[12px]">
+                <span aria-hidden className="h-[24px] w-[24px] shrink-0 rounded-full border border-black/20" style={{ backgroundColor: b.vintageBackground ?? "#f4f1ea" }} />
+                <Input name="vintageBackground" defaultValue={b.vintageBackground ?? "#f4f1ea"} pattern="#([0-9a-fA-F]{3}){1,2}" />
+              </div>
+            </Labelled>
+            <Labelled label="Behind vintage photos" hint="The colour behind each vintage piece's photo." className="flex-1">
+              <div className="flex items-center gap-[12px]">
+                <span aria-hidden className="h-[24px] w-[24px] shrink-0 rounded-full border border-black/20" style={{ backgroundColor: b.vintagePhotoBackground ?? "#1a1a1a" }} />
+                <Input name="vintagePhotoBackground" defaultValue={b.vintagePhotoBackground ?? "#1a1a1a"} pattern="#([0-9a-fA-F]{3}){1,2}" />
               </div>
             </Labelled>
           </div>

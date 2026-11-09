@@ -26,7 +26,7 @@ export default function ProductCard({
   product,
   className = "",
   wellClassName = "",
-  wellBackground = "bg-[#f7f7f7]",
+  wellBackground = "bg-[var(--photo-bg,#f7f7f7)]",
   imageSizes = "(min-width: 768px) 33vw, 50vw",
   allowImageScroll = true,
 }: {
