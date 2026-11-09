@@ -73,12 +73,12 @@ export default function ProductCard({
             // slideshow ancestor for it to (rightly) block in that context.
             <div
               ref={ref}
-              className="flex h-full snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [overscroll-behavior-x:contain] [&::-webkit-scrollbar]:hidden"
+              className="flex h-full snap-x snap-mandatory overflow-x-auto overflow-y-hidden [scrollbar-width:none] [overscroll-behavior-x:contain] [&::-webkit-scrollbar]:hidden"
             >
               {slides.map((image, i) => (
                 <div
                   key={`${image.src}-${i}`}
-                  className={`flex h-full w-full shrink-0 snap-start items-center justify-center ${wellBackground} px-[24px] py-[42px]`}
+                  className={`flex h-full w-full shrink-0 snap-start items-center justify-center overflow-hidden ${wellBackground} px-[24px] py-[42px]`}
                 >
                   <div className="relative h-full w-full shrink-0" style={mediaStyle(image)}>
                     <Image src={image.src} alt={image.alt} fill sizes={imageSizes} className="object-contain" />
@@ -89,7 +89,7 @@ export default function ProductCard({
           ) : (
             // No scroll container at all — inside a slideshow row, a wheel/touch gesture here must
             // reach that row's own scroller untouched, not be captured or contained by this card.
-            <div className={`flex h-full w-full items-center justify-center ${wellBackground} px-[24px] py-[42px]`}>
+            <div className={`flex h-full w-full items-center justify-center overflow-hidden ${wellBackground} px-[24px] py-[42px]`}>
               <div className="relative h-full w-full shrink-0" style={mediaStyle(product.image)}>
                 <Image src={product.image.src} alt={product.image.alt} fill sizes={imageSizes} className="object-contain" />
               </div>
@@ -105,7 +105,7 @@ export default function ProductCard({
             <div
               key={color.hex}
               aria-hidden
-              className={`pointer-events-none absolute inset-0 flex items-center justify-center ${wellBackground} px-[24px] py-[42px] transition-opacity duration-300`}
+              className={`pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden ${wellBackground} px-[24px] py-[42px] transition-opacity duration-300`}
               style={{ opacity: activeColor === i ? 1 : 0 }}
             >
               <div className="relative h-full w-full shrink-0" style={mediaStyle(color.image)}>

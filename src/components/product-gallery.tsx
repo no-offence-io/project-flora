@@ -21,12 +21,12 @@ export default function ProductGallery({
     <div className={`relative h-full w-full ${className}`}>
       <div
         ref={ref}
-        className="flex h-full snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex h-full snap-x snap-mandatory overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {images.map((image, i) => (
           <div
             key={`${image.src}-${i}`}
-            className="flex h-full w-full shrink-0 snap-start items-center justify-center bg-[var(--photo-bg,#f7f7f7)] px-[24px] py-[24px] md:py-[120px]"
+            className="flex h-full w-full shrink-0 snap-start items-center justify-center overflow-hidden bg-[var(--photo-bg,#f7f7f7)] px-[24px] py-[24px] md:py-[120px]"
           >
             <div className="relative h-full w-full shrink-0" style={mediaStyle(image)}>
               <Image
