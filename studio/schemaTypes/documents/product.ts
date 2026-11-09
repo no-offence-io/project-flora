@@ -136,6 +136,22 @@ export const product = defineType({
       group: 'content',
       initialValue: false,
     }),
+    defineField({
+      name: 'vintageLayout',
+      title: 'Vintage page layout',
+      description: 'How the piece\'s own page looks: the turning 3D card at the top, or the same page as a normal product (photo gallery and details side by side).',
+      type: 'string',
+      group: 'content',
+      options: {
+        list: [
+          {title: '3D card at the top', value: 'card'},
+          {title: 'Normal product page', value: 'plain'},
+        ],
+        layout: 'radio',
+      },
+      initialValue: 'card',
+      hidden: ({document}) => document?.vintage !== true,
+    }),
 
     defineField({
       name: 'images',

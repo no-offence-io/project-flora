@@ -114,6 +114,7 @@ export async function saveProduct(formData: FormData) {
     stock,
     sizing,
     vintage: formData.get("vintage") === "on",
+    vintageLayout: formData.get("vintageLayout") === "plain" ? "plain" : "card",
     visible: formData.get("visible") === "on",
   };
 

@@ -23,6 +23,7 @@ export type Category = (typeof CATEGORIES)[number];
 
 /** How a product is sized: made to the customer's measurements (the default), a fixed size list, or one size. */
 export type Sizing = "measurements" | "sizes" | "none";
+export type VintageLayout = "card" | "plain";
 export type ProductSize = { label: string; stock: number };
 
 export type Product = {
@@ -34,6 +35,8 @@ export type Product = {
   sizes: ProductSize[];
   /** One-of-a-kind pieces shown on the Vintage page instead of the shop. */
   vintage: boolean;
+  /** A vintage piece's own page: the turning 3D card at the top, or the normal product layout. */
+  vintageLayout: VintageLayout;
   /** Animated GIF made in the admin, for newsletters. */
   gif?: string;
   /** Unit price in øre (1/100 NOK), VAT included. Never sent from the client — checkout re-reads it. */

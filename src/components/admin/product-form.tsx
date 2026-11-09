@@ -21,6 +21,7 @@ export type ProductDoc = {
   gif?: string | null;
   gifSources?: string[];
   vintage?: boolean;
+  vintageLayout?: string;
   colors?: { _key: string; name?: LocalizedString; hex?: string; image?: { _ref: string; url: string } | null }[];
   specs?: { _key: string; label?: LocalizedString; value?: LocalizedString; emphasis?: boolean; expandable?: boolean; hideOnMobile?: boolean }[];
 };
@@ -73,6 +74,12 @@ export default function ProductForm({ product }: { product: ProductDoc | null })
             </Labelled>
             <Bilingual name="description" label="Description" en={getText(p?.description, "en")} no={getText(p?.description, "no")} multiline rows={5} />
             <Checkbox name="vintage" label="Vintage piece — shown on the Vintage page instead of the shop" defaultChecked={p?.vintage === true} />
+            <Labelled label="Vintage page layout" hint="Only used for vintage pieces. The 3D card is the turning card at the top of the page (set up under Vintage card); the normal layout is the same page every other product has, with the photo gallery and the details side by side.">
+              <Select name="vintageLayout" defaultValue={p?.vintageLayout === "plain" ? "plain" : "card"}>
+                <option value="card">3D card at the top</option>
+                <option value="plain">Normal product page, no 3D card</option>
+              </Select>
+            </Labelled>
           </div>
         </Card>
 

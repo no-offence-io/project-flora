@@ -54,7 +54,8 @@ export default async function ProductPage({ params }: PageProps<"/shop/[slug]">)
     },
   };
 
-  if (product.vintage) {
+  // A vintage piece gets the turning card unless the dashboard asked for the normal page.
+  if (product.vintage && product.vintageLayout === "card") {
     // Every attached photo, the one on the card included: a photo wrapped round a turning glass block is a hard read.
     const more = product.images;
     return (
@@ -110,7 +111,7 @@ export default async function ProductPage({ params }: PageProps<"/shop/[slug]">)
       </div>
 
       <div id="also-like">
-        <ProductsSlideshow title={t("product.alsoLike")} products={related} seeAllHref="/shop" />
+        <ProductsSlideshow title={t("product.alsoLike")} products={related} seeAllHref={product.vintage ? "/vintage" : "/shop"} />
       </div>
     </div>
   );

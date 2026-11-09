@@ -414,6 +414,7 @@ export type Product = {
     _key: string;
   }>;
   vintage?: boolean;
+  vintageLayout?: "card" | "plain";
   images?: Array<
     {
       _key: string;
