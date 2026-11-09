@@ -1,5 +1,5 @@
 import { saveFrontPage } from "../../actions";
-import { ImageField, VideoField } from "@/components/admin/media-field";
+import { ImageField, SCREEN_FRAMES, VideoField } from "@/components/admin/media-field";
 import { Bilingual, Button, Card, Checkbox, Heading, Input, Labelled, Muted, Select, Subheading, TextLink } from "@/components/admin/ui";
 import { getText, type LocalizedString } from "@/lib/admin/localized";
 import { adminClient } from "@/lib/admin/sanity";
@@ -37,7 +37,7 @@ export default async function FrontPageEditor({ searchParams }: { searchParams: 
           <Subheading>Top video</Subheading>
           <div className="h-px w-full bg-black/25" />
           <div className="flex flex-col gap-[24px]">
-            <VideoField name="heroVideo" label="Video" hint="MP4 or WebM, muted, ideally under 10 MB — it loops on every visit. Without one, the site uses its built-in video." current={h.hero?.video} placeholder="/hero/front-hero-1080.mp4" />
+            <VideoField name="heroVideo" label="Video" hint="MP4 or WebM, muted, ideally under 10 MB — it loops on every visit. Without one, the site uses its built-in video." current={h.hero?.video} placeholder="/hero/front-hero-1080.mp4" frames={SCREEN_FRAMES} />
             <Labelled label="Or a video URL" hint="Used only when no video is uploaded above.">
               <Input name="videoUrl" type="url" defaultValue={h.hero?.videoUrl ?? ""} />
             </Labelled>

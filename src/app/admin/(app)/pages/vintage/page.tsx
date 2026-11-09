@@ -23,7 +23,7 @@ export default async function VintageEditor({ searchParams }: { searchParams: Pr
             <Bilingual name="title" label="Title" en={getText(d.title, "en")} no={getText(d.title, "no")} required />
             <Bilingual name="intro" label="Intro" en={getText(d.intro, "en")} no={getText(d.intro, "no")} multiline rows={4} />
             <Bilingual name="emptyText" label="Text when nothing is for sale" en={getText(d.emptyText, "en")} no={getText(d.emptyText, "no")} multiline rows={2} />
-            <ImageField name="image" label="Top photo" current={d.image} frame={{ aspect: 3 / 4, fit: "cover" }} />
+            <ImageField name="image" label="Top photo" current={d.image} frames={[{ label: "Phone", aspect: 4 / 5, fit: "cover" }, { label: "Desktop", aspect: 3 / 4, fit: "cover" }]} />
           </div>
         </Card>
         <Button className="md:max-w-[320px]">Save</Button>

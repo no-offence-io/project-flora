@@ -1,6 +1,6 @@
 import { saveSettings } from "../actions";
 import { Bilingual, Button, Card, Checkbox, Heading, Input, Labelled, Muted, Select, Subheading, Textarea, TextLink } from "@/components/admin/ui";
-import { ImageField, WIDE_FRAME } from "@/components/admin/media-field";
+import { ImageField, SCREEN_FRAMES } from "@/components/admin/media-field";
 import { getText, type LocalizedString } from "@/lib/admin/localized";
 import { FONTS } from "@/lib/brand-shared";
 import { DEFAULT_LOGO } from "@/lib/brand";
@@ -144,7 +144,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <Bilingual name="signUpTitle" label="Title" en={getText(s.signUpTitle, "en")} no={getText(s.signUpTitle, "no")} />
             <Bilingual name="signUpText" label="Text" en={getText(s.signUpText, "en")} no={getText(s.signUpText, "no")} multiline rows={3} />
             <Bilingual name="signUpButton" label="Button label" en={getText(s.signUpButton, "en")} no={getText(s.signUpButton, "no")} />
-            <ImageField name="signUpImage" label="Background photo" current={s.signUpImage} placeholder="/signup/signup-bg.jpg" frame={WIDE_FRAME} />
+            <ImageField name="signUpImage" label="Background photo" current={s.signUpImage} placeholder="/signup/signup-bg.jpg" frames={SCREEN_FRAMES} />
           </div>
         </Card>
         <Card>
@@ -172,7 +172,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <div className="h-px w-full bg-black/25" />
           <div className="flex flex-col gap-[24px]">
             <Bilingual name="footerText" label="Footer text" en={getText(s.footerText, "en")} no={getText(s.footerText, "no")} multiline rows={3} />
-            <ImageField name="footerImage" label="Background photo" current={s.footerImage} placeholder="/footer/footer-bg.jpg" frame={WIDE_FRAME} />
+            <ImageField name="footerImage" label="Background photo" current={s.footerImage} placeholder="/footer/footer-bg.jpg" frames={SCREEN_FRAMES} />
             <div className="flex flex-col gap-[24px] md:flex-row">
               <Labelled label="Instagram URL" className="flex-1"><Input name="instagram" type="url" defaultValue={s.instagram ?? ""} /></Labelled>
               <Labelled label="Contact email" className="flex-1"><Input name="contactEmail" type="email" defaultValue={s.contactEmail ?? ""} /></Labelled>

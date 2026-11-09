@@ -27,7 +27,7 @@ export const homePage = defineType({
           description: 'A hosted MP4. Keep it short and muted; it loops in the background.',
           type: 'url',
         }),
-        defineField({name: 'videoScale', title: 'Video size (%)', description: 'Set in the dashboard\'s media editor. 100 fills the hero as usual.', type: 'number', validation: (rule) => rule.min(20).max(500)}),
+        defineField({name: 'videoScale', title: 'Video size (%)', description: 'Set in the dashboard\'s media editor. 100 fills the hero as usual.', type: 'number', validation: (rule) => rule.min(10).max(500)}),
         defineField({name: 'videoX', title: 'Video shift sideways (%)', type: 'number', validation: (rule) => rule.min(-200).max(200)}),
         defineField({name: 'videoY', title: 'Video shift up or down (%)', type: 'number', validation: (rule) => rule.min(-200).max(200)}),
         defineField({

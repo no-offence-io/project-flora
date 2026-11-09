@@ -59,7 +59,7 @@ export function readFit(form: FormData, name: string): FitFields {
     const n = Number(String(form.get(`${name}.${k}`) ?? "").replace(",", "."));
     return Number.isFinite(n) && n >= lo && n <= hi ? Math.round(n * 10) / 10 : null;
   };
-  const scale = num("scale", 20, 500);
+  const scale = num("scale", 10, 500);
   const x = num("x", -200, 200);
   const y = num("y", -200, 200);
   return { scale: scale !== null && Math.round(scale) !== 100 ? Math.round(scale) : null, x: x || null, y: y || null };

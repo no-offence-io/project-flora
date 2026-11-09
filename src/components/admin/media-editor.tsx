@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { pickableMedia, type PickableAsset } from "@/app/admin/(app)/media-actions";
 import { getText, type LocalizedString } from "@/lib/admin/localized";
 import { isDefaultTransform, mediaStyle, SCALE_MAX, SCALE_MIN, SHIFT_MAX, type MediaTransform } from "@/lib/media-transform";
+import { PORTRAIT_FRAME, type Frame } from "@/lib/media-frames";
 
 /*
  * One picture or video on a dashboard form, with an Edit view: move and resize it inside a box
@@ -18,13 +19,6 @@ import { isDefaultTransform, mediaStyle, SCALE_MAX, SCALE_MIN, SHIFT_MAX, type M
  * scale is about the point under the fingers (or the opposite corner), so what you are looking
  * at stays put while the rest grows or shrinks around it.
  */
-
-/** The shape of the box the site draws the picture in; `pad` is the box's margin as fractions of its width and height. */
-export type Frame = { aspect: number; fit: "contain" | "cover"; pad?: [number, number] };
-/** The shop grid's desktop card: 347 by 258, the photo whole inside a 24/42px margin. */
-export const PRODUCT_FRAME: Frame = { aspect: 347 / 258, fit: "contain", pad: [24 / 347, 42 / 258] };
-export const PORTRAIT_FRAME: Frame = { aspect: 4 / 5, fit: "cover" };
-export const WIDE_FRAME: Frame = { aspect: 16 / 9, fit: "cover" };
 
 export type CurrentMedia = { _ref: string; url: string; filename?: string | null; alt?: LocalizedString | null; scale?: number | null; x?: number | null; y?: number | null } | null | undefined;
 
@@ -44,7 +38,8 @@ export default function MediaEditor({
   placeholderNote = "Built-in — in use now. Replace it to use your own.",
   dark = false,
   hint,
-  frame = PORTRAIT_FRAME,
+  frame,
+  frames: framesProp,
   crop = true,
   alt: withAlt = true,
   accept,
@@ -60,6 +55,8 @@ export default function MediaEditor({
   dark?: boolean;
   hint?: string;
   frame?: Frame;
+  /** Several boxes the site draws this picture in; the editor shows a "Preview as" switch. */
+  frames?: Frame[];
   /** False for pictures the site never crops (the logo, the icons): no handles, no gestures. */
   crop?: boolean;
   /** False for fields without a name/alt text of their own. */
@@ -76,6 +73,9 @@ export default function MediaEditor({
   const [altEn, setAltEn] = useState(getText(current?.alt ?? undefined, "en"));
   const [altNo, setAltNo] = useState(getText(current?.alt ?? undefined, "no"));
   const [initial] = useState(() => fromCurrent(current));
+  const frames = framesProp && framesProp.length > 0 ? framesProp : [frame ?? PORTRAIT_FRAME];
+  const [frameIndex, setFrameIndex] = useState(0);
+  const shownFrame = frames[Math.min(frameIndex, frames.length - 1)];
 
   // A file chosen in the hidden input: preview it straight away; the server uploads it on save.
   const onFile = () => {
@@ -117,7 +117,7 @@ export default function MediaEditor({
       <span className="font-gotham text-[11px] leading-normal tracking-[0.2em] uppercase text-black/50">{label}</span>
       <div className="flex gap-[12px]">
         <button type="button" onClick={() => setOpen(true)} aria-label={`Edit ${label}`} className="w-[160px] shrink-0 cursor-pointer text-left">
-          <Preview src={shown} kind={kind} frame={frame} t={isPlaceholder ? DEFAULT_T : t} dark={dark} className="w-full" />
+          <Preview src={shown} kind={kind} frame={shownFrame} t={isPlaceholder ? DEFAULT_T : t} dark={dark} className="w-full" />
         </button>
         <div className="flex min-w-0 flex-1 flex-col items-start gap-[8px] font-gotham text-paragraph text-black">
           {summary && <span className="text-[11px] leading-normal text-black/50">{summary}</span>}
@@ -155,7 +155,9 @@ export default function MediaEditor({
           src={shown}
           isPlaceholder={isPlaceholder}
           removed={removed}
-          frame={frame}
+          frames={frames}
+          frameIndex={Math.min(frameIndex, frames.length - 1)}
+          setFrameIndex={setFrameIndex}
           crop={crop && !isPlaceholder}
           t={t}
           setT={(next) => setT(clampT(next))}
@@ -229,7 +231,9 @@ function EditDialog({
   src,
   isPlaceholder,
   removed,
-  frame,
+  frames,
+  frameIndex,
+  setFrameIndex,
   crop,
   t,
   setT,
@@ -247,7 +251,9 @@ function EditDialog({
   src: string | null;
   isPlaceholder: boolean;
   removed: boolean;
-  frame: Frame;
+  frames: Frame[];
+  frameIndex: number;
+  setFrameIndex: (i: number) => void;
   crop: boolean;
   t: T;
   setT: (t: T) => void;
@@ -260,6 +266,7 @@ function EditDialog({
   onClose: () => void;
   canRemove: boolean;
 }) {
+  const frame = frames[frameIndex];
   const frameEl = useRef<HTMLDivElement>(null);
   const [aspect, setAspect] = useState<number | null>(null);
   const gesture = useRef<Gesture | null>(null);
@@ -469,7 +476,7 @@ function EditDialog({
           <div className="flex flex-col gap-[6px]">
             <h2 className="m-0 font-americana text-[24px] leading-none capitalize">{label}</h2>
             <span className="text-[11px] leading-normal text-black/50">
-              {crop ? "Drag to move. Pinch, or hold ⌘/Ctrl and scroll, to resize; or pull a corner. Arrow keys nudge." : "This picture is never cropped by the site, so there is nothing to move here."}
+              {crop ? "Drag to move. Pinch, or hold ⌘/Ctrl and scroll, to resize; pull a corner; or use − and +. Arrow keys nudge. Smaller than the box is fine, for a cut-out PNG say." : "This picture is never cropped by the site, so there is nothing to move here."}
             </span>
           </div>
           <button type="button" onClick={onClose} className={btn}>
@@ -488,8 +495,10 @@ function EditDialog({
                 dark={false}
                 frameRef={frameEl}
                 onLoad={setAspect}
-                className={`w-full ${crop && src && !removed ? "cursor-grab active:cursor-grabbing" : ""}`}
+                className={`mx-auto ${crop && src && !removed ? "cursor-grab active:cursor-grabbing" : ""}`}
+                style={{ width: `min(100%, calc(58vh * ${frame.aspect}))` }}
               >
+                {frame.pad && <div aria-hidden className="pointer-events-none absolute border border-dashed border-black/15" style={{ left: `${frame.pad[0] * 100}%`, right: `${frame.pad[0] * 100}%`, top: `${frame.pad[1] * 100}%`, bottom: `${frame.pad[1] * 100}%` }} />}
                 {/* Pointer events on the frame itself: picture, margin and handles alike. */}
                 {crop && src && !removed && (
                   <div className="absolute inset-0" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
@@ -501,16 +510,34 @@ function EditDialog({
                         key={h.corner}
                         data-handle={h.corner}
                         role="presentation"
-                        className={`absolute h-[12px] w-[12px] -translate-x-1/2 -translate-y-1/2 border border-black bg-white shadow-[0_0_0_1px_rgba(255,255,255,0.9)] ${h.corner === "tl" || h.corner === "br" ? "cursor-nwse-resize" : "cursor-nesw-resize"}`}
+                        className={`absolute flex h-[28px] w-[28px] -translate-x-1/2 -translate-y-1/2 items-center justify-center ${h.corner === "tl" || h.corner === "br" ? "cursor-nwse-resize" : "cursor-nesw-resize"}`}
                         style={{ left: h.x, top: h.y }}
-                      />
+                      >
+                        <span data-handle={h.corner} className="block h-[12px] w-[12px] border border-black bg-white shadow-[0_0_0_1px_rgba(255,255,255,0.9)]" />
+                      </div>
                     ))}
                   </div>
                 )}
               </Preview>
             </div>
+            {frames.length > 1 && (
+              <div className="flex flex-wrap items-center gap-[6px]">
+                <span className="mr-[6px] text-[11px] leading-normal tracking-[0.2em] uppercase text-black/50">Preview as</span>
+                {frames.map((f, i) => (
+                  <button key={f.label ?? i} type="button" onClick={() => setFrameIndex(i)} aria-pressed={i === frameIndex} className={`border px-[10px] py-[6px] text-[11px] leading-normal transition-colors ${i === frameIndex ? "border-black bg-black text-white" : "border-black/20 text-black hover:border-black"}`}>
+                    {f.label ?? `Box ${i + 1}`}
+                  </button>
+                ))}
+              </div>
+            )}
             {crop && (
               <div className="flex flex-wrap items-center gap-[12px]">
+                <button type="button" onClick={() => zoomAbout(centerOfFrame(), 1 / 1.1, tRef.current)} className={btn} disabled={!src || removed} aria-label="Smaller">
+                  −
+                </button>
+                <button type="button" onClick={() => zoomAbout(centerOfFrame(), 1.1, tRef.current)} className={btn} disabled={!src || removed} aria-label="Larger">
+                  +
+                </button>
                 <button type="button" onClick={() => setT(DEFAULT_T)} className={btn} disabled={!src || removed}>
                   Fit
                 </button>

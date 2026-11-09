@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { deleteProduct, makeGif, removeGif, saveProduct } from "@/app/admin/(app)/actions";
-import { ImageField, PRODUCT_FRAME } from "@/components/admin/media-field";
+import { ImageField, productFrames } from "@/components/admin/media-field";
 import { Bilingual, Button, Card, Checkbox, Input, Labelled, Muted, Select, Subheading } from "@/components/admin/ui";
 import { getText, type LocalizedString } from "@/lib/admin/localized";
 import { oreToKroner } from "@/lib/admin/sanity";
@@ -125,7 +125,7 @@ export default function ProductForm({ product }: { product: ProductDoc | null })
               {photos.map((img, i) => (
                 <div key={img._key}>
                   <input type="hidden" name="imageKey" value={img._key} />
-                  <ImageField name={`image_${img._key}`} label={i === 0 ? "Thumbnail (first photo)" : `Photo ${i + 1}`} current={{ _ref: img.asset!._ref, url: img.url!, alt: img.alt, scale: img.scale, x: img.x, y: img.y }} frame={PRODUCT_FRAME} />
+                  <ImageField name={`image_${img._key}`} label={i === 0 ? "Thumbnail (first photo)" : `Photo ${i + 1}`} current={{ _ref: img.asset!._ref, url: img.url!, alt: img.alt, scale: img.scale, x: img.x, y: img.y }} frames={productFrames(p?.vintage === true)} />
                 </div>
               ))}
             </div>
@@ -175,7 +175,7 @@ export default function ProductForm({ product }: { product: ProductDoc | null })
                   <Input name={`colorHex_${i}`} defaultValue={c?.hex ?? ""} pattern="#([0-9a-fA-F]{3}){1,2}" className="md:max-w-[160px]" />
                 </div>
               </Labelled>
-              <ImageField name={`colorImage_${i}`} label="Photo in this colour" current={c?.image} frame={PRODUCT_FRAME} />
+              <ImageField name={`colorImage_${i}`} label="Photo in this colour" current={c?.image} frames={productFrames(p?.vintage === true)} />
               {c && <Checkbox name={`colorRemove_${i}`} label="Remove this colour" />}
             </div>
           ))}

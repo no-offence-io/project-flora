@@ -1,5 +1,6 @@
 import Image from "next/image";
-import MediaEditor, { PORTRAIT_FRAME, WIDE_FRAME, type CurrentMedia, type Frame } from "./media-editor";
+import MediaEditor, { type CurrentMedia } from "./media-editor";
+import { PORTRAIT_FRAME, WIDE_FRAME, type Frame } from "@/lib/media-frames";
 
 /*
  * Image and video fields for the admin forms. Each is the media editor (media-editor.tsx): a
@@ -9,7 +10,7 @@ import MediaEditor, { PORTRAIT_FRAME, WIDE_FRAME, type CurrentMedia, type Frame 
 
 export type CurrentImage = CurrentMedia;
 export type CurrentVideo = CurrentMedia;
-export { PORTRAIT_FRAME, WIDE_FRAME, PRODUCT_FRAME, type Frame } from "./media-editor";
+export { PORTRAIT_FRAME, WIDE_FRAME, PRODUCT_FRAME, SCREEN_FRAMES, productFrames, type Frame } from "@/lib/media-frames";
 
 /** The cart's thumbnail treatment: the whole photo on a light box, never cropped. */
 export function Thumb({ url, alt = "", className = "", dark = false }: { url?: string | null; alt?: string; className?: string; dark?: boolean }) {
@@ -26,10 +27,10 @@ export function Thumb({ url, alt = "", className = "", dark = false }: { url?: s
  * transparent picture on black so it can be seen. `frame` is the shape of the box the site draws
  * the picture in; `crop` false for pictures the site never crops; `alt` false for fields without a name of their own.
  */
-export function ImageField({ name, label, current, hint, placeholder, dark = false, frame = PORTRAIT_FRAME, crop = true, alt = true }: { name: string; label: string; current: CurrentImage; hint?: string; placeholder?: string; dark?: boolean; frame?: Frame; crop?: boolean; alt?: boolean }) {
-  return <MediaEditor name={name} label={label} kind="image" current={current} hint={hint} placeholder={placeholder} dark={dark} frame={frame} crop={crop} alt={alt} />;
+export function ImageField({ name, label, current, hint, placeholder, dark = false, frame = PORTRAIT_FRAME, frames, crop = true, alt = true }: { name: string; label: string; current: CurrentImage; hint?: string; placeholder?: string; dark?: boolean; frame?: Frame; frames?: Frame[]; crop?: boolean; alt?: boolean }) {
+  return <MediaEditor name={name} label={label} kind="image" current={current} hint={hint} placeholder={placeholder} dark={dark} frame={frame} frames={frames} crop={crop} alt={alt} />;
 }
 
-export function VideoField({ name, label, current, hint, placeholder, frame = WIDE_FRAME }: { name: string; label: string; current: CurrentVideo; hint?: string; placeholder?: string; frame?: Frame }) {
-  return <MediaEditor name={name} label={label} kind="video" current={current} hint={hint} placeholder={placeholder} placeholderNote="Built-in video — in use now. Replace it to use your own." frame={frame} alt={false} />;
+export function VideoField({ name, label, current, hint, placeholder, frame = WIDE_FRAME, frames }: { name: string; label: string; current: CurrentVideo; hint?: string; placeholder?: string; frame?: Frame; frames?: Frame[] }) {
+  return <MediaEditor name={name} label={label} kind="video" current={current} hint={hint} placeholder={placeholder} placeholderNote="Built-in video — in use now. Replace it to use your own." frame={frame} frames={frames} alt={false} />;
 }

@@ -13,7 +13,7 @@ import type { CSSProperties } from "react";
  */
 export type MediaTransform = { scale?: number; x?: number; y?: number };
 
-export const SCALE_MIN = 0.2;
+export const SCALE_MIN = 0.1;
 export const SCALE_MAX = 5;
 export const SHIFT_MAX = 200;
 
