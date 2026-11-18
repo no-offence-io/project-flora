@@ -14,6 +14,10 @@ export type ProductColor = {
   name: string;
   /** Image shown in the card's thumbnail while this swatch is hovered or focused. */
   image: { src: string; alt: string } & MediaTransform;
+  /** The English name, which is what an order records whichever language the shop is shown in. */
+  id?: string;
+  /** Every photo of the product in this colour, main first; the product page's gallery shows these when the colour is chosen. */
+  images?: ({ src: string; alt: string; key?: string } & MediaTransform)[];
 };
 
 export type SlideshowProduct = {

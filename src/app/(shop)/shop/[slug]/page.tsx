@@ -5,6 +5,7 @@ import Navbar from "@/components/navbar";
 import PhotoSlideshow from "@/components/photo-slideshow";
 import ProductDetails from "@/components/product-details";
 import ProductGallery from "@/components/product-gallery";
+import { ProductColourProvider } from "@/components/product-colour";
 import ProductOptions from "@/components/product-options";
 import ProductsSlideshow from "@/components/products-slideshow";
 import { CareInstructions } from "@/components/care-icons";
@@ -99,14 +100,16 @@ export default async function ProductPage({ params }: PageProps<"/shop/[slug]">)
       {/* Top screen: on desktop the navbar, gallery and details fill the viewport; mobile keeps the fixed Figma heights */}
       <div className="flex flex-col gap-[24px] md:h-screen md:gap-0">
         <Navbar tone="dark" />
-        <section className="flex flex-col gap-[24px] md:min-h-0 md:flex-1 md:flex-row md:gap-0">
-          <div className="h-[386px] w-full md:h-full md:w-1/2 md:max-w-[720px] md:shrink-0">
-            <ProductGallery images={product.images} />
-          </div>
-          <div id="details" className="md:contents">
-            <ProductDetails product={product} sizing={sizing} soldOutLabel={t("product.soldOut")} />
-          </div>
-        </section>
+        <ProductColourProvider>
+          <section className="flex flex-col gap-[24px] md:min-h-0 md:flex-1 md:flex-row md:gap-0">
+            <div className="h-[386px] w-full md:h-full md:w-1/2 md:max-w-[720px] md:shrink-0">
+              <ProductGallery images={product.images} colours={product.colors} />
+            </div>
+            <div id="details" className="md:contents">
+              <ProductDetails product={product} sizing={sizing} soldOutLabel={t("product.soldOut")} />
+            </div>
+          </section>
+        </ProductColourProvider>
       </div>
 
       <div id="photos">

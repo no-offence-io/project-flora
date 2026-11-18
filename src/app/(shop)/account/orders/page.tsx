@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { variantLabel } from "@/lib/variant";
 import { redirect } from "next/navigation";
 import { Heading, Status } from "@/components/account-ui";
 import { getCustomer } from "@/lib/customer";
@@ -27,7 +28,7 @@ export default async function OrdersPage() {
               </span>
               <span className="flex flex-col gap-[5px] text-[11px] leading-normal">
                 <span>{t("account.ordered")}: <span className="text-black/50">{new Date(o.orderedAt).toLocaleDateString("nb-NO")}</span></span>
-                <span className="text-black/50">{o.items.map((i) => `${i.name}${i.size ? ` – ${i.size}` : ""} × ${i.quantity}`).join(", ")}</span>
+                <span className="text-black/50">{o.items.map((i) => `${i.name}${variantLabel(i) ? ` – ${variantLabel(i)}` : ""} × ${i.quantity}`).join(", ")}</span>
                 {o.trackingNumber && <span>{t("account.tracking")}: <span className="text-black/50">{o.trackingNumber}</span></span>}
               </span>
               <span className="flex justify-between">

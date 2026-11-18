@@ -9,7 +9,7 @@ export type OrderView = {
   orderedAt: string;
   trackingNumber?: string;
   trackingUrl?: string;
-  items: { name: string; quantity: number; size?: string; measurements: { label: string; value: string }[] }[];
+  items: { name: string; quantity: number; size?: string; colour?: string; measurements: { label: string; value: string }[] }[];
   totalOre: number;
 };
 export type LookupState = { status: "idle" } | { status: "notFound" } | { status: "found"; order: OrderView };
@@ -29,7 +29,7 @@ export async function lookupOrder(_prev: LookupState, formData: FormData): Promi
   const o = await client.withConfig({ useCdn: false }).fetch<Omit<OrderView, "trackingUrl"> | null>(
     `*[_type == "order" && orderNumber == $number && lower(customer.email) == $email][0]{
       orderNumber, status, orderedAt, trackingNumber, totalOre,
-      "items": items[]{ name, quantity, size, "measurements": coalesce(measurements[]{ label, value }, []) }
+      "items": items[]{ name, quantity, size, colour, "measurements": coalesce(measurements[]{ label, value }, []) }
     }`,
     { number, email },
   );

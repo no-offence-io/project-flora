@@ -6,7 +6,7 @@ import { computeTotals } from "./pricing";
 import { orderReference } from "./money";
 import { getWriteClient } from "@/sanity/lib/write";
 
-export type RecordedLine = { name: string; quantity: number; unitPriceOre: number; size?: string; measurements: { label: string; value: string }[]; /** First product photo, for the confirmation email. */ image?: string };
+export type RecordedLine = { name: string; quantity: number; unitPriceOre: number; size?: string; colour?: string; measurements: { label: string; value: string }[]; /** First product photo, for the confirmation email. */ image?: string };
 export type RecordedOrder = {
   orderNumber: string;
   created: boolean;
@@ -64,7 +64,7 @@ export const recordOrder = (intent: Stripe.PaymentIntent) => recordPaidOrder(pay
  * and is not an error.
  *
  * Sized products count down the chosen size's own stock (`sizes[label=="M"].stock`); the others
- * count down the product's single number.
+ * count down the product's single number. Made-to-measure lines on a sized product count down nothing.
  */
 export async function recordPaidOrder(payment: PaidPayment): Promise<RecordedOrder> {
   const client = getWriteClient();
@@ -73,12 +73,13 @@ export async function recordPaidOrder(payment: PaidPayment): Promise<RecordedOrd
   const language = m.lang === "no" ? "no" : "en";
 
   const lines = linesFromMetadata(m);
-  const productRows = await client.fetch<{ slug?: string; _id?: string; name?: string; image?: string | null }[]>(
+  const productRows = await client.fetch<{ slug?: string; _id?: string; name?: string; image?: string | null; trackStock?: boolean | null }[]>(
     // Product names are English in every language — the brand's choice.
-    `*[_type == "product" && slug.current in $slugs]{ "slug": slug.current, _id, "name": name[_key == "en"][0].value, "image": images[0].asset->url }`,
+    `*[_type == "product" && slug.current in $slugs]{ "slug": slug.current, _id, "name": name[_key == "en"][0].value, "image": images[0].asset->url, trackStock }`,
     { slugs: lines.map((l) => l.id) },
   );
   const products: Record<string, { _id: string; name: string; image?: string }> = {};
+  const untracked = new Set(productRows.filter((r) => r.slug && r.trackStock === false).map((r) => r.slug!));
   for (const r of productRows) if (r.slug && r._id) products[r.slug] = { _id: r._id, name: r.name ?? r.slug, ...(r.image ? { image: r.image } : {}) };
 
   const recordedLines: RecordedLine[] = lines.map((l) => ({
@@ -86,6 +87,7 @@ export async function recordPaidOrder(payment: PaidPayment): Promise<RecordedOrd
     quantity: l.qty,
     unitPriceOre: l.p,
     ...(l.s ? { size: l.s } : {}),
+    ...(l.c ? { colour: l.c } : {}),
     measurements: l.measurements,
     ...(products[l.id]?.image ? { image: products[l.id].image } : {}),
   }));
@@ -135,6 +137,7 @@ export async function recordPaidOrder(payment: PaidPayment): Promise<RecordedOrd
       quantity: l.qty,
       unitPriceOre: l.p,
       ...(l.s ? { size: l.s } : {}),
+      ...(l.c ? { colour: l.c } : {}),
       measurements: l.measurements.map((x, j) => ({ _key: `m-${j}`, _type: "measurement", label: x.label, value: x.value })),
     })),
     subtotalOre: totals.subtotalOre,
@@ -151,6 +154,8 @@ export async function recordPaidOrder(payment: PaidPayment): Promise<RecordedOrd
   for (const l of lines) {
     const id = products[l.id]?._id;
     if (!id) continue;
+    // Made to measure is made to order, and some products don't count stock at all: nothing to count down.
+    if (l.t || untracked.has(l.id)) continue;
     if (l.s) tx = tx.patch(id, (p) => p.dec({ [`sizes[label=="${l.s!.replace(/"/g, "")}"].stock`]: l.qty }));
     else tx = tx.patch(id, (p) => p.setIfMissing({ stock: 0 }).dec({ stock: l.qty }));
   }
@@ -158,7 +163,7 @@ export async function recordPaidOrder(payment: PaidPayment): Promise<RecordedOrd
 
   try {
     await tx.commit({ autoGenerateArrayKeys: false });
-    return { ...base, created: true, oversold: await settleOversold(lines, products) };
+    return { ...base, created: true, oversold: await settleOversold(lines, products, untracked) };
   } catch (err) {
     // A duplicate id means another delivery beat us to it, stock decrements included.
     if (err instanceof Error && /already exists/i.test(err.message)) return { ...base, created: false };
@@ -171,12 +176,13 @@ export async function recordPaidOrder(payment: PaidPayment): Promise<RecordedOrd
  * Stripe has taken both payments by now, so the second order stands: this finds what went below
  * zero, puts it back to zero so the shop reads sold out, and reports it for a person to resolve.
  */
-async function settleOversold(lines: ReturnType<typeof linesFromMetadata>, products: Record<string, { _id: string; name: string }>): Promise<string[]> {
+async function settleOversold(lines: ReturnType<typeof linesFromMetadata>, products: Record<string, { _id: string; name: string }>, untracked: Set<string>): Promise<string[]> {
   const client = getWriteClient();
   const ids = lines.map((l) => products[l.id]?._id).filter(Boolean);
   const rows = await client.fetch<{ _id: string; stock?: number; sizes?: { label?: string; stock?: number }[] }[]>(`*[_id in $ids]{ _id, stock, sizes }`, { ids });
   const oversold: string[] = [];
   for (const l of lines) {
+    if (l.t || untracked.has(l.id)) continue;
     const product = products[l.id];
     const row = rows.find((r) => r._id === product?._id);
     if (!row) continue;

@@ -15,6 +15,8 @@
  *     stores the VAT inside its total, and "ex VAT" is total minus that.
  */
 
+import { variantLabel } from "../variant";
+
 export const TIME_ZONE = "Europe/Oslo";
 
 export type ReportOrder = {
@@ -33,7 +35,7 @@ export type ReportOrder = {
   paymentProvider?: string | null;
   paymentReference?: string | null;
   customer?: { name?: string | null; email?: string | null; address?: string | null } | null;
-  items?: { name?: string | null; quantity?: number | null; unitPriceOre?: number | null; size?: string | null }[] | null;
+  items?: { name?: string | null; quantity?: number | null; unitPriceOre?: number | null; size?: string | null; colour?: string | null }[] | null;
 };
 
 /* ---- days ------------------------------------------------------------------------------------ */
@@ -391,7 +393,7 @@ export function ordersCsv(orders: ReportOrder[]): string {
       o.customer?.name ?? "",
       o.customer?.email ?? "",
       o.customer?.address ?? "",
-      (o.items ?? []).map((i) => `${n(i.quantity)} x ${i.name ?? ""}${i.size ? ` (${i.size})` : ""}`).join(", "),
+      (o.items ?? []).map((i) => `${n(i.quantity)} x ${i.name ?? ""}${variantLabel(i) ? ` (${variantLabel(i)})` : ""}`).join(", "),
       unitsOf(o),
       csvMoney(o.subtotalOre),
       csvMoney(o.discountOre),

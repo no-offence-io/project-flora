@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { variantLabel } from "@/lib/variant";
 import Link from "next/link";
 import { useCart } from "./cart-context";
 import { useT } from "@/components/i18n-provider";
@@ -48,7 +49,7 @@ export default function CartItems({ className = "" }: { className?: string }) {
             <p className="m-0">
               <Link href={item.href} className="hover:opacity-70 transition-opacity">
                 {item.name}
-                {item.size ? ` - ${item.size}` : ""} x {item.quantity}
+                {variantLabel(item) ? ` - ${variantLabel(item)}` : ""} x {item.quantity}
               </Link>
             </p>
             {item.measurements.length > 0 && (

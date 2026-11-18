@@ -3,18 +3,20 @@ import { getCheckoutProducts, getShippingRules } from "./catalog";
 import type { QuotedLine } from "./checkout-schema";
 import { checkDiscount } from "./discounts";
 import { computeTotals, type AppliedDiscount } from "./pricing";
+import { quoteLine } from "./cart-lines";
 import type { Totals } from "./money";
 
 export { METADATA_SITE } from "./order-metadata";
 
 export type CartQuote = { lines: QuotedLine[]; totals: Totals; discount: (AppliedDiscount & { docId: string }) | null; discountError?: string };
 
-type CartLine = { id: string; quantity: number; size?: string; measurements?: { label: string; value: string }[] };
+type CartLine = { id: string; quantity: number; size?: string; colour?: string; measurements?: { label: string; value: string }[] };
 
 /**
  * Turn cart lines into priced lines from the catalogue in Sanity, read fresh. The client's copy of
  * the price is never consulted; anything it sent beyond id, quantity, size and measurements was
- * already rejected by the schema. Stock is checked per size for sized products.
+ * already rejected by the schema. The rules for each line, stock and made to measure included, are
+ * in cart-lines.ts.
  */
 export async function quoteCart(items: CartLine[], options: { country?: string; discountCode?: string } = {}): Promise<CartQuote | { error: string }> {
   const [products, rules] = await Promise.all([getCheckoutProducts(items.map((i) => i.id)), getShippingRules()]);
@@ -23,25 +25,9 @@ export async function quoteCart(items: CartLine[], options: { country?: string; 
     const product = products.get(item.id);
     if (!product) return { error: `Unknown product: ${item.id}` };
 
-    let available = product.stock;
-    if (product.sizing === "sizes") {
-      const size = product.sizes.find((s) => s.label === item.size);
-      if (!size) return { error: `Please choose a size for ${product.name}` };
-      available = size.stock;
-    } else if (product.sizing === "measurements" && !(item.measurements && item.measurements.length > 0)) {
-      return { error: `Please add your measurements for ${product.name}` };
-    }
-    if (item.quantity > available) {
-      return { error: available === 0 ? `${product.name}${item.size ? ` (${item.size})` : ""} is sold out` : `Only ${available} of ${product.name}${item.size ? ` (${item.size})` : ""} available` };
-    }
-    lines.push({
-      id: item.id,
-      name: product.name,
-      quantity: item.quantity,
-      unitPriceOre: product.priceOre,
-      ...(product.sizing === "sizes" && item.size ? { size: item.size } : {}),
-      ...(product.sizing === "measurements" && item.measurements ? { measurements: item.measurements } : {}),
-    });
+    const quoted = quoteLine(product, item);
+    if ("error" in quoted) return { error: quoted.error };
+    lines.push(quoted.line);
   }
 
   const subtotalOre = lines.reduce((sum, l) => sum + l.unitPriceOre * l.quantity, 0);

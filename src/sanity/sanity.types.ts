@@ -382,6 +382,7 @@ export type Order = {
     quantity?: number;
     unitPriceOre?: number;
     size?: string;
+    colour?: string;
     measurements?: Array<{
       label?: string;
       value?: string;
@@ -423,6 +424,9 @@ export type Product = {
     _type: "size";
     _key: string;
   }>;
+  tailored?: boolean;
+  tailoredExtraOre?: number;
+  trackStock?: boolean;
   vintage?: boolean;
   vintageLayout?: "card" | "plain";
   images?: Array<
@@ -438,6 +442,7 @@ export type Product = {
   colors?: Array<{
     name?: InternationalizedArrayString;
     hex?: string;
+    photoKeys?: Array<string>;
     image?: LocalizedImage;
     _type: "color";
     _key: string;

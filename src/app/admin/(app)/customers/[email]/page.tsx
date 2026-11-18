@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { variantLabel } from "@/lib/variant";
 import { notFound } from "next/navigation";
 import OrderPreview, { type PreviewOrder } from "@/components/admin/order-preview";
 import { Card, Heading, Muted, StatusPill, Subheading, Tag, TextLink } from "@/components/admin/ui";
@@ -21,7 +22,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ email
   }
   const [orders, account] = await Promise.all([
     adminClient().fetch<O[]>(
-      `*[_type == "order" && lower(customer.email) == $email] | order(orderedAt desc){ _id, demo, manual, orderNumber, status, totalOre, shippingOre, orderedAt, customer, paymentProvider, paymentCard, origin, trackingNumber, language, items[]{_key, name, quantity, unitPriceOre, size} }`,
+      `*[_type == "order" && lower(customer.email) == $email] | order(orderedAt desc){ _id, demo, manual, orderNumber, status, totalOre, shippingOre, orderedAt, customer, paymentProvider, paymentCard, origin, trackingNumber, language, items[]{_key, name, quantity, unitPriceOre, size, colour} }`,
       { email },
     ),
     adminClient().fetch<Account | null>(`*[_type == "customer" && lower(email) == $email][0]`, { email }),
@@ -84,7 +85,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ email
                     <span className="ml-auto">{kr(o.totalOre)}</span>
                   </div>
                   <div className="flex flex-col gap-[3px] text-[11px] leading-normal text-black/50">
-                    <span>{date(o.orderedAt)} · {(o.items ?? []).map((i) => `${i.quantity} × ${i.name}${i.size ? ` (${i.size})` : ""}`).join(", ")}</span>
+                    <span>{date(o.orderedAt)} · {(o.items ?? []).map((i) => `${i.quantity} × ${i.name}${variantLabel(i) ? ` (${variantLabel(i)})` : ""}`).join(", ")}</span>
                     {o.customer?.address && <span>To: {o.customer.address}</span>}
                     <span>{paidWith(o)}{o.trackingNumber ? ` · tracking ${o.trackingNumber}` : ""}{o.origin?.label ? ` · ${o.origin.label}` : ""}</span>
                   </div>

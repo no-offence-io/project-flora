@@ -17,6 +17,8 @@ export const cartLineSchema = z.strictObject({
   id: z.string().min(1).max(100),
   quantity: z.number().int().min(1).max(10),
   size: z.string().trim().min(1).max(20).optional(),
+  /** The colour chosen, by its English name; checked against the product's colours. */
+  colour: z.string().trim().min(1).max(60).optional(),
   measurements: z.array(measurementSchema).max(12).optional(),
 });
 
@@ -53,7 +55,7 @@ export const intentRequestSchema = z.strictObject({
 export type IntentRequest = z.infer<typeof intentRequestSchema>;
 export type Customer = z.infer<typeof customerSchema>;
 
-export type QuotedLine = { id: string; name: string; quantity: number; unitPriceOre: number; size?: string; measurements?: { label: string; value: string }[] };
+export type QuotedLine = { id: string; name: string; quantity: number; unitPriceOre: number; size?: string; colour?: string; measurements?: { label: string; value: string }[]; /** Made to measure instead of a standard size: made to order, no stock taken. */ tailored?: boolean };
 
 export type IntentResponse = {
   clientSecret: string;

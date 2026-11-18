@@ -28,6 +28,7 @@ const T = {
     confirmed: (n: string) => `Your order ${n} is confirmed. We will let you know as soon as it has been sent.`,
     yourOrder: "Your order",
     size: "Size",
+    colour: "Colour",
     deliveryTo: "Delivery to",
     subtotal: "Subtotal",
     discount: "Discount",
@@ -64,6 +65,7 @@ const T = {
     confirmed: (n: string) => `Ordren din ${n} er bekreftet. Vi gir beskjed så snart den er sendt.`,
     yourOrder: "Din ordre",
     size: "Størrelse",
+    colour: "Farge",
     deliveryTo: "Leveres til",
     subtotal: "Delsum",
     discount: "Rabatt",
@@ -138,6 +140,7 @@ function linesTable(lines: RecordedLine[], t: (typeof T)[Lang]) {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${lines
     .map((l) => {
       const details = [
+        ...(l.colour ? [`${t.colour}: ${esc(l.colour)}`] : []),
         ...(l.size ? [`${t.size}: ${esc(l.size)}`] : []),
         ...l.measurements.map((m) => `${esc(m.label)}: ${esc(m.value)} cm`),
       ];

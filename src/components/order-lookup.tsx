@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { variantLabel } from "@/lib/variant";
 import { Busy } from "./busy";
 import RolloverText from "./rollover-text";
 import { useT } from "@/components/i18n-provider";
@@ -67,7 +68,7 @@ export default function OrderLookup() {
               <li key={i} className="flex flex-col gap-[5px] border-[0.25px] border-black/25 p-[12px]">
                 <span>
                   {it.name}
-                  {it.size ? ` - ${it.size}` : ""} x {it.quantity}
+                  {variantLabel(it) ? ` - ${variantLabel(it)}` : ""} x {it.quantity}
                 </span>
                 {it.measurements.length > 0 && (
                   <span className="flex flex-col gap-[5px] text-[11px] leading-normal">

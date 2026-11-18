@@ -46,7 +46,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     <>
     <div data-admin-root className={`flex min-h-screen flex-col md:flex-row ${night === "on" ? "admin-night" : night === "auto" ? "admin-night-auto" : ""}`}>
       <AdminNav email={admin.email} unread={unread} logo={logo} signOut={doSignOut} demo={demo} toggleDemo={toggleDemoMode} night={night} hidden={cardPieces > 0 ? [] : ["/admin/vintage-card"]} />
-      <main className="flex min-w-0 flex-1 flex-col gap-[42px] overflow-x-hidden px-[24px] py-[42px] pb-[60px] md:px-[42px] md:pb-[120px]">
+      <main className="flex min-w-0 flex-1 flex-col gap-[42px] overflow-x-clip px-[24px] py-[42px] pb-[60px] md:px-[42px] md:pb-[120px]">
         {demo && (
           <p className="m-0 border-[0.5px] border-black px-[12px] py-[8px] font-gotham text-[11px] leading-normal tracking-[0.2em] uppercase text-black">
             Test mode — the orders, subscribers and notifications here are made up. Switch it off in the menu to remove them.

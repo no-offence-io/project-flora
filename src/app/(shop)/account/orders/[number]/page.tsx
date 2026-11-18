@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { variantLabel } from "@/lib/variant";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Heading, Status } from "@/components/account-ui";
@@ -37,7 +38,7 @@ export default async function OrderPage({ params }: { params: Promise<{ number: 
           <li key={i} className="flex gap-[12px] border-[0.25px] border-black/25 p-[12px]">
             <span className="relative h-[105px] w-[84px] shrink-0 bg-[#f7f7f7]">{it.image && <Image src={it.image} alt="" fill sizes="84px" className="object-contain p-[12px]" />}</span>
             <span className="flex min-w-0 flex-1 flex-col gap-[12px]">
-              <span>{it.name}{it.size ? ` - ${it.size}` : ""} x {it.quantity}</span>
+              <span>{it.name}{variantLabel(it) ? ` - ${variantLabel(it)}` : ""} x {it.quantity}</span>
               {it.measurements.length > 0 && (
                 <span className="flex flex-col gap-[5px] text-[11px] leading-normal">
                   {it.measurements.map((m) => <span key={m.label}>{m.label}: <span className="text-black/50">{m.value} cm</span></span>)}

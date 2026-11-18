@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import { useScroller } from "./use-scroller";
+import { useColourChoice } from "./product-colour";
+import type { ProductColor } from "./products-slideshow";
 import { mediaStyle, type MediaTransform } from "@/lib/media-transform";
 
 /**
@@ -9,12 +11,23 @@ import { mediaStyle, type MediaTransform } from "@/lib/media-transform";
  * Swipe or scroll horizontally between images; the line shows which one is in view.
  */
 export default function ProductGallery({
-  images,
+  images: all,
+  colours = [],
   className = "",
 }: {
   images: ({ src: string; alt: string } & MediaTransform)[];
+  /** The product's colours; once one is chosen on the page, the gallery shows its photos. */
+  colours?: ProductColor[];
   className?: string;
 }) {
+  const choice = useColourChoice();
+  const chosen = choice?.colour ? colours.find((c) => c.id === choice.colour) : undefined;
+  const images = chosen?.images?.length ? chosen.images : all;
+  // A new set of photos starts again from the first.
+  return <Gallery key={chosen?.id ?? "all"} images={images} className={className} />;
+}
+
+function Gallery({ images, className }: { images: ({ src: string; alt: string } & MediaTransform)[]; className: string }) {
   const { ref, index } = useScroller(0);
 
   return (

@@ -15,7 +15,7 @@ import { adminClient } from "./sanity";
 const FIELDS = `_id, orderNumber, status, orderedAt, manual, demo, totalOre, subtotalOre, discountOre, discountCode, shippingOre, vatIncludedOre, paymentProvider,
   "paymentReference": coalesce(stripePaymentIntentId, vippsReference),
   "customer": customer{ name, email, address },
-  "items": items[]{ name, quantity, unitPriceOre, size }`;
+  "items": items[]{ name, quantity, unitPriceOre, size, colour }`;
 
 export const ORDER_CAP = 20000;
 

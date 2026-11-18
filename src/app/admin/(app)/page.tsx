@@ -19,7 +19,7 @@ export default async function AdminDashboard() {
       `{
       "toPack": count(*[_type == "order" && status == "paid"]),
       "latest": *[_type == "order"] | order(orderedAt desc)[0...6]{_id, orderNumber, status, totalOre, orderedAt, "name": customer.name},
-      "lowStock": *[_type == "product" && visible != false && stock <= 3] | order(stock asc)[0...6]{_id, name, stock}
+      "lowStock": *[_type == "product" && visible != false && trackStock != false && sizing != "sizes" && stock <= 3] | order(stock asc)[0...6]{_id, name, stock}
     }`,
     ),
     loadReportOrders(),

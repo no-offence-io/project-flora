@@ -6,7 +6,7 @@ import { isStatus, ORDER_STATUSES, STATUS_LABEL } from "@/lib/order-status";
 
 type OrderRow = PreviewOrder & { demo?: boolean };
 
-const ROW = `_id, demo, manual, orderNumber, status, totalOre, shippingOre, orderedAt, customer, paymentProvider, paymentCard, origin, items[]{_key, name, quantity, unitPriceOre, size}`;
+const ROW = `_id, demo, manual, orderNumber, status, totalOre, shippingOre, orderedAt, customer, paymentProvider, paymentCard, origin, items[]{_key, name, quantity, unitPriceOre, size, colour}`;
 
 export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ status?: string; q?: string }> }) {
   const { status: rawStatus, q: rawQ } = await searchParams;

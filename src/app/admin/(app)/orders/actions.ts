@@ -111,7 +111,7 @@ type StoredOrder = {
   language?: string;
   demo?: boolean;
   customer?: { name?: string; email?: string; address?: string };
-  items?: { name?: string; quantity?: number; unitPriceOre?: number; size?: string; measurements?: { label?: string; value?: string }[]; image?: string | null }[];
+  items?: { name?: string; quantity?: number; unitPriceOre?: number; size?: string; colour?: string; measurements?: { label?: string; value?: string }[]; image?: string | null }[];
   subtotalOre?: number; shippingOre?: number; discountOre?: number; discountCode?: string; vatIncludedOre?: number; totalOre?: number;
 };
 
@@ -124,7 +124,7 @@ export async function resendConfirmation(formData: FormData) {
   const id = String(formData.get("id") ?? "");
   if (!id.startsWith("order-")) throw new Error("Invalid order");
   const o = await adminClient().fetch<StoredOrder | null>(
-    `*[_id == $id][0]{ orderNumber, language, demo, customer, subtotalOre, shippingOre, discountOre, discountCode, vatIncludedOre, totalOre, items[]{ name, quantity, unitPriceOre, size, measurements, "image": product->images[0].asset->url } }`,
+    `*[_id == $id][0]{ orderNumber, language, demo, customer, subtotalOre, shippingOre, discountOre, discountCode, vatIncludedOre, totalOre, items[]{ name, quantity, unitPriceOre, size, colour, measurements, "image": product->images[0].asset->url } }`,
     { id },
   );
   // Declared with an explicit type, so the checker knows nothing runs after a call to it.
@@ -138,7 +138,7 @@ export async function resendConfirmation(formData: FormData) {
       orderNumber: o.orderNumber,
       language: o.language === "no" ? "no" : "en",
       customer: { name: o.customer.name ?? "", email: o.customer.email, address: o.customer.address ?? "" },
-      lines: (o.items ?? []).map((it) => ({ name: it.name ?? "", quantity: it.quantity ?? 1, unitPriceOre: it.unitPriceOre ?? 0, ...(it.size ? { size: it.size } : {}), measurements: (it.measurements ?? []).map((m) => ({ label: m.label ?? "", value: m.value ?? "" })), ...(it.image ? { image: it.image } : {}) })),
+      lines: (o.items ?? []).map((it) => ({ name: it.name ?? "", quantity: it.quantity ?? 1, unitPriceOre: it.unitPriceOre ?? 0, ...(it.size ? { size: it.size } : {}), ...(it.colour ? { colour: it.colour } : {}), measurements: (it.measurements ?? []).map((m) => ({ label: m.label ?? "", value: m.value ?? "" })), ...(it.image ? { image: it.image } : {}) })),
       totals: { subtotalOre: o.subtotalOre ?? 0, shippingOre: o.shippingOre ?? 0, discountOre: o.discountOre ?? 0, ...(o.discountCode ? { discountCode: o.discountCode } : {}), vatIncludedOre: o.vatIncludedOre ?? 0, totalOre: o.totalOre ?? 0 },
     });
     if (!sent) back("error=" + encodeURIComponent("Email isn't connected — see Setup."));

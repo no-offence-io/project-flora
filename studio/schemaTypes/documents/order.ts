@@ -84,6 +84,7 @@ export const order = defineType({
             defineField({name: 'quantity', type: 'number'}),
             defineField({name: 'unitPriceOre', title: 'Unit price (øre)', type: 'number'}),
             defineField({name: 'size', title: 'Size', type: 'string'}),
+            defineField({name: 'colour', title: 'Colour', type: 'string'}),
             defineField({
               name: 'measurements',
               title: 'Measurements (cm)',
@@ -99,8 +100,8 @@ export const order = defineType({
             }),
           ],
           preview: {
-            select: {name: 'name', quantity: 'quantity', unitPriceOre: 'unitPriceOre', size: 'size'},
-            prepare: ({name, quantity, unitPriceOre, size}) => ({title: `${quantity} × ${name}${size ? ` (${size})` : ''}`, subtitle: `${(unitPriceOre ?? 0) / 100} kr each`}),
+            select: {name: 'name', quantity: 'quantity', unitPriceOre: 'unitPriceOre', size: 'size', colour: 'colour'},
+            prepare: ({name, quantity, unitPriceOre, size, colour}) => ({title: `${quantity} × ${name}${size || colour ? ` (${[colour, size].filter(Boolean).join(', ')})` : ''}`, subtitle: `${(unitPriceOre ?? 0) / 100} kr each`}),
           },
         }),
       ],

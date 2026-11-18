@@ -25,10 +25,10 @@ const L = (field: string) => `coalesce(${field}[_key == $lang][0].value, ${field
 const IMG = (field: string) => `{ "src": ${field}.asset->url, "alt": ${L(`${field}.alt`)}, "scale": ${field}.scale, "x": ${field}.x, "y": ${field}.y }`;
 
 const PRODUCT_FIELDS = `
-  "slug": slug.current, category, "name": name[_key == "en"][0].value, priceOre, compareAtPriceOre, stock, sizing, "sizes": sizes[]{ label, stock }, vintage, vintageLayout, "gif": gif.asset->url,
+  "slug": slug.current, category, "name": name[_key == "en"][0].value, priceOre, compareAtPriceOre, stock, sizing, "sizes": sizes[]{ label, stock }, tailored, tailoredExtraOre, trackStock, vintage, vintageLayout, "gif": gif.asset->url,
   "description": ${L("description")},
-  "colors": colors[]{ hex, "name": ${L("name")}, "image": ${IMG("image")} },
-  "images": images[]${IMG("@")},
+  "colors": colors[]{ hex, "id": name[_key == "en"][0].value, "name": ${L("name")}, "image": ${IMG("image")}, photoKeys },
+  "images": images[]{ "key": _key, "src": asset->url, "alt": ${L("alt")}, scale, x, y },
   "specs": specs[]{ "label": ${L("label")}, "value": ${L("value")}, emphasis, expandable, hideOnMobile }
 `;
 
@@ -36,18 +36,19 @@ const PRODUCTS_QUERY = defineQuery(`*[_type == "product" && visible != false && 
 const VINTAGE_QUERY = defineQuery(`*[_type == "product" && visible != false && vintage == true && defined(slug.current)] | order(_createdAt desc) { ${PRODUCT_FIELDS} }`);
 const PRODUCT_QUERY = defineQuery(`*[_type == "product" && slug.current == $slug][0] { ${PRODUCT_FIELDS} }`);
 
-type RawImage = { src?: string | null; alt?: string | null; scale?: number | null; x?: number | null; y?: number | null };
+type RawImage = { key?: string | null; src?: string | null; alt?: string | null; scale?: number | null; x?: number | null; y?: number | null };
 type RawProduct = {
   slug: string; category?: string | null; name?: string | null; priceOre?: number | null; compareAtPriceOre?: number | null; stock?: number | null;
-  sizing?: string | null; sizes?: { label?: string | null; stock?: number | null }[] | null; vintage?: boolean | null; vintageLayout?: string | null; gif?: string | null;
+  sizing?: string | null; sizes?: { label?: string | null; stock?: number | null }[] | null; tailored?: boolean | null; tailoredExtraOre?: number | null; trackStock?: boolean | null; vintage?: boolean | null; vintageLayout?: string | null; gif?: string | null;
   description?: string | null;
-  colors?: { hex?: string | null; name?: string | null; image?: RawImage | null }[] | null;
+  colors?: { hex?: string | null; id?: string | null; name?: string | null; image?: RawImage | null; photoKeys?: (string | null)[] | null }[] | null;
   images?: RawImage[] | null;
   specs?: { label?: string | null; value?: string | null; emphasis?: boolean | null; expandable?: boolean | null; hideOnMobile?: boolean | null }[] | null;
 };
 
 function toProduct(raw: RawProduct): Product {
-  const images = (raw.images ?? []).filter((i): i is RawImage & { src: string } => Boolean(i?.src)).map((i) => toImage(i, raw.name ?? ""));
+  const images = (raw.images ?? []).filter((i): i is RawImage & { src: string } => Boolean(i?.src)).map((i) => ({ ...toImage(i, raw.name ?? ""), ...(i.key ? { key: i.key } : {}) }));
+  const byKey = new Map(images.filter((i) => i.key).map((i) => [i.key!, i]));
   const fallback = images[0] ?? { src: "", alt: "" };
   return {
     slug: raw.slug,
@@ -58,13 +59,21 @@ function toProduct(raw: RawProduct): Product {
     stock: raw.stock ?? 0,
     sizing: raw.sizing === "sizes" || raw.sizing === "none" ? raw.sizing : "measurements",
     sizes: (raw.sizes ?? []).filter((s) => s?.label).map((s) => ({ label: s.label!, stock: s.stock ?? 0 })),
+    tailored: raw.sizing === "sizes" && raw.tailored === true,
+    trackStock: raw.trackStock !== false,
+    tailoredExtraOre: raw.sizing === "sizes" && raw.tailored === true ? extraOre(raw.tailoredExtraOre) : 0,
     vintage: raw.vintage === true,
     vintageLayout: raw.vintageLayout === "plain" ? "plain" : "card",
     gif: raw.gif ?? undefined,
     description: raw.description ?? "",
     colors: (raw.colors ?? [])
       .filter((c) => c?.hex)
-      .map((c) => ({ hex: c.hex!, name: c.name ?? "", image: c.image?.src ? toImage(c.image, c.name ?? "") : fallback })),
+      .map((c) => {
+        const image = c.image?.src ? toImage(c.image, c.name ?? "") : fallback;
+        // The colour's own photos, in the order picked on the dashboard; colours saved before there was a choice have their one photo.
+        const photos = (c.photoKeys ?? []).map((k) => (k ? byKey.get(k) : undefined)).filter((i): i is (typeof images)[number] => Boolean(i));
+        return { hex: c.hex!, id: c.id ?? c.name ?? "", name: c.name ?? "", image: photos[0] ?? image, images: photos.length ? photos : [image] };
+      }),
     images,
     specs: (raw.specs ?? []).map((s) => ({ label: s.label ?? "", value: s.value ?? undefined, emphasis: !!s.emphasis, expandable: !!s.expandable, hideOnMobile: !!s.hideOnMobile })),
   };
@@ -92,13 +101,16 @@ export async function getProduct(slug: string): Promise<Product | null> {
  * For pricing a cart: straight from the API, never the CDN, so a stock or price change in the
  * editor is what the next checkout sees. English is fine here; only numbers are used.
  */
-export type CheckoutProduct = { name: string; priceOre: number; stock: number; sizing: Sizing; sizes: ProductSize[] };
+export type CheckoutProduct = { name: string; priceOre: number; stock: number; sizing: Sizing; sizes: ProductSize[]; tailored: boolean; tailoredExtraOre: number; trackStock: boolean; colours: string[] };
+
+/** The made-to-measure extra as stored: whole øre, never negative; anything else counts as none. */
+const extraOre = (v: number | null | undefined) => (typeof v === "number" && Number.isInteger(v) && v > 0 ? v : 0);
 
 export async function getCheckoutProducts(slugs: string[]): Promise<Map<string, CheckoutProduct>> {
   const rows = await client
     .withConfig({ useCdn: false })
-    .fetch<{ slug: string; name: string | null; priceOre: number | null; stock: number | null; sizing?: string | null; sizes?: { label?: string | null; stock?: number | null }[] | null }[]>(
-      `*[_type == "product" && visible != false && slug.current in $slugs]{ "slug": slug.current, "name": name[_key == "en"][0].value, priceOre, stock, sizing, "sizes": sizes[]{ label, stock } }`,
+    .fetch<{ slug: string; name: string | null; priceOre: number | null; stock: number | null; sizing?: string | null; sizes?: { label?: string | null; stock?: number | null }[] | null; tailored?: boolean | null; tailoredExtraOre?: number | null; trackStock?: boolean | null; colours?: (string | null)[] | null }[]>(
+      `*[_type == "product" && visible != false && slug.current in $slugs]{ "slug": slug.current, "name": name[_key == "en"][0].value, priceOre, stock, sizing, "sizes": sizes[]{ label, stock }, tailored, tailoredExtraOre, trackStock, "colours": colors[defined(hex)].name[_key == "en"][0].value }`,
       { slugs },
     );
   return new Map(
@@ -110,6 +122,10 @@ export async function getCheckoutProducts(slugs: string[]): Promise<Map<string, 
         stock: r.stock ?? 0,
         sizing: (r.sizing === "sizes" || r.sizing === "none" ? r.sizing : "measurements") as Sizing,
         sizes: (r.sizes ?? []).filter((s) => s?.label).map((s) => ({ label: s.label!, stock: s.stock ?? 0 })),
+        tailored: r.sizing === "sizes" && r.tailored === true,
+        trackStock: r.trackStock !== false,
+        tailoredExtraOre: r.sizing === "sizes" && r.tailored === true ? extraOre(r.tailoredExtraOre) : 0,
+        colours: (r.colours ?? []).filter((c): c is string => Boolean(c?.trim())),
       },
     ]),
   );

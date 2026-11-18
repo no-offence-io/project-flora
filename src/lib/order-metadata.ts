@@ -7,13 +7,14 @@ export const METADATA_SITE = "flora";
  * How a quote travels on the PaymentIntent. Stripe metadata allows 50 keys of 500 characters, so the
  * lines go in one compact key and each line's measurements in a key of their own.
  */
-export type MetadataLine = { id: string; qty: number; p: number; s?: string };
+/** `t`: made to measure instead of a standard size, so no stock is counted down for it. */
+export type MetadataLine = { id: string; qty: number; p: number; s?: string; c?: string; t?: 1 };
 
 export function quoteToMetadata(quote: { lines: QuotedLine[]; totals: { discountOre: number }; discount: { code: string; docId: string } | null }, extra: { lang: string; country?: string }): Record<string, string> {
   const metadata: Record<string, string> = {
     site: METADATA_SITE,
     lang: extra.lang,
-    items: JSON.stringify(quote.lines.map((l) => ({ id: l.id, qty: l.quantity, p: l.unitPriceOre, ...(l.size ? { s: l.size } : {}) }))),
+    items: JSON.stringify(quote.lines.map((l) => ({ id: l.id, qty: l.quantity, p: l.unitPriceOre, ...(l.size ? { s: l.size } : {}), ...(l.colour ? { c: l.colour } : {}), ...(l.tailored ? { t: 1 } : {}) }))),
   };
   quote.lines.forEach((l, i) => {
     if (l.measurements?.length) metadata[`m_${i}`] = l.measurements.map((m) => `${m.label}=${m.value}`).join(";").slice(0, 500);
@@ -43,6 +44,8 @@ export function linesFromMetadata(m: Record<string, string>): (MetadataLine & { 
       qty: Number(x.qty) || 0,
       p: Number(x.p) || 0,
       ...(x.s ? { s: String(x.s) } : {}),
+      ...(x.c ? { c: String(x.c).slice(0, 60) } : {}),
+      ...(x.t === 1 ? { t: 1 as const } : {}),
       measurements: (m[`m_${i}`] ?? "")
         .split(";")
         .filter(Boolean)

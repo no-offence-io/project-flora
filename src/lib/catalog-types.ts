@@ -25,7 +25,8 @@ export type Category = (typeof CATEGORIES)[number];
 /** How a product is sized: made to the customer's measurements (the default), a fixed size list, or one size. */
 /** A picture the site draws in a box of its own shape, with how it sits there (see media-transform.ts). */
 export type SiteImage = { src: string; alt: string } & MediaTransform;
-export type ProductImage = SiteImage;
+/** A product photo; `key` ties it to the colours that show it. */
+export type ProductImage = SiteImage & { key?: string };
 
 /** From a GROQ image projection (`src`, `alt`, `scale`, `x`, `y`) to a SiteImage; `alt` falls back to the given text. */
 export function toImage(raw: { src?: string | null; alt?: string | null; scale?: number | null; x?: number | null; y?: number | null }, alt: string): SiteImage {
@@ -43,6 +44,18 @@ export type Product = {
   sizing: Sizing;
   /** Only meaningful when `sizing` is "sizes"; each size carries its own stock. */
   sizes: ProductSize[];
+  /**
+   * With `sizing` "sizes": the customer may choose "made to measure" instead of a size. Such a piece
+   * is made to order, so it neither needs nor uses a size's stock.
+   */
+  tailored: boolean;
+  /**
+   * False for a piece whose stock isn't counted (made to order, or simply not worth counting): it is
+   * never sold out, has no limit in the cart, and paid orders count nothing down.
+   */
+  trackStock: boolean;
+  /** Added to the price for a made-to-measure piece, in øre; 0 for none. */
+  tailoredExtraOre: number;
   /** One-of-a-kind pieces shown on the Vintage page instead of the shop. */
   vintage: boolean;
   /** A vintage piece's own page: the turning 3D card at the top, or the normal product layout. */
@@ -71,8 +84,10 @@ export const LIFESTYLE_PHOTOS = [
 ];
 
 /** Nothing left to sell: all sizes empty, or the single stock number at zero. */
-export function isSoldOut(product: Pick<Product, "sizing" | "sizes" | "stock">): boolean {
-  if (product.sizing === "sizes") return product.sizes.every((s) => s.stock <= 0);
+export function isSoldOut(product: Pick<Product, "sizing" | "sizes" | "stock"> & { tailored?: boolean; trackStock?: boolean }): boolean {
+  if (product.trackStock === false) return false;
+  // Made to measure is made to order: it can always be bought, whatever the standard sizes say.
+  if (product.sizing === "sizes") return !product.tailored && product.sizes.every((s) => s.stock <= 0);
   return product.stock <= 0;
 }
 

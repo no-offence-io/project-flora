@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { variantLabel } from "@/lib/variant";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { setOrderStatus } from "@/app/admin/(app)/orders/actions";
@@ -14,7 +15,7 @@ export type PreviewOrder = {
   orderedAt?: string;
   manual?: string;
   customer?: { name?: string; email?: string; phone?: string; address?: string; note?: string };
-  items?: { _key: string; name?: string; quantity?: number; unitPriceOre?: number; size?: string }[];
+  items?: { _key: string; name?: string; quantity?: number; unitPriceOre?: number; size?: string; colour?: string }[];
   shippingOre?: number;
   totalOre?: number;
   paymentProvider?: string;
@@ -142,7 +143,7 @@ export default function OrderPreview({ order }: { order: PreviewOrder }) {
                 <tbody>
                   {(order.items ?? []).map((it) => (
                     <tr key={it._key} className="border-b border-black/10">
-                      <td className="py-[10px] pr-[12px]">{it.name}{it.size ? ` – ${it.size}` : ""}</td>
+                      <td className="py-[10px] pr-[12px]">{it.name}{variantLabel(it) ? ` – ${variantLabel(it)}` : ""}</td>
                       <td className="py-[10px] text-right">{it.quantity}</td>
                       <td className="py-[10px] text-right">{kr((it.unitPriceOre ?? 0) * (it.quantity ?? 0))}</td>
                     </tr>

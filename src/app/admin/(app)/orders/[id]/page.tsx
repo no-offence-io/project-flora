@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { variantLabel } from "@/lib/variant";
 import { saveOrder, sendShippingEmail } from "../../actions";
 import { refundVippsOrder, resendConfirmation } from "../actions";
 import { Button, Card, Heading, Input, Labelled, Muted, Row, Select, StatusPill, Subheading, Tag, Textarea, TextLink } from "@/components/admin/ui";
@@ -17,7 +18,7 @@ type Order = {
   confirmationSentAt?: string;
   shippingEmailSentAt?: string;
   customer?: { name?: string; email?: string; phone?: string; address?: string; note?: string };
-  items?: { _key: string; name?: string; quantity?: number; unitPriceOre?: number; size?: string; measurements?: { _key: string; label?: string; value?: string }[] }[];
+  items?: { _key: string; name?: string; quantity?: number; unitPriceOre?: number; size?: string; colour?: string; measurements?: { _key: string; label?: string; value?: string }[] }[];
   subtotalOre?: number;
   discountCode?: string;
   discountOre?: number;
@@ -92,7 +93,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
                   <span className="flex min-w-0 flex-1 flex-col gap-[5px]">
                     <span>
                       {it.name}
-                      {it.size ? ` – ${it.size}` : ""} × {it.quantity}
+                      {variantLabel(it) ? ` – ${variantLabel(it)}` : ""} × {it.quantity}
                     </span>
                     {it.measurements && it.measurements.length > 0 && (
                       <span className="flex flex-col gap-[5px] text-[11px] leading-normal">

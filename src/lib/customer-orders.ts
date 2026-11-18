@@ -12,12 +12,12 @@ export type CustomerOrder = {
   shippingOre?: number;
   discountOre?: number;
   vatIncludedOre?: number;
-  items: { name: string; quantity: number; unitPriceOre: number; size?: string; image?: string; measurements: { label: string; value: string }[] }[];
+  items: { name: string; quantity: number; unitPriceOre: number; size?: string; colour?: string; image?: string; measurements: { label: string; value: string }[] }[];
   address?: string;
 };
 
 const FIELDS = `_id, orderNumber, status, orderedAt, trackingNumber, totalOre, subtotalOre, shippingOre, discountOre, vatIncludedOre, "address": customer.address,
-  "items": items[]{ name, quantity, unitPriceOre, size, "image": product->images[0].asset->url, "measurements": coalesce(measurements[]{ label, value }, []) }`;
+  "items": items[]{ name, quantity, unitPriceOre, size, colour, "image": product->images[0].asset->url, "measurements": coalesce(measurements[]{ label, value }, []) }`;
 
 /** Only ever called with the signed-in session's email — never an email from a request. */
 export async function ordersFor(email: string): Promise<CustomerOrder[]> {

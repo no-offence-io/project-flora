@@ -85,8 +85,8 @@ export async function healthChecks(): Promise<HealthCheck[]> {
     const { waiting, low, lowSizes } = await client.fetch<{ waiting: number; low: { _id: string; name?: string; stock?: number }[]; lowSizes: { _id: string; name?: string; sizes?: { label?: string; stock?: number }[] }[] }>(
       `{
         "waiting": count(*[_type == "order" && status == "paid" && orderedAt < $since]),
-        "low": *[_type == "product" && visible != false && sizing != "sizes" && stock <= 1]{ _id, "name": name[_key == "en"][0].value, stock },
-        "lowSizes": *[_type == "product" && visible != false && sizing == "sizes" && count(sizes[stock <= 1]) > 0]{ _id, "name": name[_key == "en"][0].value, "sizes": sizes[stock <= 1]{ label, stock } }
+        "low": *[_type == "product" && visible != false && trackStock != false && sizing != "sizes" && stock <= 1]{ _id, "name": name[_key == "en"][0].value, stock },
+        "lowSizes": *[_type == "product" && visible != false && trackStock != false && sizing == "sizes" && tailored != true && count(sizes[stock <= 1]) > 0]{ _id, "name": name[_key == "en"][0].value, "sizes": sizes[stock <= 1]{ label, stock } }
       }`,
       { since },
     );

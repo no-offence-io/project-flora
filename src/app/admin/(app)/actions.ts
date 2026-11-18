@@ -85,25 +85,58 @@ export async function sendShippingEmail(formData: FormData) {
 
 const CATEGORIES = ["Tops", "Skirts", "Pants", "Sets", "Accessories"] as const;
 
+/**
+ * Something about the product as typed that can't be saved, said in words for the editor to show.
+ * The form's own checks catch most of these before anything is sent; these are the backstop.
+ */
+class ProductInputError extends Error {}
+
 export async function saveProduct(formData: FormData) {
   await requireAdmin();
-  const client = adminClient();
   const id = String(formData.get("id") ?? "");
+  let docId: string;
+  try {
+    docId = await writeProduct(formData, id);
+  } catch (err) {
+    // A mistake in the form goes back to the editor as a sentence; anything else is a real fault and stays one.
+    if (!(err instanceof ProductInputError)) throw err;
+    redirect(`${id ? `/admin/products/${id}` : "/admin/products/new"}?error=${encodeURIComponent(err.message)}`);
+  }
+  revalidatePath("/admin");
+  revalidatePath("/admin/products");
+  revalidatePath(`/admin/products/${docId}`);
+  redirect(`/admin/products/${docId}?saved=1`);
+}
+
+async function writeProduct(formData: FormData, id: string): Promise<string> {
+  const client = adminClient();
+  const fail = (message: string): never => {
+    throw new ProductInputError(`${message} Nothing was saved.`);
+  };
   const name = readLocalizedString(formData, "name");
   const slug = String(formData.get("slug") ?? "").trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-|-$/g, "");
   const category = String(formData.get("category") ?? "");
   const priceOre = kronerToOre(formData.get("price"));
   const compareAtPriceOre = kronerToOre(formData.get("compareAtPrice"));
-  const stock = Number(formData.get("stock") ?? 0);
+  const trackStock = formData.get("trackStock") !== "off";
   const sizingRaw = String(formData.get("sizing") ?? "measurements");
-  const sizing = sizingRaw === "sizes" || sizingRaw === "none" ? sizingRaw : "measurements";
+  // "Both" is stored as sized with tailoring on.
+  const tailored = sizingRaw === "both";
+  const sizing = sizingRaw === "sizes" || tailored ? "sizes" : sizingRaw === "none" ? "none" : "measurements";
+  // The stock number only matters when stock is counted and there are no sizes; a field that wasn't shown isn't sent.
+  const stockRaw = formData.get("stock");
+  const stock = stockRaw === null || String(stockRaw).trim() === "" ? 0 : Number(stockRaw);
+  const tailoredExtraOre = tailored ? (kronerToOre(formData.get("tailoredExtra")) ?? 0) : 0;
 
-  if (!name.some((v) => v._key === "en")) throw new Error("An English name is required");
-  if (!slug) throw new Error("A web address is required");
-  if (!CATEGORIES.includes(category as (typeof CATEGORIES)[number])) throw new Error("Pick a category");
-  if (priceOre === undefined || priceOre < 0) throw new Error("A price is required");
-  if (!Number.isInteger(stock) || stock < 0) throw new Error("Stock must be a whole number");
-  if (compareAtPriceOre !== undefined && compareAtPriceOre <= priceOre) throw new Error("The previous price should be higher than the current price");
+  if (!name.some((v) => v._key === "en")) fail("An English name is needed.");
+  if (!slug) fail("A web address is needed.");
+  if (!CATEGORIES.includes(category as (typeof CATEGORIES)[number])) fail("Choose a category.");
+  if (priceOre === undefined || priceOre < 0) fail("A price is needed, in kroner, e.g. 890.");
+  if (!Number.isInteger(stock) || stock < 0) fail("Stock must be a whole number, 0 or more.");
+  if (tailoredExtraOre < 0) fail("The extra for Tailored can't be negative.");
+  if (compareAtPriceOre !== undefined && compareAtPriceOre <= priceOre!) fail("The previous price should be higher than the price.");
+  const clash = await client.fetch<string | null>(`*[_type == "product" && slug.current == $slug && !(_id in [$id, "drafts." + $id])][0]._id`, { slug, id: id || "-" });
+  if (clash) fail(`Another product already uses the web address "${slug}". Choose another.`);
 
   const fields = {
     name,
@@ -114,6 +147,9 @@ export async function saveProduct(formData: FormData) {
     compareAtPriceOre: compareAtPriceOre ?? null,
     stock,
     sizing,
+    tailored,
+    tailoredExtraOre,
+    trackStock,
     vintage: formData.get("vintage") === "on",
     vintageLayout: formData.get("vintageLayout") === "plain" ? "plain" : "card",
     visible: formData.get("visible") === "on",
@@ -125,12 +161,13 @@ export async function saveProduct(formData: FormData) {
     if (formData.get(`sizeRemove_${i}`) === "on") continue;
     const label = String(formData.get(`sizeLabel_${i}`) ?? "").trim();
     if (!label) continue;
-    if (!/^[A-Za-z0-9 ./-]{1,20}$/.test(label)) throw new Error(`Size "${label}" may only use letters, numbers, space, . / -`);
-    const sizeStock = Number(formData.get(`sizeStock_${i}`) ?? 0);
-    if (!Number.isInteger(sizeStock) || sizeStock < 0) throw new Error(`Stock for size ${label} must be a whole number`);
+    if (!/^[A-Za-z0-9 ./-]{1,20}$/.test(label)) fail(`Size "${label}" may only use letters, numbers, space, . / -.`);
+    const sizeStockRaw = formData.get(`sizeStock_${i}`);
+    const sizeStock = sizeStockRaw === null || String(sizeStockRaw).trim() === "" ? 0 : Number(sizeStockRaw);
+    if (!Number.isInteger(sizeStock) || sizeStock < 0) fail(`Stock for size ${label} must be a whole number, 0 or more.`);
     sizes.push({ _key: String(formData.get(`sizeKey_${i}`) ?? "") || `z${Date.now().toString(36)}${i}`, _type: "size", label, stock: sizeStock });
   }
-  if (sizing === "sizes" && sizes.length === 0) throw new Error("Add at least one size, or choose another way of sizing");
+  if (sizing === "sizes" && sizes.length === 0) fail("Add at least one size, or choose another way of sizing.");
 
   // Photos: each existing one is a media-editor field (`image_<key>`: kept, replaced, placed, named or removed), then any new uploads.
   const images: ImageValue[] = [];
@@ -145,19 +182,38 @@ export async function saveProduct(formData: FormData) {
   }
 
   // Colours and detail rows come as numbered slots (see ProductForm); empty or ticked-off slots are dropped.
+  // A colour's photos are the product's own photos, picked by key (colorPhotos_i, main first); the main
+  // one is copied into the colour, placement and name included, for the swatch hover on product cards.
+  // A colour with none picked keeps a photo of its own from before, if it had one.
+  const colourPhotos = (i: number) =>
+    String(formData.get(`colorPhotos_${i}`) ?? "")
+      .split(",")
+      .map((k) => k.trim())
+      .filter((k, at, all) => k && all.indexOf(k) === at && images.some((img) => img._key === k));
+  const colourImage = async (keys: string[], i: number) => {
+    const main = images.find((img) => img._key === keys[0]);
+    if (main) {
+      const { _key, ...rest } = main;
+      void _key;
+      return { ...rest, _type: "localizedImage" as const };
+    }
+    return readImageField(formData, `colorImage_${i}`);
+  };
   const colors = [];
   for (let i = 0; i < (Number(formData.get("colorCount")) || 0); i++) {
     if (formData.get(`colorRemove_${i}`) === "on") continue;
     const name = readLocalizedString(formData, `colorName_${i}`);
     const hex = String(formData.get(`colorHex_${i}`) ?? "").trim().toLowerCase();
     if (!name.some((v) => v._key === "en" && v.value)) continue;
-    if (!/^#([0-9a-f]{3}){1,2}$/.test(hex)) throw new Error(`Colour ${i + 1} needs a hex code like #6b7280`);
+    if (!/^#([0-9a-f]{3}){1,2}$/.test(hex)) fail(`The colour "${name.find((v) => v._key === "en")?.value}" needs its colour dot: pick a photo for it, or tap the dot.`);
+    const photoKeys = colourPhotos(i);
     colors.push({
       _key: String(formData.get(`colorKey_${i}`) ?? "") || `c${Date.now().toString(36)}${i}`,
       _type: "color",
       name,
       hex,
-      image: await readImageField(formData, `colorImage_${i}`),
+      photoKeys,
+      image: await colourImage(photoKeys, i),
     });
   }
   const specs = [];
@@ -176,16 +232,12 @@ export async function saveProduct(formData: FormData) {
     });
   }
 
-  let docId = id;
   if (id) {
     await client.patch(id).set({ ...fields, images, colors, specs, sizes }).commit();
-  } else {
-    const created = await client.create({ _type: "product", ...fields, images, colors, specs, sizes });
-    docId = created._id;
+    return id;
   }
-  revalidatePath("/admin");
-  revalidatePath("/admin/products");
-  redirect(`/admin/products/${docId}?saved=1`);
+  const created = await client.create({ _type: "product", ...fields, images, colors, specs, sizes });
+  return created._id;
 }
 
 export async function deleteProduct(formData: FormData) {
