@@ -5,6 +5,7 @@ export const GROUPS: { title: string; links: { label: string; href: string }[] }
     links: [
       { label: "Dashboard", href: "/admin" },
       { label: "Orders", href: "/admin/orders" },
+      { label: "Reports", href: "/admin/reports" },
       { label: "Customers", href: "/admin/customers" },
       { label: "Visits", href: "/admin/visits" },
       { label: "Payments", href: "/admin/payments" },

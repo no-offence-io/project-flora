@@ -81,25 +81,65 @@ async function batchRunReports(propertyId: string, requests: ReportRequest[]): P
   return data.reports;
 }
 
-/** Visitors on the site in the last 30 minutes, from the realtime API — the way to check that counting works. */
-export async function getActiveNow(propertyId: string): Promise<number> {
+async function realtime(propertyId: string, body: object): Promise<Report> {
   const token = await accessToken();
   const res = await fetch(`https://analyticsdata.googleapis.com/v1beta/properties/${encodeURIComponent(propertyId)}:runRealtimeReport`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ metrics: [{ name: "activeUsers" }] }),
+    body: JSON.stringify(body),
     cache: "no-store",
   });
   const data = (await res.json()) as Report & { error?: { message?: string } };
   if (!res.ok) throw new Error(data.error?.message ?? "Google Analytics returned an error");
+  return data;
+}
+
+/** Visitors on the site in the last 30 minutes, from the realtime API — the way to check that counting works. */
+export async function getActiveNow(propertyId: string): Promise<number> {
+  const data = await realtime(propertyId, { metrics: [{ name: "activeUsers" }] });
   return Number(data.rows?.[0]?.metricValues?.[0]?.value ?? 0) || 0;
+}
+
+/**
+ * Who is on the site right now, for the dashboard's live panel: the count, the last half hour
+ * minute by minute (index 0 is the minute just gone), what they are looking at, and on what.
+ * Google's realtime window is 30 minutes and counts only visitors who accepted cookies.
+ */
+export type Live = { active: number; minutes: number[]; pages: { name: string; users: number }[]; devices: { name: string; users: number }[]; countries: { name: string; users: number }[]; at: string };
+
+export async function getLive(propertyId: string): Promise<Live> {
+  const users = [{ name: "activeUsers" }];
+  const top = (name: string, limit: number) => ({ dimensions: [{ name }], metrics: users, orderBys: [{ metric: { metricName: "activeUsers" }, desc: true }], limit });
+  const [total, perMinute, pages, devices, countries] = await Promise.all([
+    realtime(propertyId, { metrics: users }),
+    realtime(propertyId, { dimensions: [{ name: "minutesAgo" }], metrics: users, limit: 30 }),
+    realtime(propertyId, top("unifiedScreenName", 6)),
+    realtime(propertyId, top("deviceCategory", 3)),
+    realtime(propertyId, top("country", 4)),
+  ]);
+  const minutes = Array<number>(30).fill(0);
+  for (const r of perMinute.rows ?? []) {
+    const ago = Number(r.dimensionValues?.[0]?.value);
+    if (Number.isInteger(ago) && ago >= 0 && ago < 30) minutes[ago] = Number(r.metricValues?.[0]?.value ?? 0) || 0;
+  }
+  const list = (rep: Report, clean: (s: string) => string = (x) => x) => (rep.rows ?? []).map((r) => ({ name: clean(r.dimensionValues?.[0]?.value ?? "") || "(unknown)", users: Number(r.metricValues?.[0]?.value ?? 0) || 0 })).filter((r) => r.users > 0);
+  return {
+    active: Number(total.rows?.[0]?.metricValues?.[0]?.value ?? 0) || 0,
+    minutes,
+    pages: list(pages, (t) => t.replace(/\s*[–-]\s*Flöra\s*$/, "")),
+    devices: list(devices, (d) => d.replace(/^\w/, (c) => c.toUpperCase())),
+    countries: list(countries),
+    at: new Date().toISOString(),
+  };
 }
 
 const dim = (r: Row, i: number) => r.dimensionValues?.[i]?.value ?? "";
 const num = (r: Row, i: number) => Number(r.metricValues?.[i]?.value ?? 0) || 0;
 
 export type Visits = {
-  days: number;
+  /** Whole days, both ends included, in the property's time zone (Europe/Oslo). */
+  from: string;
+  to: string;
   totals: { users: number; sessions: number; views: number; seconds: number };
   previous: { users: number; sessions: number; views: number; seconds: number };
   daily: { date: string; users: number; sessions: number }[];
@@ -113,17 +153,20 @@ export type Visits = {
 const SOURCE_NAMES: Record<string, string> = { "(direct)": "Direct", ig: "Instagram", instagram: "Instagram", "l.instagram.com": "Instagram", "instagram.com": "Instagram", google: "Google", fb: "Facebook", "m.facebook.com": "Facebook", "facebook.com": "Facebook", tiktok: "TikTok", pinterest: "Pinterest", "pinterest.com": "Pinterest" };
 const pretty = (s: string) => SOURCE_NAMES[s.toLowerCase()] ?? s;
 
-/** The dashboard's "Visits" page in one call: the last `days` days against the `days` before them. */
-export async function getVisits(propertyId: string, days: number): Promise<Visits> {
-  const current = [{ startDate: `${days - 1}daysAgo`, endDate: "today" }];
-  const previous = [{ startDate: `${2 * days - 1}daysAgo`, endDate: `${days}daysAgo` }];
+/**
+ * The dashboard's "Visits" page in one call: any period (dates as YYYY-MM-DD) against the period
+ * given to compare with, normally the same number of days just before it.
+ */
+export async function getVisits(propertyId: string, range: { from: string; to: string }, before: { from: string; to: string }): Promise<Visits> {
+  const current = [{ startDate: range.from, endDate: range.to }];
+  const previous = [{ startDate: before.from, endDate: before.to }];
   const totals = { name: "activeUsers" };
   const metrics = [totals, { name: "sessions" }, { name: "screenPageViews" }, { name: "userEngagementDuration" }];
   const [a, b] = await Promise.all([
     batchRunReports(propertyId, [
       { dateRanges: current, metrics },
       { dateRanges: previous, metrics },
-      { dateRanges: current, dimensions: [{ name: "date" }], metrics: [totals, { name: "sessions" }], orderBys: [{ dimension: { dimensionName: "date" } }], limit: 100 },
+      { dateRanges: current, dimensions: [{ name: "date" }], metrics: [totals, { name: "sessions" }], orderBys: [{ dimension: { dimensionName: "date" } }], limit: 2500 },
       { dateRanges: current, dimensions: [{ name: "sessionSource" }], metrics: [{ name: "sessions" }, totals], orderBys: [{ metric: { metricName: "sessions" }, desc: true }], limit: 10 },
       { dateRanges: current, dimensions: [{ name: "pagePath" }, { name: "pageTitle" }], metrics: [{ name: "screenPageViews" }], orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }], limit: 40 },
     ]),
@@ -138,7 +181,8 @@ export async function getVisits(propertyId: string, days: number): Promise<Visit
   };
   const pages = (a[4].rows ?? []).map((r) => ({ path: dim(r, 0), title: dim(r, 1).replace(/\s*[–-]\s*Flöra\s*$/, ""), views: num(r, 0) }));
   return {
-    days,
+    from: range.from,
+    to: range.to,
     totals: sum(a[0]),
     previous: sum(a[1]),
     daily: (a[2].rows ?? []).map((r) => ({ date: dim(r, 0), users: num(r, 0), sessions: num(r, 1) })),
@@ -148,4 +192,23 @@ export async function getVisits(propertyId: string, days: number): Promise<Visit
     devices: (b[0].rows ?? []).map((r) => ({ name: dim(r, 0).replace(/^\w/, (c) => c.toUpperCase()), users: num(r, 0) })),
     countries: (b[1].rows ?? []).map((r) => ({ name: dim(r, 0), users: num(r, 0) })),
   };
+}
+
+/** The Analytics property the dashboard reads, from Settings; null when it hasn't been filled in or the key is missing. */
+export async function readablePropertyId(): Promise<string | null> {
+  if (!analyticsConfigured()) return null;
+  const { adminClient } = await import("./sanity");
+  const id = (await adminClient().fetch<string | null>(`*[_id == "siteSettings"][0].gaPropertyId`))?.trim();
+  return id && /^\d{6,12}$/.test(id) ? id : null;
+}
+
+/** The live panel's first answer, rendered on the server: the figures, or which of the reasons there are none. */
+export async function liveOrReason(): Promise<Live | { error: "not-connected" | "analytics"; message?: string }> {
+  const propertyId = await readablePropertyId().catch(() => null);
+  if (!propertyId) return { error: "not-connected" };
+  try {
+    return await getLive(propertyId);
+  } catch (err) {
+    return { error: "analytics", message: err instanceof Error ? err.message.slice(0, 300) : undefined };
+  }
 }
