@@ -585,6 +585,9 @@ export async function removeGif(formData: FormData) {
 export async function toggleDemoMode() {
   await requireAdmin();
   const { clearDemo, isDemoOn, seedDemo } = await import("@/lib/admin/demo");
+  // Test mode writes and deletes documents; with a read-only token, say so on Setup instead of crashing the page.
+  const { canWrite } = await import("@/sanity/lib/write");
+  if (!(await canWrite()).ok) redirect("/admin/setup");
   if (await isDemoOn()) await clearDemo();
   else await seedDemo();
   revalidatePath("/admin", "layout");

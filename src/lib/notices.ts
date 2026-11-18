@@ -1,7 +1,7 @@
 import "server-only";
 import { isComingSoon } from "./gate";
 import { createHash } from "node:crypto";
-import { getWriteClient } from "@/sanity/lib/write";
+import { getWriteClient, canWrite } from "@/sanity/lib/write";
 import { getEmailSettings, notifyAddresses } from "./email-settings";
 import type { NotifyScenario } from "./email-shared";
 
@@ -76,6 +76,7 @@ export async function healthChecks(): Promise<HealthCheck[]> {
   if (process.env.VIPPS_MSN && process.env.VIPPS_ENV === "production" && !process.env.VIPPS_WEBHOOK_SECRET) out.push({ kind: "warning", title: "No webhook secret for Vipps", detail: "Orders are still recorded when the customer comes back from Vipps, but not if they close the app first. Register the webhook and set VIPPS_WEBHOOK_SECRET.", href: "/admin/setup" });
   if (!process.env.RESEND_API_KEY) out.push({ kind: "warning", title: "Email is not connected", detail: "Order confirmations, shipping emails and newsletters are not being sent.", href: "/admin/setup" });
   if (!process.env.SANITY_TOKEN) out.push({ kind: "error", title: "Content token missing", detail: "Orders cannot be recorded and the admin cannot save.", href: "/admin/setup" });
+  else if (!(await canWrite()).ok) out.push({ kind: "error", title: "Content token is read-only", detail: "Sanity refuses writes with this token, so paid orders are not recorded and nothing in the dashboard can be saved. Give SANITY_TOKEN a token with Editor rights (sanity.io/manage → API → Tokens) and redeploy.", href: "/admin/setup" });
   if (await isComingSoon()) out.push({ kind: "info", title: "The shop is behind the coming-soon page", detail: "Visitors see the placeholder. Open the shop under Settings → Shop status.", href: "/admin/settings" });
 
   try {

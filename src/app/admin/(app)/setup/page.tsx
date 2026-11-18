@@ -1,4 +1,5 @@
 import { sendSampleNewsletter, sendTestEmails } from "../actions";
+import { canWrite } from "@/sanity/lib/write";
 import { analyticsConfigured, serviceAccountEmail } from "@/lib/admin/analytics";
 import { Button, Card, Heading, Muted, Subheading, Tag } from "@/components/admin/ui";
 import { requireAdmin } from "@/lib/admin/session";
@@ -14,6 +15,7 @@ export default async function SetupPage({ searchParams }: { searchParams: Promis
   const mail = await getEmailSettings();
   const admin = await requireAdmin();
   const { sent, newsletter, error } = await searchParams;
+  const writable = process.env.SANITY_TOKEN ? await canWrite() : { ok: false as const, reason: undefined };
   const stripeKey = process.env.STRIPE_SECRET_KEY ?? "";
   const stripeMode = stripeKey.startsWith("sk_live_") ? "live" : stripeKey.startsWith("sk_test_") ? "test" : "missing";
   const items: { title: string; ok: boolean; status: string; how: string[] }[] = [
@@ -68,9 +70,9 @@ export default async function SetupPage({ searchParams }: { searchParams: Promis
     },
     {
       title: "Sanity content",
-      ok: Boolean(process.env.SANITY_TOKEN),
-      status: process.env.SANITY_TOKEN ? "Connected" : "SANITY_TOKEN missing — orders cannot be recorded",
-      how: ["sanity.io/manage → project → API → Tokens → a token with Editor rights, as SANITY_TOKEN."],
+      ok: Boolean(process.env.SANITY_TOKEN) && writable.ok,
+      status: !process.env.SANITY_TOKEN ? "SANITY_TOKEN missing — orders cannot be recorded" : writable.ok ? "Connected, and the token can write" : `Read-only token — Sanity refuses writes, so orders are not recorded and nothing can be saved (${writable.reason ?? "no permission"})`,
+      how: ["sanity.io/manage → project → API → Tokens → a token with Editor rights, as SANITY_TOKEN (sensitive, in Vercel). Redeploy.", "If the token used to work: check under Members and API that its role is still Editor, and that the project's plan still includes that role."],
     },
   ];
 
