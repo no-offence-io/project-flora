@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { getWriteClient, canWrite } from "@/sanity/lib/write";
 import { getEmailSettings, notifyAddresses } from "./email-settings";
 import type { NotifyScenario } from "./email-shared";
+import { notificationDocId } from "@/lib/doc-ids";
 
 /*
  * The owner's notification centre. Anything that goes wrong without a person watching — a failed
@@ -18,7 +19,7 @@ export async function notice(input: { kind: NoticeKind; title: string; detail?: 
   try {
     const client = getWriteClient();
     const key = input.dedupeKey ?? `${input.source}:${input.title}`;
-    const id = `notification-${createHash("sha256").update(key).digest("hex").slice(0, 24)}`;
+    const id = notificationDocId(createHash("sha256").update(key).digest("hex").slice(0, 24));
     const now = new Date().toISOString();
     const existing = await client.getDocument(id);
     if (existing && existing.createdAt && Date.now() - new Date(String(existing.createdAt)).getTime() < 24 * 3600 * 1000) {

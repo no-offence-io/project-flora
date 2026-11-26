@@ -8,11 +8,12 @@ import { adminClient, kronerToOre } from "@/lib/admin/sanity";
 import { requireAdmin } from "@/lib/admin/session";
 import { ORDER_STATUSES } from "@/lib/order-status";
 import { refundVippsPayment, VippsError } from "@/lib/vipps";
+import { ORDER_PREFIX, VIPPS_ORDER_DOC_ID, manualOrderDocId } from "@/lib/doc-ids";
 
 /** The quick buttons in the order list's preview: change the status, nothing else. */
 export async function setOrderStatus(formData: FormData) {
   await requireAdmin();
-  const parsed = z.object({ id: z.string().startsWith("order-"), status: z.enum(ORDER_STATUSES) }).safeParse(Object.fromEntries(formData));
+  const parsed = z.object({ id: z.string().startsWith(ORDER_PREFIX), status: z.enum(ORDER_STATUSES) }).safeParse(Object.fromEntries(formData));
   if (!parsed.success) throw new Error("Invalid status change");
   await adminClient().patch(parsed.data.id).set({ status: parsed.data.status }).commit();
   revalidatePath("/admin");
@@ -62,7 +63,7 @@ export async function createManualOrder(formData: FormData) {
   const day = text("orderedAt", 10);
   const orderedAt = /^\d{4}-\d{2}-\d{2}$/.test(day) ? new Date(`${day}T12:00:00`).toISOString() : new Date().toISOString();
   const ref = randomBytes(4).toString("hex").toUpperCase();
-  const docId = `order-manual-${ref.toLowerCase()}`;
+  const docId = manualOrderDocId(ref.toLowerCase());
 
   let tx = client.transaction().create({
     _id: docId,
@@ -122,7 +123,7 @@ type StoredOrder = {
 export async function resendConfirmation(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
-  if (!id.startsWith("order-")) throw new Error("Invalid order");
+  if (!id.startsWith(ORDER_PREFIX)) throw new Error("Invalid order");
   const o = await adminClient().fetch<StoredOrder | null>(
     `*[_id == $id][0]{ orderNumber, language, demo, customer, subtotalOre, shippingOre, discountOre, discountCode, vatIncludedOre, totalOre, items[]{ name, quantity, unitPriceOre, size, colour, measurements, "image": product->images[0].asset->url } }`,
     { id },
@@ -158,7 +159,7 @@ export async function resendConfirmation(formData: FormData) {
 export async function refundVippsOrder(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
-  if (!/^order-vipps-fl-[a-f0-9]{24}$/.test(id)) throw new Error("Invalid order");
+  if (!VIPPS_ORDER_DOC_ID.test(id)) throw new Error("Invalid order");
   const back: (q: string) => never = (q) => redirect(`/admin/orders/${id}?${q}`);
   if (formData.get("sure") !== "on") back("error=" + encodeURIComponent("Tick the box to confirm the refund."));
   const o = await adminClient().fetch<{ vippsReference?: string; totalOre?: number; status?: string } | null>(`*[_id == $id][0]{ vippsReference, totalOre, status }`, { id });

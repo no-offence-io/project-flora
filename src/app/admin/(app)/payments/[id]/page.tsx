@@ -4,6 +4,7 @@ import { Button, Card, Checkbox, Heading, Muted, Subheading, Tag, TextLink } fro
 import { adminClient, kr } from "@/lib/admin/sanity";
 import { getStripe } from "@/lib/stripe";
 import { requireAdmin } from "@/lib/admin/session";
+import { orderDocId } from "@/lib/doc-ids";
 
 export default async function PaymentPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ refunded?: string; error?: string }> }) {
   await requireAdmin();
@@ -15,7 +16,7 @@ export default async function PaymentPage({ params, searchParams }: { params: Pr
   if (!pi) notFound();
   const charge = typeof pi.latest_charge === "object" && pi.latest_charge ? pi.latest_charge : null;
   const alreadyRefunded = Boolean(charge?.refunded) || (charge?.amount_refunded ?? 0) > 0;
-  const orderId = `order-${pi.id}`;
+  const orderId = orderDocId(pi.id);
   const order = await adminClient().fetch<{ orderNumber?: string; status?: string } | null>(`*[_id == $id][0]{ orderNumber, status }`, { id: orderId });
   const live = process.env.STRIPE_SECRET_KEY?.startsWith("sk_live_");
 

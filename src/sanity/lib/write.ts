@@ -22,7 +22,7 @@ let writeCheck: { ok: boolean; reason?: string; at: number } | null = null;
 export async function canWrite(): Promise<{ ok: boolean; reason?: string }> {
   if (writeCheck && Date.now() - writeCheck.at < 60_000) return writeCheck;
   try {
-    await getWriteClient().createOrReplace({ _id: "write-check", _type: "notification", demo: true }, { dryRun: true });
+    await getWriteClient().createOrReplace({ _id: "notification.write-check", _type: "notification", demo: true }, { dryRun: true });
     writeCheck = { ok: true, at: Date.now() };
   } catch (err) {
     const message = err instanceof Error ? err.message.split("\n")[0] : String(err);

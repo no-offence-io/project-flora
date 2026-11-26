@@ -5,6 +5,7 @@ import { linesFromMetadata } from "./orders";
 import { computeTotals } from "./pricing";
 import { orderReference } from "./money";
 import { getWriteClient } from "@/sanity/lib/write";
+import { orderDocId } from "@/lib/doc-ids";
 
 export type RecordedLine = { name: string; quantity: number; unitPriceOre: number; size?: string; colour?: string; measurements: { label: string; value: string }[]; /** First product photo, for the confirmation email. */ image?: string };
 export type RecordedOrder = {
@@ -40,7 +41,7 @@ export function paymentFromIntent(intent: Stripe.PaymentIntent): PaidPayment {
   return {
     provider: paymentProviderOf(intent),
     id: intent.id,
-    docId: `order-${intent.id}`,
+    docId: orderDocId(intent.id),
     orderNumber: orderReference(intent.id),
     amountOre: intent.amount_received || intent.amount,
     currency: intent.currency,

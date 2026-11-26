@@ -1,6 +1,7 @@
 import "server-only";
 import { createCipheriv, createECDH, createHash, createPrivateKey, createSign, hkdfSync, randomBytes } from "node:crypto";
 import { getWriteClient } from "@/sanity/lib/write";
+import { pushSubscriptionDocId } from "@/lib/doc-ids";
 
 /*
  * Notifications on Ida's phone, from the installed dashboard app. Standard Web Push, done with
@@ -57,7 +58,7 @@ export function encryptFor(sub: PushSubscriptionJSON, payload: Buffer): Buffer {
   return Buffer.concat([header, asPublic, body]);
 }
 
-export const subscriptionId = (endpoint: string) => `pushSubscription-${createHash("sha256").update(endpoint).digest("hex").slice(0, 32)}`;
+export const subscriptionId = (endpoint: string) => pushSubscriptionDocId(createHash("sha256").update(endpoint).digest("hex").slice(0, 32));
 
 /** Sends to every phone that asked for notifications. Never throws: a notification is a courtesy. */
 export async function sendPush(message: PushMessage): Promise<{ sent: number; failed: number }> {

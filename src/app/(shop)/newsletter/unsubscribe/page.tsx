@@ -4,6 +4,7 @@ import Navbar from "@/components/navbar";
 import RolloverText from "@/components/rollover-text";
 import { getT } from "@/lib/i18n-server";
 import { getWriteClient } from "@/sanity/lib/write";
+import { subscriberDocIdFromLink } from "@/lib/doc-ids";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getT();
@@ -12,9 +13,10 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /** The link at the bottom of every newsletter. The id is the subscriber's own hashed id — nothing else is needed. */
 export default async function UnsubscribePage({ searchParams }: { searchParams: Promise<{ id?: string }> }) {
-  const [{ id }, t] = await Promise.all([searchParams, getT()]);
+  const [{ id: linkId }, t] = await Promise.all([searchParams, getT()]);
+  const id = subscriberDocIdFromLink(linkId);
   let done = false;
-  if (id && /^subscriber-[a-f0-9]{32}$/.test(id)) {
+  if (id) {
     try {
       const client = getWriteClient();
       if (await client.getDocument(id)) {

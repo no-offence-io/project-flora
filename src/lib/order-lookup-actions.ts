@@ -17,8 +17,8 @@ export type LookupState = { status: "idle" } | { status: "notFound" } | { status
 /**
  * "Find my order": the number from the confirmation plus the email it was placed with. Both must
  * match, so a number alone (they are derived from Stripe ids and could be guessed) reveals nothing.
- * Reads through the public client — orders aren't public, but the token-free client has read access
- * to the dataset, and only the fields listed leave the server.
+ * Orders are private documents, so this reads with the server's token, and only the fields listed
+ * leave the server.
  */
 export async function lookupOrder(_prev: LookupState, formData: FormData): Promise<LookupState> {
   const parsed = z

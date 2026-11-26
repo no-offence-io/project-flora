@@ -24,6 +24,11 @@ Everything lives in one Sanity dataset. The schema is in `studio/schemaTypes/`.
 | Audience | `subscriber`, `newsletter` |
 | Housekeeping | `notification` |
 
+- **Private documents have a dot in their id.** Sanity hands a document to an anonymous reader only
+  when its id has no dot, so orders, customers, subscribers, discount codes, Vipps payments,
+  newsletters and notifications get ids like `order.<payment>` from `src/lib/doc-ids.ts`. They need
+  the server's token whatever the dataset's visibility is. Create them through the shop or the
+  dashboard, not by hand in the Studio, which would give them a public id.
 - **Orders are written by the payment code only** (`src/lib/record-order.ts`), never by hand. The
   money fields are read-only everywhere; fulfilment status, tracking and notes can be edited.
 - **`SANITY_TOKEN` is server-only.** `src/sanity/lib/write.ts` is guarded by `server-only`, and the
@@ -127,3 +132,4 @@ renamed `middleware.ts` to `proxy.ts`.)
 | `scripts/migrate-content.mjs` | The record of the original content import into Sanity. Re-runnable: it upserts by slug or fixed id. |
 | `scripts/translate-no.mjs` | Writes the Norwegian translation next to the English, replacing only the `no` entries. |
 | `scripts/vipps-webhook.mjs` | Registers, lists and removes Vipps webhooks. |
+| `scripts/private-ids.mjs` | Moves private documents from the old public ids to private ones. Dry run by default. |

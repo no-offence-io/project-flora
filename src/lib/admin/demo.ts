@@ -2,6 +2,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { adminClient } from "./sanity";
 import { orderReference } from "@/lib/money";
+import { demoNewsletterDocId, demoOrderDocId, notificationDocId, subscriberDocId } from "@/lib/doc-ids";
 
 /*
  * Test mode for the admin: fills the dashboard with made-up orders, subscribers, notifications and
@@ -104,7 +105,7 @@ export async function seedDemo(): Promise<void> {
     const totalOre = subtotalOre - discountOre + shippingOre;
     const status = daysAgo < 3 ? "paid" : daysAgo < 8 ? pick(["paid", "shipped", "shipped"]) : pick(["shipped", "delivered", "delivered", "delivered", "delivered", "returned", "refunded", "cancelled"]);
     docs.push({
-      _id: `order-demo-${i}`,
+      _id: demoOrderDocId(i),
       _type: "order",
       demo: true,
       ...(manual ? { manual } : {}),
@@ -138,7 +139,7 @@ export async function seedDemo(): Promise<void> {
   for (let i = 0; i < 46; i++) {
     const email = `${pick(FIRST).toLowerCase()}${i}@example.com`;
     docs.push({
-      _id: `subscriber-${createHash("sha256").update(`demo:${email}`).digest("hex").slice(0, 32)}`,
+      _id: subscriberDocId(createHash("sha256").update(`demo:${email}`).digest("hex").slice(0, 32)),
       _type: "subscriber",
       demo: true,
       email,
@@ -158,7 +159,7 @@ export async function seedDemo(): Promise<void> {
   ];
   notes.forEach(([kind, source, title, detail, daysAgo, read], i) =>
     docs.push({
-      _id: `notification-demo-${i}`,
+      _id: notificationDocId(`demo-${i}`),
       _type: "notification",
       demo: true,
       kind,
@@ -172,8 +173,8 @@ export async function seedDemo(): Promise<void> {
 
   // Newsletters: one sent, one draft.
   docs.push(
-    { _id: "newsletter-demo-sent", _type: "newsletter", demo: true, title: "The first collection", subjectEn: "The first collection – Flöra", subjectNo: "Den første kolleksjonen – Flöra", blocks: "[]", status: "sent", sentAt: new Date(now - 3 * 86400000).toISOString(), sentCount: 42 },
-    { _id: "newsletter-demo-draft", _type: "newsletter", demo: true, title: "Autumn notes", subjectEn: "Autumn notes – Flöra", subjectNo: "Høstnotater – Flöra", blocks: "[]", status: "draft" },
+    { _id: demoNewsletterDocId("sent"), _type: "newsletter", demo: true, title: "The first collection", subjectEn: "The first collection – Flöra", subjectNo: "Den første kolleksjonen – Flöra", blocks: "[]", status: "sent", sentAt: new Date(now - 3 * 86400000).toISOString(), sentCount: 42 },
+    { _id: demoNewsletterDocId("draft"), _type: "newsletter", demo: true, title: "Autumn notes", subjectEn: "Autumn notes – Flöra", subjectNo: "Høstnotater – Flöra", blocks: "[]", status: "draft" },
   );
 
   for (let i = 0; i < docs.length; i += 50) {

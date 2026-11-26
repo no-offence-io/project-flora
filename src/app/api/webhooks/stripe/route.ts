@@ -6,6 +6,7 @@ import { METADATA_SITE } from "@/lib/order-metadata";
 import { recordOrder } from "@/lib/record-order";
 import { getWriteClient } from "@/sanity/lib/write";
 import { notice } from "@/lib/notices";
+import { orderDocId } from "@/lib/doc-ids";
 
 /**
  * Stripe → us. This is the only place an order is ever created: the success page displays state,
@@ -82,7 +83,7 @@ export async function POST(req: Request) {
       const charge = event.data.object;
       const intentId = typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
       if (!intentId) break;
-      const docId = `order-${intentId}`;
+      const docId = orderDocId(intentId);
       const order = await getWriteClient().getDocument<{ orderNumber?: string }>(docId);
       if (!order) break; // the old shop, or a payment from before this one
       const amount = `${(charge.amount_refunded / 100).toLocaleString("nb-NO")} kr`;

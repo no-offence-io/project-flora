@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getLanguage } from "./language";
 import { sendNewsletterWelcome } from "./notify";
 import { getWriteClient } from "@/sanity/lib/write";
+import { subscriberDocId } from "@/lib/doc-ids";
 
 export type SignUpState = { status: "idle" | "ok" | "invalid" | "failed" };
 
@@ -19,7 +20,7 @@ export async function subscribe(_prev: SignUpState, formData: FormData): Promise
   if (!parsed.success) return { status: "invalid" };
   const email = parsed.data;
   const language = await getLanguage();
-  const id = `subscriber-${createHash("sha256").update(email).digest("hex").slice(0, 32)}`;
+  const id = subscriberDocId(createHash("sha256").update(email).digest("hex").slice(0, 32));
 
   try {
     const client = getWriteClient();

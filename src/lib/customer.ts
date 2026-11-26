@@ -2,6 +2,7 @@ import "server-only";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { getWriteClient } from "@/sanity/lib/write";
+import { customerDocId, rateLimitDocId } from "@/lib/doc-ids";
 
 /*
  * Customer accounts without passwords. A customer proves their email by clicking a link we send
@@ -44,7 +45,7 @@ const sign = (purpose: string, payload: string) => createHmac("sha256", secret()
 const same = (a: string, b: string) => a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
 
 export const normalizeEmail = (email: string) => email.trim().toLowerCase();
-export const customerIdFor = (email: string) => `customer-${createHash("sha256").update(normalizeEmail(email)).digest("hex").slice(0, 32)}`;
+export const customerIdFor = (email: string) => customerDocId(createHash("sha256").update(normalizeEmail(email)).digest("hex").slice(0, 32));
 
 /** `email.issuedAt.expiresAt.extra.signature`, all signed together. */
 function make(purpose: string, email: string, ttlMs: number, extra = "0"): string {
@@ -117,7 +118,7 @@ export async function sessionEmail(): Promise<string | null> {
  */
 export async function allowSignInEmail(email: string): Promise<boolean> {
   const client = getWriteClient();
-  const id = `ratelimit-signin-${createHash("sha256").update(normalizeEmail(email)).digest("hex").slice(0, 32)}`;
+  const id = rateLimitDocId(`signin-${createHash("sha256").update(normalizeEmail(email)).digest("hex").slice(0, 32)}`);
   const doc = await client.getDocument<{ sent?: number[] }>(id);
   const now = Date.now();
   const recent = (doc?.sent ?? []).filter((t) => now - t < 3_600_000);

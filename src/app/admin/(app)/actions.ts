@@ -12,6 +12,7 @@ import { FONT_CHOICES } from "@/lib/brand-shared";
 import { ORDER_STATUSES } from "@/lib/order-status";
 import { siteDomain } from "@/lib/email-settings";
 import { isEmail, SCENARIO_KEYS, type NotifyScenario } from "@/lib/email-shared";
+import { NOBODY_SUBSCRIBER_ID, ORDER_PREFIX, newPrivateDocId } from "@/lib/doc-ids";
 
 /*
  * Every action starts with requireAdmin(). Server actions are reachable by anyone who can POST to
@@ -23,7 +24,7 @@ export async function saveOrder(formData: FormData) {
   await requireAdmin();
   const parsed = z
     .object({
-      id: z.string().startsWith("order-"),
+      id: z.string().startsWith(ORDER_PREFIX),
       status: z.enum(ORDER_STATUSES),
       trackingNumber: z.string().trim().max(100),
       internalNote: z.string().trim().max(2000),
@@ -46,7 +47,7 @@ export async function saveOrder(formData: FormData) {
 export async function sendShippingEmail(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
-  if (!id.startsWith("order-")) throw new Error("Invalid order");
+  if (!id.startsWith(ORDER_PREFIX)) throw new Error("Invalid order");
   const trackingNumber = String(formData.get("trackingNumber") ?? "").trim().slice(0, 100);
   const order = await adminClient().fetch<{ orderNumber?: string; language?: string; demo?: boolean; customer?: { email?: string } } | null>(`*[_id == $id][0]{ orderNumber, language, demo, customer }`, { id });
   if (!order) throw new Error("Order not found");
@@ -516,7 +517,7 @@ export async function saveDiscount(formData: FormData) {
   if (taken) throw new Error(`The code ${d.code} already exists`);
   let docId = d.id ?? "";
   if (docId) await adminClient().patch(docId).set(fields).commit();
-  else docId = (await adminClient().create({ _type: "discount", uses: 0, ...fields }))._id;
+  else docId = (await adminClient().create({ _id: newPrivateDocId("discount"), _type: "discount", uses: 0, ...fields }))._id;
   revalidatePath("/admin/discounts");
   redirect(`/admin/discounts/${docId}?saved=1`);
 }
@@ -593,7 +594,7 @@ export async function sendSampleNewsletter() {
   try {
     const { defaultBlocks } = await import("@/lib/newsletter-blocks");
     const { renderForLang } = await import("@/lib/admin/newsletter");
-    const html = await renderForLang(defaultBlocks(base, ids), "en", notify.unsubscribeUrlFor("subscriber-00000000000000000000000000000000"));
+    const html = await renderForLang(defaultBlocks(base, ids), "en", notify.unsubscribeUrlFor(NOBODY_SUBSCRIBER_ID));
     await notify.sendNewsletter({ email: admin.email, subject: "The first collection – Flöra" }, html);
   } catch (err) {
     redirect(`/admin/setup?error=${encodeURIComponent(err instanceof Error ? err.message : "Sending failed")}`);

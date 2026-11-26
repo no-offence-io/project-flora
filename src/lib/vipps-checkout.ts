@@ -5,6 +5,7 @@ import { afterOrderCreated } from "./order-followup";
 import { recordPaidOrder } from "./record-order";
 import { captureVippsPayment, getVippsPayment, vippsEnv, type VippsPayment } from "./vipps";
 import { getWriteClient } from "@/sanity/lib/write";
+import { vippsOrderDocId, vippsPaymentDocId } from "@/lib/doc-ids";
 
 /*
  * The shop's side of a Vipps payment. The checkout writes a `vippsPayment` document with the quoted
@@ -16,8 +17,8 @@ import { getWriteClient } from "@/sanity/lib/write";
  */
 
 export const VIPPS_REFERENCE = /^fl-[a-f0-9]{24}$/;
-export const vippsDocId = (reference: string) => `vipps-${reference}`;
-export const vippsOrderDocId = (reference: string) => `order-vipps-${reference}`;
+export const vippsDocId = vippsPaymentDocId;
+export { vippsOrderDocId };
 
 export type StoredVippsPayment = { _id: string; reference: string; status: string; amountOre: number; email?: string; metadata: string; environment: string; createdAt: string; orderId?: string };
 

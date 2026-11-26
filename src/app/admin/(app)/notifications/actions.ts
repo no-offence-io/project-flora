@@ -4,11 +4,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { adminClient } from "@/lib/admin/sanity";
 import { requireAdmin } from "@/lib/admin/session";
+import { NOTIFICATION_PREFIX } from "@/lib/doc-ids";
 
 export async function markRead(formData: FormData) {
   await requireAdmin();
   const id = String(formData.get("id") ?? "");
-  if (id.startsWith("notification-")) await adminClient().patch(id).set({ readAt: new Date().toISOString() }).commit();
+  if (id.startsWith(NOTIFICATION_PREFIX)) await adminClient().patch(id).set({ readAt: new Date().toISOString() }).commit();
   revalidatePath("/admin", "layout");
   redirect("/admin/notifications");
 }

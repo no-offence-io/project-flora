@@ -8,6 +8,7 @@ import { adminClient } from "@/lib/admin/sanity";
 import { requireAdmin } from "@/lib/admin/session";
 import { parseBlocks, titleOf } from "@/lib/newsletter-blocks";
 import { emailConfigured, sendNewsletter, unsubscribeUrlFor } from "@/lib/notify";
+import { NOBODY_SUBSCRIBER_ID, newPrivateDocId } from "@/lib/doc-ids";
 
 /*
  * Called from the drag-and-drop editor (a client component), so these return results instead of
@@ -34,7 +35,7 @@ export async function saveNewsletter(input: { id: string | null; subjectEn: stri
     if (existing.status === "sent") return { ok: false, error: "This newsletter was sent; duplicate it to edit a copy" };
     await adminClient().patch(id).set(fields).commit();
   } else {
-    id = (await adminClient().create({ _type: "newsletter", status: "draft", ...fields }))._id;
+    id = (await adminClient().create({ _id: newPrivateDocId("newsletter"), _type: "newsletter", status: "draft", ...fields }))._id;
   }
   revalidatePath("/admin/newsletters");
   return { ok: true, id };
@@ -61,7 +62,7 @@ export async function sendNewsletterTest(input: { id: string; lang: "en" | "no" 
   const subject = (input.lang === "no" ? doc.subjectNo || doc.subjectEn : doc.subjectEn) || "";
   if (!subject) return { ok: false, error: "Write a subject line first" };
   try {
-    const html = await renderForLang(blocks, input.lang, unsubscribeUrlFor("subscriber-00000000000000000000000000000000"));
+    const html = await renderForLang(blocks, input.lang, unsubscribeUrlFor(NOBODY_SUBSCRIBER_ID));
     await sendNewsletter({ email: admin.email, subject }, html);
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Sending failed" };
@@ -98,7 +99,7 @@ export async function duplicateNewsletter(input: { id: string }): Promise<Result
   await requireAdmin();
   const doc = await loadNewsletter(input.id);
   if (!doc) return { ok: false, error: "Newsletter not found" };
-  const created = await adminClient().create({ _type: "newsletter", status: "draft", title: `${doc.title ?? ""} (copy)`, subjectEn: doc.subjectEn ?? "", subjectNo: doc.subjectNo ?? "", blocks: doc.blocks ?? "[]" });
+  const created = await adminClient().create({ _id: newPrivateDocId("newsletter"), _type: "newsletter", status: "draft", title: `${doc.title ?? ""} (copy)`, subjectEn: doc.subjectEn ?? "", subjectNo: doc.subjectNo ?? "", blocks: doc.blocks ?? "[]" });
   revalidatePath("/admin/newsletters");
   return { ok: true, id: created._id };
 }
