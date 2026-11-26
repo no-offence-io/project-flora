@@ -4,11 +4,13 @@ import VintageCardForm from "@/components/admin/vintage-card-form";
 import { Heading, Muted, Subheading } from "@/components/admin/ui";
 import { adminClient } from "@/lib/admin/sanity";
 import { parseVintageCard } from "@/lib/vintage-card-shared";
+import { requireAdmin } from "@/lib/admin/session";
 
 type Piece = { slug?: string | null; nameEn?: string | null; nameNo?: string | null; priceOre?: number | null; src?: string | null; alt?: string | null };
 type Current = { vintageCard?: Record<string, unknown> | null; sample?: { src?: string | null; alt?: string | null; name?: string | null } | null; pieces?: Piece[] | null };
 
 export default async function VintageCardPage({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
+  await requireAdmin();
   const { saved } = await searchParams;
   // The setting, and one vintage piece's first photo for the preview (any product's if none is vintage yet).
   const current = await adminClient().fetch<Current | null>(

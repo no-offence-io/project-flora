@@ -2,10 +2,12 @@ import Image from "next/image";
 import { Heading, Muted, Row, Tag } from "@/components/admin/ui";
 import { getText, type LocalizedString } from "@/lib/admin/localized";
 import { adminClient } from "@/lib/admin/sanity";
+import { requireAdmin } from "@/lib/admin/session";
 
 type Row_ = { _id: string; title?: LocalizedString; date?: string; published?: boolean; image?: string };
 
 export default async function PostsPage() {
+  await requireAdmin();
   const posts = await adminClient().fetch<Row_[]>(`*[_type == "post"] | order(date desc, _createdAt desc){ _id, title, date, published, "image": image.asset->url }`);
   return (
     <>

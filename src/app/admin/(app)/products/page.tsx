@@ -2,10 +2,12 @@ import Image from "next/image";
 import { Heading, Muted, Row, Tag } from "@/components/admin/ui";
 import { getText, type LocalizedString } from "@/lib/admin/localized";
 import { adminClient, kr } from "@/lib/admin/sanity";
+import { requireAdmin } from "@/lib/admin/session";
 
 type Row_ = { _id: string; name?: LocalizedString; category?: string; priceOre?: number; compareAtPriceOre?: number; stock?: number; visible?: boolean; vintage?: boolean; image?: string };
 
 export default async function ProductsPage() {
+  await requireAdmin();
   const products = await adminClient().fetch<Row_[]>(
     `*[_type == "product"] | order(category asc, name[_key == "en"][0].value asc){_id, name, category, priceOre, compareAtPriceOre, stock, visible, vintage, "image": images[0].asset->url}`,
   );

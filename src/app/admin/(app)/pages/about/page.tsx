@@ -3,10 +3,12 @@ import { ImageField } from "@/components/admin/media-field";
 import { Bilingual, Button, Card, Heading, Muted, TextLink } from "@/components/admin/ui";
 import { getBlocksText, getText, type LocalizedBlocks, type LocalizedString } from "@/lib/admin/localized";
 import { adminClient } from "@/lib/admin/sanity";
+import { requireAdmin } from "@/lib/admin/session";
 
 type About = { title?: LocalizedString; intro?: LocalizedString; body?: LocalizedBlocks; image?: { _ref: string; url: string } | null };
 
 export default async function AboutEditor({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
+  await requireAdmin();
   const { saved } = await searchParams;
   const d = (await adminClient().fetch<About | null>(`*[_id == "aboutPage"][0]{ ..., "image": select(defined(image.asset) => { "_ref": image.asset._ref, "url": image.asset->url, "alt": image.alt, "scale": image.scale, "x": image.x, "y": image.y }) }`)) ?? {};
   return (

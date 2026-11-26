@@ -2,12 +2,14 @@ import Image from "next/image";
 import { deleteMedia, uploadMedia } from "../actions";
 import { Button, Card, Heading, Labelled, Muted, Subheading } from "@/components/admin/ui";
 import { formatBytes, listMedia } from "@/lib/admin/media";
+import { requireAdmin } from "@/lib/admin/session";
 
 /**
  * Everything ever uploaded: photos and videos, newest first, with where they're used. Upload here
  * to have a file ready, or upload straight from the field that needs it — both end up in this list.
  */
 export default async function MediaPage({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string }> }) {
+  await requireAdmin();
   const { saved, error } = await searchParams;
   const assets = await listMedia();
   const images = assets.filter((a) => a._type === "sanity.imageAsset");

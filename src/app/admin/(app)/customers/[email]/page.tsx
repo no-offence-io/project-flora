@@ -5,6 +5,7 @@ import OrderPreview, { type PreviewOrder } from "@/components/admin/order-previe
 import { Card, Heading, Muted, StatusPill, Subheading, Tag, TextLink } from "@/components/admin/ui";
 import { adminClient, kr } from "@/lib/admin/sanity";
 import { COUNTS_AS_SALE, paidWith } from "@/lib/order-status";
+import { requireAdmin } from "@/lib/admin/session";
 
 type O = PreviewOrder & { demo?: boolean; trackingNumber?: string; language?: string; origin?: PreviewOrder["origin"] & { landing?: string; referrer?: string } };
 type Account = { firstName?: string; lastName?: string; phonePrefix?: string; phone?: string; street?: string; apartment?: string; postcode?: string; city?: string; country?: string; measurements?: { _key: string; label?: string; value?: string }[]; createdAt?: string; lastSignInAt?: string; stripeCustomerId?: string };
@@ -13,6 +14,7 @@ const date = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("nb-NO", 
 
 /** One customer: every order they've placed, every address they've used, and how they found the shop. */
 export default async function CustomerPage({ params }: { params: Promise<{ email: string }> }) {
+  await requireAdmin();
   const { email: raw } = await params;
   let email: string;
   try {

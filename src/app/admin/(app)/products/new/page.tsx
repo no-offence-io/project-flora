@@ -1,7 +1,9 @@
 import ProductForm from "@/components/admin/product-form";
 import { Heading, TextLink } from "@/components/admin/ui";
+import { requireAdmin } from "@/lib/admin/session";
 
 export default async function NewProductPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  await requireAdmin();
   const { error } = await searchParams;
   return (
     <>

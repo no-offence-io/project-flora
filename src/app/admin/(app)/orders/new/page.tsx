@@ -2,6 +2,7 @@ import { createManualOrder } from "../actions";
 import { Button, Card, Checkbox, Heading, Input, Labelled, Muted, Select, Subheading, Textarea, TextLink } from "@/components/admin/ui";
 import { adminClient, kr } from "@/lib/admin/sanity";
 import { ORDER_STATUSES, STATUS_LABEL } from "@/lib/order-status";
+import { requireAdmin } from "@/lib/admin/session";
 
 type Product = { _id: string; name?: string; priceOre?: number; sizes?: string[] };
 
@@ -9,6 +10,7 @@ const SLOTS = [0, 1, 2, 3, 4, 5];
 
 /** Add an order by hand: a PR gift, a sale at a market, anything paid outside the shop. */
 export default async function NewOrderPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  await requireAdmin();
   const { error } = await searchParams;
   const products = await adminClient().fetch<Product[]>(
     `*[_type == "product" && !(_id in path("drafts.**"))] | order(name[_key == "en"][0].value asc){ _id, "name": name[_key == "en"][0].value, priceOre, "sizes": sizes[].label }`,

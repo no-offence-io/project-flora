@@ -4,8 +4,10 @@ import { Heading, Muted } from "@/components/admin/ui";
 import { adminClient } from "@/lib/admin/sanity";
 import { parseLoadingStyle } from "@/lib/loading-shared";
 import { parseTransition } from "@/lib/page-transition-shared";
+import { requireAdmin } from "@/lib/admin/session";
 
 export default async function TransitionsPage({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
+  await requireAdmin();
   const { saved } = await searchParams;
   const current = await adminClient().fetch<{ pageTransition?: Record<string, unknown>; loadingStyle?: string } | null>(`*[_id == "siteSettings"][0]{ pageTransition, loadingStyle }`);
   return (

@@ -1,296 +1,255 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/flora-mark-white.svg">
+    <img src=".github/assets/flora-mark-black.svg" alt="Flöra" width="56">
+  </picture>
 
-## Getting Started
+  <h1>Flöra</h1>
 
-First, run the development server:
+  <p>
+    The web shop for Flöra: natural fabrics, honest production,<br>
+    made to the customer's measurements in Norway.
+  </p>
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+  <p>
+    <a href="https://www.prosjectflora.com">prosjectflora.com</a>
+  </p>
+
+  <p>
+    <sub>Next.js 16 · React 19 · TypeScript · Tailwind CSS 4 · Sanity · Stripe · Vipps MobilePay · Vercel</sub>
+  </p>
+</div>
+
+<br>
+
+Flöra is a small clothing label, and this is its whole shop in one codebase: the storefront customers
+see, the checkout that takes their money, and the dashboard the owner runs the business from. It is
+built to be run by one person who is not a developer, so everything that changes from week to week
+(products, prices, photos, texts, shipping, discount codes, newsletters) is edited in the dashboard
+and never in code.
+
+## Contents
+
+- [What is in it](#what-is-in-it)
+- [How it fits together](#how-it-fits-together)
+- [How payments are kept safe](#how-payments-are-kept-safe)
+- [Tech stack](#tech-stack)
+- [Getting started](#getting-started)
+- [Project structure](#project-structure)
+- [Testing](#testing)
+- [Deployment](#deployment)
+- [Further reading](#further-reading)
+- [Typefaces, photographs and licence](#typefaces-photographs-and-licence)
+
+## What is in it
+
+### Storefront
+
+- **Made to measure.** A product can be sold by the customer's own measurements in centimetres, by a
+  fixed list of sizes with stock per size, or with no size at all. Products can have colours, each
+  with its own photos.
+- **Two languages.** English and Norwegian throughout, switchable anywhere, falling back to English
+  field by field where a translation is missing.
+- **Pages the owner writes.** Front page, shop, a vintage collection, journal, values, about, FAQ and
+  the policy pages are all edited in the dashboard.
+- **Customer accounts without passwords.** Customers sign in with a link sent to their email, then
+  see their orders and keep their measurements for next time. An order can also be looked up with its
+  number and the email it was placed with.
+- **Details.** Light and dark theme, page transitions and image loading styles the owner can choose,
+  an installable web app manifest, a sitemap, structured product data and generated share images.
+
+### Checkout
+
+- **Cards, Apple Pay, Google Pay and Klarna** through Stripe, in Stripe's own fields.
+- **Vipps MobilePay**, integrated directly with the ePayment API.
+- **Shipping zones and discount codes**, with prices in NOK and VAT included.
+- **Emails** for order confirmation and shipping (with tracking), in the customer's language.
+
+### Dashboard
+
+The owner's side of the shop lives at `/admin`, behind Google sign-in and an allowlist of addresses.
+
+- **Orders**: what to pack, tracking numbers, shipping emails, refunds.
+- **Products**: photos, colours, sizing, stock, sale prices, the vintage flag.
+- **Content**: every page and text on the site, in both languages, plus a media library that shows
+  where each photo and video is used.
+- **Newsletters**: a block editor with live preview, sent to every subscriber in their language.
+- **Reports**: revenue, visits, live visitors, and exports for accounting.
+- **Settings**: shipping, sizing, brand (logo, typefaces, colours), and a switch that keeps the whole
+  shop behind a "coming soon" page until it is ready to open.
+- **Setup and notifications**: a page that checks every outside service and says, in plain words,
+  what is connected and what still needs doing.
+
+## How it fits together
+
+```mermaid
+flowchart LR
+  customer([Customer]) --> app
+  owner([Shop owner]) -- Google sign-in --> app
+
+  subgraph vercel [Vercel]
+    app[Next.js app<br>storefront, checkout, dashboard]
+  end
+
+  app -- content, orders, customers --> sanity[(Sanity)]
+  app -- payment intents --> stripe[Stripe]
+  app -- payments --> vipps[Vipps MobilePay]
+  stripe -. signed webhook .-> app
+  vipps -. signed webhook .-> app
+  app -- order and shipping emails --> resend[Resend]
+  sanity -. publish webhook .-> app
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **One Next.js app** on Vercel serves the storefront, the checkout API routes and the dashboard.
+- **Sanity** is the database: products, pages, settings, orders, customers and subscribers are all
+  documents there. The storefront reads through one module (`src/lib/catalog.ts`), and a publish
+  webhook refreshes the site within seconds of an edit.
+- **Stripe and Vipps** hold the money. The app never stores card details.
+- **Resend** sends the emails.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## How payments are kept safe
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+A few rules hold everywhere in the code, and most of the payment code exists to enforce them.
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-## Content (Sanity) and Ida's dashboard
-
-Sanity project **`559r73zo`**, dataset `production`. The Studio lives in `studio/` (standalone, its
-own `package.json`) and is Ida's dashboard: Sanity's own login, roles and 2FA, no custom auth code.
-
-- Hosted at **https://prosjectflora-admin.sanity.studio** (`cd studio && npx sanity deploy`).
-  Moving it to `admin.prosjectflora.com` means deploying `studio/` as its own Vercel project (root
-  directory `studio`, framework preset Sanity) and a CNAME at the registrar.
-- **Dashboard tab** (`studio/tools/dashboard.tsx`): revenue today / 7 / 30 days, orders to pack,
-  latest orders, low stock, one-click links to every editable part of the site.
-- **Every text field is bilingual.** `sanity-plugin-internationalized-array` turns each string,
-  text and rich-text field into `[{_key: "en"}, {_key: "no"}]`; editors see English with a
-  "+ Norsk" button. Query with `coalesce(field[_key == $lang][0].value, field[_key == "en"][0].value)`.
-- **Orders are documents, written only by the Stripe webhook** (`src/lib/record-order.ts`). The
-  document id is `order-<paymentIntentId>` and it is created with `create` inside a transaction with
-  the stock decrements, so a duplicate delivery fails atomically — one order, one decrement, even
-  for two deliveries in the same instant. The Studio offers no "new order" button and the order's
-  money fields are read-only; fulfilment status, tracking and notes are editable.
-- `SANITY_TOKEN` (Developer/Editor role) is **server-only**: `src/sanity/lib/write.ts` is guarded by
-  `server-only`, and the live-preview tokens are explicitly `false` so nothing with write access can
-  reach the browser. If it's missing in production the webhook returns 500 on purpose, so Stripe
-  keeps retrying until it's set and no order is lost.
-- Types: `cd studio && npm run typegen` regenerates `src/sanity/sanity.types.ts` from the schema.
-- `node scripts/migrate-content.mjs` copies the static content in `src/data/*` and the front page into
-  Sanity (products with photos, colours and spec rows; front page; FAQ; policy pages; site settings).
-  Re-runnable: it upserts by slug or fixed id and uploads each image once. English only.
-- `node scripts/translate-no.mjs` writes the Norwegian translation of all of it next to the English,
-  replacing only the `no` entries. Editors can change any of it afterwards.
-
-**Ida's admin at `/admin`** (Google sign-in via Auth.js, `ADMIN_EMAILS` allowlist) edits the same
-documents in the site's own design: orders, products (photos, colours with their photos, the
-details list), front page, FAQ, policies and settings. **Media** (`/admin/media`) lists every
-photo and video ever uploaded with a preview, size and where it is used; files can be uploaded
-there or straight from the field that needs them, and deleted only once nothing references them.
-Image and video fields (`src/components/admin/media-field.tsx`) always show what is there now, and
-`src/lib/admin/media.ts` turns their form fields into Sanity asset references. The front-page video
-can be an uploaded MP4/WebM (served from Sanity's CDN — bandwidth counts, keep it small), a URL, or
-neither, in which case the built-in `/hero/*.mp4` plays; the sign-up banner and footer photos work
-the same way with their built-in images.
-
-**Sizing.** A product is sized one of three ways (`sizing` on the product): the customer gives
-their **measurements in cm** on the product page (the default — made to measure; the fields asked for
-are set under Settings → Sizing, with an optional size guide), a **fixed size list** with stock per
-size, or **no size**. The choice rides on the cart line (`src/data/cart.ts`, one line per product +
-size + measurements), is validated server-side in `quoteCart`, travels on the PaymentIntent
-(`src/lib/order-metadata.ts` keeps every value under Stripe's 500-character limit) and lands on the
-order, where the admin shows it per item. Sized products count down the chosen size's own stock.
-Sold out disables the button and labels the card.
-
-**Shipping zones and discount codes.** Settings → Shipping holds the flat price, the countries
-offered at checkout and zones with their own price/threshold; the checkout sends the country as soon
-as it is chosen so the shipping line follows. Discount codes are documents (Codes in the admin):
-percent, amount or free shipping, with dates, minimum order and a usage cap. The browser sends only
-the code; `src/lib/discounts.ts` decides what it is worth, the webhook counts the use. All the maths
-is in `src/lib/pricing.ts`, which is pure and unit-tested (`npm test`).
-
-**Email** goes through Resend (`src/lib/notify.ts`, HTTP API, no SDK): order confirmation (with a
-copy to `EMAIL_NOTIFY`), shipping notification with a Posten tracking link, newsletter welcome, and a
-test set from Setup. Templates are bilingual and follow the customer's language at the time of
-ordering. Without `RESEND_API_KEY` nothing is sent, and the admin says so where it matters. The order
-page's **Send** button saves the tracking number, marks the order shipped and emails the customer.
-
-**Newsletter** sign-ups are `subscriber` documents (hashed-email ids, so a double sign-up is a no-op;
-a honeypot field drops bots). **Find your order** (`/order`) needs the order number *and* the email.
-
-**Setup** (`/admin/setup`) lists every outside service with connected / to-do and the exact steps:
-Stripe live switch, Resend, Vercel Analytics (cookieless; enable once in the Vercel project), Vipps
-(needs a merchant agreement), Sanity token.
-
-**Pages.** `/vintage` lists products flagged *vintage* on a paper background with a two-column grid;
-`/values` and `/about` are editable under Pages. SEO: `sitemap.xml`, `robots.txt` (everything
-disallowed while the coming-soon gate is on), a generated Open Graph image, product `Product`
-JSON-LD with price and availability. Custom 404 and error pages in the shop chrome.
-
-**Newsletters** are built in `/admin/newsletters` from blocks (`src/lib/newsletter-blocks.ts`) in a
-drag-and-drop editor (`src/components/admin/newsletter-editor.tsx`) with a live preview; the server
-renders them (`renderNewsletter` in `src/lib/notify.ts`, unit-tested) and sends to every subscriber
-in their language with a personal unsubscribe link. **Product GIFs** (`src/lib/admin/gif.ts`, sharp +
-gifenc) are made on the product page from its photos and used by "pieces" blocks.
-
-**Brand** (Settings → Brand) can replace the logo, pick heading/body fonts (own files or Google
-Fonts), set type sizes and colours; `src/lib/brand.ts` turns that into CSS variables on `<html>`
-(the size tokens are a plain `@theme`, not inline, for exactly this). **Payments** shows the Stripe
-balance and refunds in full with confirmation. **Notifications** (`src/lib/notices.ts`): live health
-checks plus events the site writes (webhook, emails, sends, GIFs), unread count in the sidebar,
-owner email on errors.
-
-**The storefront reads Sanity.** `src/lib/catalog.ts` holds every query, projected straight into
-the shapes the components take (`src/lib/catalog-types.ts`). Pages use `sanityFetch` (Live Content
-API); checkout pricing (`src/lib/orders.ts`) reads products and the shipping rules from the API
-directly, never the CDN, so an edit is what the next checkout charges. There is no static copy of
-the content any more — `scripts/migrate-content.mjs` is the record of what was moved.
-
-**Language.** An EN / NO switch in the navbar and the menu sets a `flora-lang` cookie (a server
-action, so it works without JavaScript); every query takes `$lang` and falls back to English per
-field, so a half-translated site shows English where Norwegian is missing rather than a gap.
-
-The chrome — navigation, footer, cart, product buttons, the whole checkout, order-complete, the
-coming-soon page — is translated from one dictionary, `src/lib/i18n.ts`. Server components call
-`await getT()` (`src/lib/i18n-server.ts`); client components call `useT()` from the
-`I18nProvider` mounted in the shop layout. Add a string by adding a key to both languages; TypeScript
-refuses unknown keys. Admin screens stay English.
-
-**Edits reach the site without a browser open.** Every storefront read is tagged `sanity-content`;
-a Sanity webhook ("Storefront revalidate", GROQ-powered, on any publish of the content types) POSTs
-to `/api/revalidate` with `x-revalidate-secret`, which drops the tag. The Live Content API does the
-same through any open browser; the webhook covers quiet hours. `REVALIDATE_SECRET` must match on
-Vercel and in the webhook (Sanity Manage → API → Webhooks).
-
-**Policy pages.** Their text is plain paragraphs in the editor; a paragraph written as
-"Heading — text" becomes a collapsible section on the page.
-
-## Coming-soon gate
-
-`src/proxy.ts` holds the whole site behind `/coming-soon` while `COMING_SOON=true`. Set it to
-anything else (or remove it) to open the site — no code change needed.
-
-To see the real site while it's closed, visit any URL with `?preview=<PREVIEW_TOKEN>`. The token is
-swapped for a 30-day cookie and dropped from the address bar, so a preview link can be handed to the
-client without the token ending up in their history or a screenshot.
-
-Every URL keeps its own address and simply renders the placeholder (a rewrite, not a redirect), so
-the site's structure isn't advertised. Two paths are deliberately never gated:
-
-- `/api/webhooks/stripe` — Stripe calls it, and it's the only thing that records an order.
-- `/.well-known/…` — Apple fetches it to verify the domain for Apple Pay.
-
-Static assets are also excluded, or the placeholder itself couldn't render. See the `matcher` in
-`src/proxy.ts`.
-
-Note for future Next.js work: `middleware.ts` is deprecated in Next 16 and renamed to `proxy.ts`.
-
-## Payments
-
-Checkout is Stripe Payment Element only. Card data goes from the customer's browser to Stripe inside
-Stripe-hosted iframes; it never touches this codebase or server, which keeps PCI scope at SAQ A.
-Apple Pay, Google Pay and cards appear automatically; Vipps appears too once it is enabled on the
-Stripe account (see below).
-
-**How money flows**
-
-- `POST /api/checkout/intent` quotes the cart from `src/data/products.ts` and `src/lib/pricing.ts`
-  (VAT 25% included in listed prices, 89 kr shipping, free over 1 500 kr) and creates or updates a
-  PaymentIntent in NOK. The request may only name product ids and quantities — the zod schema is
-  strict and rejects any price field. Changing prices in devtools changes nothing.
-- The browser confirms the PaymentIntent with Stripe directly and lands on `/order-complete`, which
-  only *reads* the payment status.
-- `POST /api/webhooks/stripe` is the only thing that creates an order, after verifying Stripe's
-  signature on the raw body. The order number is derived from the PaymentIntent id, so replaying the
-  webhook cannot create a second order.
-
-**Environment** — see `.env.example`. `.env.local` is git-ignored; no secret is ever `NEXT_PUBLIC_`.
-
-| Variable | Where it's used |
+| Rule | How |
 | --- | --- |
-| `STRIPE_SECRET_KEY` | server only (`src/lib/stripe.ts`, guarded by `server-only`) |
-| `STRIPE_WEBHOOK_SECRET` | webhook route only |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | browser, loads Stripe.js |
+| Card details never touch this code | They go from the customer's browser straight to Stripe, inside Stripe's own fields. |
+| The server decides every amount | The browser may only name products, quantities and a discount code. Prices, shipping, VAT and discounts are worked out on the server from the stored data (`src/lib/pricing.ts`, pure and unit-tested). |
+| An order exists only when a payment is proven | Orders are written from Stripe's signed webhook, or after asking Vipps directly for the state of a payment. Never from a page the customer lands on. |
+| Nothing is recorded twice | The order's document id is derived from the payment, and the order is written in one transaction together with the stock change, so a repeated delivery changes nothing. |
+| Secrets stay on the server | No secret is ever exposed to the browser, and the modules that hold one are marked `server-only`, so importing them from client code fails the build. |
+| Misconfiguration is refused, not discovered later | The checkout will not create a payment with mismatched test and live keys, or with live keys and no webhook secret. |
 
-**Local development**
+The details, including the layout of the wallet buttons and a go-live checklist, are in
+[docs/payments.md](docs/payments.md).
+
+## Tech stack
+
+| Area | Choice |
+| --- | --- |
+| Framework | [Next.js 16](https://nextjs.org) (App Router, React 19, server actions) |
+| Language | TypeScript |
+| Styling | [Tailwind CSS 4](https://tailwindcss.com) |
+| Content and data | [Sanity](https://www.sanity.io) (Live Content API), with a Studio in `studio/` |
+| Payments | [Stripe](https://stripe.com) Payment Element and Express Checkout, [Vipps MobilePay](https://developer.vippsmobilepay.com) ePayment |
+| Sign-in | [Auth.js](https://authjs.dev) with Google for the dashboard, emailed links for customers |
+| Email | [Resend](https://resend.com) |
+| Motion | [GSAP](https://gsap.com), [Lenis](https://lenis.darkroom.engineering), [three.js](https://threejs.org) |
+| Analytics | Vercel Analytics, Google Analytics 4 behind a consent choice |
+| Tests | [Vitest](https://vitest.dev) |
+| Hosting | [Vercel](https://vercel.com) |
+
+## Getting started
+
+You need Node.js 22 or newer, and your own Sanity project and Stripe test keys.
 
 ```bash
-cp .env.example .env.local   # then paste test keys
+git clone https://github.com/no-offence-io/project-flora.git
+cd project-flora
+npm install
+
+cp .env.example .env.local   # then fill in the values, see below
 npm run dev
-stripe listen --forward-to localhost:3000/api/webhooks/stripe   # prints the whsec_ for .env.local
 ```
 
-Test cards: `4242 4242 4242 4242` succeeds, `4000 0000 0000 0002` is declined inline,
-`4000 0025 0000 3155` requires 3D Secure. Any future expiry, any CVC.
+The site is then at [http://localhost:3000](http://localhost:3000).
 
-**Known limits with the static product file**
+### Environment
 
-- Stock is *checked* at checkout (`quoteCart`) but cannot be *decremented* — there is no datastore
-  to write to. The webhook marks where that goes.
-- The PaymentIntent is the order record (items, customer, amounts, order number all live in its
-  metadata, visible in the Stripe dashboard). Move this to a database when one is added.
-- No email provider is configured; `src/lib/notify.ts` logs instead. Stripe's own receipt email
-  (dashboard setting, live mode) covers the basics meanwhile.
+Every variable is described in [`.env.example`](.env.example). In short:
 
-**Wallets and Klarna**
-
-Apple Pay, Google Pay and Klarna are Stripe-drawn buttons in their brands' official styling, side
-by side above an "Or pay with card" divider, with Stripe's card fields below. Card data never touches
-this code.
-
-The side-by-side part is the non-obvious bit. Stripe's Express Checkout Element lays its buttons out
-itself and stacks them once they don't fit the 520px column, so each button gets its **own Elements
-group** in its own column of our flex row, each restricted to one method (`paymentMethods`). All
-groups run in deferred mode (`mode`, `amount`, `currency`, `paymentMethodTypes`) and confirm the
-same server-priced PaymentIntent by client secret. Klarna needs its own group because it is its own
-payment method type; the wallets ride on `card`. The card fields are a fourth group with
-`paymentMethodTypes: ["card"]` and wallets off, which is what stops Stripe drawing a tab strip.
-
-`applePay: "always"` is what also gets Apple Pay onto desktop Chrome, Edge and Firefox via Apple's
-scan-to-pay code. A column is dropped only once Stripe reports that button unusable in the browser.
-Both wallets need the domain registered under **payment method domains** (Settings → Payment
-methods → Payment method domains, or `/v1/payment_method_domains`), in test mode and again in live
-mode; the older Apple Pay-only list is not enough. Registration verifies
-`/.well-known/apple-developer-merchantid-domain-association`, so the site must be publicly reachable.
-
-Traps: `overflow: "never"` and a `maxRows` above 0 can't be combined, and an invalid option makes an
-element fail to mount rather than degrade, which looks exactly like a device with no wallets.
-`?debug=wallets` on the checkout prints each column's reported availability. Link is switched off in
-the Stripe payment method configuration.
-
-**Vipps**
-
-Vipps on Stripe is in private preview. Check Settings → Payment methods on the Stripe account. If it
-is enabled, nothing here changes — it shows up as a redirect method inside the Payment Element. If
-it is not, a separate Vipps MobilePay ePayment path is the follow-up (server creates payment →
-redirect → HMAC-verified webhook → capture → same order pipeline), tested against apitest.vipps.no.
-
-**Hosting and the domain**
-
-The app needs a Node server for `/api/checkout/intent` and `/api/webhooks/stripe`, so it runs on
-Vercel. `prosjectflora.com` is registered at one.com, and one.com's own web hosting (SSH/SFTP into
-`/webroots/…`) is **static and PHP only** — no `node`, `npm` or `pm2` on that box — so the site is
-not deployed there. one.com is the registrar and DNS host; the records point at Vercel.
-
-| Record | Host | Value |
+| Group | Variables | Needed for |
 | --- | --- | --- |
-| A | `@` | `76.76.21.21` |
-| CNAME | `www` | `cname.vercel-dns.com` |
+| Sanity | `NEXT_PUBLIC_SANITY_PROJECT_ID`, `NEXT_PUBLIC_SANITY_DATASET`, `SANITY_TOKEN` | Everything. The token is server-only and needs write access. |
+| Stripe | `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET` | Checkout and recording orders |
+| Dashboard sign-in | `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `ADMIN_EMAILS` | `/admin` |
+| Email | `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_NOTIFY` | Order, shipping and newsletter emails. Without a key nothing is sent, and the dashboard says so. |
+| Vipps | `VIPPS_ENV`, `VIPPS_MSN`, `VIPPS_CLIENT_ID`, `VIPPS_CLIENT_SECRET`, `VIPPS_SUBSCRIPTION_KEY`, `VIPPS_WEBHOOK_SECRET` | The Vipps button. Leave empty to hide it. |
+| Site | `NEXT_PUBLIC_SITE_URL`, `COMING_SOON`, `PREVIEW_TOKEN`, `REVALIDATE_SECRET` | Links in emails, the coming-soon page, refreshing the site after an edit |
 
-Take the authoritative values from Vercel (Project → Settings → Domains) when adding the domain —
-Vercel sometimes issues a project-specific CNAME. Deploying is unchanged: push to `main`.
+`.env.local` is ignored by git. Real keys belong there and in the host's environment settings, never
+in the repository.
 
-**Configuration guard**
+### Payments on your machine
 
-`assertStripeEnvironment()` in `src/lib/stripe.ts` runs before any PaymentIntent is created and
-refuses two states outright, with the reason returned in the response:
+Stripe has to reach the webhook for an order to be recorded. The Stripe CLI forwards it:
 
-- **Mode mismatch** — a live secret key with a test publishable key (or the reverse). The browser
-  couldn't confirm an intent this server created, so the customer would fail at the moment of paying.
-- **Live keys with no `STRIPE_WEBHOOK_SECRET`** — the webhook is the only thing that records an
-  order and it rejects unsigned deliveries, so this state charges real customers and records nothing.
+```bash
+stripe listen --forward-to localhost:3000/api/webhooks/stripe
+```
 
-Note that `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` is inlined at build time, so the guard compares the
-server's key against the publishable key actually shipped to browsers. Changing it needs a redeploy,
-not just an environment edit.
+It prints a signing secret (`whsec_…`) for `STRIPE_WEBHOOK_SECRET`. Test cards: `4242 4242 4242 4242`
+succeeds, `4000 0000 0000 0002` is declined, `4000 0025 0000 3155` asks for 3D Secure.
 
-**Go-live checklist**
+### Commands
 
-1. Switch `STRIPE_SECRET_KEY` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` to live keys in Vercel's
-   environment variables (Production scope). Never in the repo.
-2. Register the webhook again in live mode: Developers → Webhooks → add
-   `https://prosjectflora.com/api/webhooks/stripe` for `payment_intent.succeeded`,
-   `payment_intent.payment_failed` and `charge.refunded`; put its signing secret in `STRIPE_WEBHOOK_SECRET`.
-3. Register `prosjectflora.com` and `www.prosjectflora.com` under payment method domains in live
-   mode (see Wallets above). Apple Pay verification fetches
-   `/.well-known/apple-developer-merchantid-domain-association`, which the app serves from `public/`,
-   so the domain must resolve to Vercel and be reachable without a login first — Vercel Deployment
-   Protection has to stay off for production.
-4. Check the **live** payment method configuration (Settings → Payment methods): Apple Pay, Google
-   Pay and Klarna on, Link off. Test and live are separate configurations, and in test Google Pay
-   was off and Link on until both were changed by hand.
-5. Confirm Vipps status (above) — it is a placeholder button until the direct integration is built.
-6. Make one real purchase, check the order number in the PaymentIntent metadata and the webhook
-   delivery shows 200, then refund it from the dashboard.
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Start the development server |
+| `npm run build` | Build for production |
+| `npm start` | Serve the production build |
+| `npm test` | Run the unit tests |
+| `npm run lint` | Lint the code |
+| `npm run fonts` | Fetch the typefaces (runs by itself before `dev` and `build`) |
+
+The Sanity Studio is a separate small project in [`studio/`](studio): `cd studio && npm install && npm run dev`.
+
+## Project structure
+
+```text
+src/
+  app/
+    (shop)/        The storefront: shop, product, checkout, account, journal, policies
+    admin/         The owner's dashboard
+    api/           Checkout, payment webhooks, sign-in, revalidation
+  components/      Interface components; admin/ holds the dashboard's
+  lib/             Pricing, orders, payments, email, translations; admin/ holds reports and media
+  sanity/          Read and write clients, generated types
+  proxy.ts         The coming-soon gate (Next.js 16's name for middleware)
+studio/            Sanity Studio and the content schema
+scripts/           One-off and build scripts
+docs/              Notes on payments and on content
+```
+
+## Testing
+
+```bash
+npm test
+```
+
+The tests cover the parts where a mistake costs money or trust: pricing, cart lines, money
+formatting, what is stored with a payment, the Vipps flow and its webhook signatures, newsletter
+rendering and the reports.
+
+## Deployment
+
+The shop runs on Vercel. A push to `main` is a production release; the environment variables above
+are set in the Vercel project.
+
+While the shop is closed, every address shows a "coming soon" page. The switch is in the dashboard
+(Settings, then Shop status), and a preview link lets invited people see the real site in the
+meantime. Payment webhooks and the files Apple Pay needs are always let through.
+
+## Further reading
+
+- [docs/payments.md](docs/payments.md): how money moves, the wallet buttons, Vipps, going live.
+- [docs/content.md](docs/content.md): the content model, the dashboard, languages, email and the
+  coming-soon gate.
+
+## Typefaces, photographs and licence
+
+Flöra's brand typefaces are commercially licensed and are **not in this repository**. The shop's own
+builds fetch them from private storage. Everywhere else, `scripts/fonts.mjs` downloads two
+open-licensed stand-ins ([Source Serif 4](https://github.com/adobe-fonts/source-serif) and
+[Source Sans 3](https://github.com/adobe-fonts/source-sans), SIL Open Font License) so the project
+runs as it is. To use your own, put two `.otf` files at `src/app/fonts/AmericanaStdRoman.otf` and
+`src/app/fonts/GothamBook.otf`.
+
+The Flöra name, logo, photographs, films and texts belong to Flöra and may not be reused. The source
+code is published so it can be read; no licence to reuse it is granted.
+
+<br>
+
+<div align="center">
+  <sub>Designed and built by <a href="https://github.com/no-offence-io">no offence</a> for Flöra.</sub>
+</div>

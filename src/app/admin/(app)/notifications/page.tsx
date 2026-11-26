@@ -1,6 +1,7 @@
 import { clearRead, markAllRead, markRead } from "./actions";
 import { Card, Heading, Muted, Row, Subheading, Tag, TextLink } from "@/components/admin/ui";
 import { healthChecks, listNotices } from "@/lib/notices";
+import { requireAdmin } from "@/lib/admin/session";
 
 const tone = (kind: string) => (kind === "error" ? "border-[#b00020] text-[#b00020]" : kind === "warning" ? "border-black text-black" : "border-black/50 text-black/50");
 const when = (iso: string) => new Date(iso).toLocaleString("nb-NO", { dateStyle: "short", timeStyle: "short" });
@@ -11,6 +12,7 @@ const when = (iso: string) => new Date(iso).toLocaleString("nb-NO", { dateStyle:
  * were written down by the site: failed emails, webhook errors, sends; those are read and cleared.
  */
 export default async function NotificationsPage() {
+  await requireAdmin();
   const [checks, notices] = await Promise.all([healthChecks(), listNotices()]);
   const unread = notices.filter((n) => !n.readAt);
   return (

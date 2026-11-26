@@ -3,6 +3,7 @@ import { ImageField, SCREEN_FRAMES, VideoField } from "@/components/admin/media-
 import { Bilingual, Button, Card, Checkbox, Heading, Input, Labelled, Muted, Select, Subheading, TextLink } from "@/components/admin/ui";
 import { getText, type LocalizedString } from "@/lib/admin/localized";
 import { adminClient } from "@/lib/admin/sanity";
+import { requireAdmin } from "@/lib/admin/session";
 
 type Pic = { _ref: string; url: string } | null;
 type Vid = { _ref: string; url: string; filename?: string } | null;
@@ -20,6 +21,7 @@ const QUERY = `*[_id == "homePage"][0]{
 }`;
 
 export default async function FrontPageEditor({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
+  await requireAdmin();
   const { saved } = await searchParams;
   const h = (await adminClient().fetch<Home | null>(QUERY)) ?? {};
   // One slot per existing value plus an empty one to add the next.

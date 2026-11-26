@@ -43,3 +43,7 @@ next-env.d.ts
 
 # editor
 .vscode/
+
+# brand typefaces: licensed, fetched by scripts/fonts.mjs, never committed
+/src/app/fonts/*.otf
+/public/email/fonts/*.otf

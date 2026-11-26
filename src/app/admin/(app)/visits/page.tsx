@@ -5,6 +5,7 @@ import { Card, Heading, Muted, Subheading, TextLink } from "@/components/admin/u
 import { analyticsConfigured, getVisits, liveOrReason, serviceAccountEmail, type Visits } from "@/lib/admin/analytics";
 import { addDays, dayKey, daysBetween, parseRange, presetRange, previousRange } from "@/lib/admin/reports";
 import { adminClient } from "@/lib/admin/sanity";
+import { requireAdmin } from "@/lib/admin/session";
 
 const n = new Intl.NumberFormat("nb-NO");
 const minutes = (seconds: number, sessions: number) => (sessions ? `${Math.floor(seconds / sessions / 60)}:${String(Math.round((seconds / sessions) % 60)).padStart(2, "0")}` : "0:00");
@@ -71,6 +72,7 @@ function Ranked({ rows, unit }: { rows: { label: string; value: number; sub?: st
 }
 
 export default async function VisitsPage({ searchParams }: { searchParams: Promise<{ days?: string; range?: string; from?: string; to?: string }> }) {
+  await requireAdmin();
   const params = await searchParams;
   const today = dayKey(new Date());
   // Any day or period, as on Reports. Old links with ?days=7 / 30 / 90 still mean what they did.

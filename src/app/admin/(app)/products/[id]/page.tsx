@@ -3,8 +3,10 @@ import ProductForm, { PRODUCT_ADMIN_PROJECTION, type ProductDoc } from "@/compon
 import { Heading, Muted, TextLink } from "@/components/admin/ui";
 import { getText } from "@/lib/admin/localized";
 import { adminClient } from "@/lib/admin/sanity";
+import { requireAdmin } from "@/lib/admin/session";
 
 export default async function ProductPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; gif?: string; error?: string }> }) {
+  await requireAdmin();
   const { id } = await params;
   const { saved, gif, error } = await searchParams;
   const product = await adminClient().fetch<ProductDoc | null>(

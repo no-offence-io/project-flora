@@ -9,6 +9,7 @@ import { NOTIFY_SCENARIOS } from "@/lib/email-shared";
 import { emailConfigured } from "@/lib/notify";
 import { adminClient, oreToKroner } from "@/lib/admin/sanity";
 import { isComingSoon } from "@/lib/gate";
+import { requireAdmin } from "@/lib/admin/session";
 
 type Settings = {
   comingSoon?: boolean;
@@ -25,6 +26,7 @@ type Pic = { _ref: string; url: string } | null;
 const PIC = (f: string) => `"${f}": select(defined(${f}.asset) => { "_ref": ${f}.asset._ref, "url": ${f}.asset->url, "alt": ${f}.alt, "scale": ${f}.scale, "x": ${f}.x, "y": ${f}.y })`;
 
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string }> }) {
+  await requireAdmin();
   const { saved, error } = await searchParams;
   const s = (await adminClient().fetch<Settings | null>(`*[_id == "siteSettings"][0]{ ..., ${PIC("signUpImage")}, ${PIC("footerImage")}, "brand": { ...brand, ${PIC("logo").replace('"logo"', '"logo"').replace("logo.asset", "brand.logo.asset")} } }`)) ?? {};
   const b = s.brand ?? {};

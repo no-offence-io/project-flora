@@ -1,7 +1,9 @@
 import PostForm from "@/components/admin/post-form";
 import { Heading, TextLink } from "@/components/admin/ui";
+import { requireAdmin } from "@/lib/admin/session";
 
-export default function NewPostPage() {
+export default async function NewPostPage() {
+  await requireAdmin();
   return (
     <>
       <div className="flex flex-col gap-[12px]">

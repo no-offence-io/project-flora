@@ -16,16 +16,18 @@ const SITE = () => (process.env.NEXT_PUBLIC_SITE_URL || "https://www.prosjectflo
 
 /**
  * Where Vipps sends the customer back. Their origin when it is one of ours over https (the site,
- * its www form, a Vercel preview), so the cart in that origin's storage is the one that gets
- * cleared; the configured site otherwise. Vipps only accepts https here.
+ * its www form, or this very deployment's own Vercel address), so the cart in that origin's storage
+ * is the one that gets cleared; the configured site otherwise. Never any other host, or a payer
+ * could be sent to someone else's page after a real payment. Vipps only accepts https here.
  */
 function returnOrigin(req: Request): string {
   const site = new URL(SITE());
   const candidate = req.headers.get("origin") ?? new URL(req.url).origin;
   try {
     const u = new URL(candidate);
-    const host = u.hostname.replace(/^www\./, "");
-    if (u.protocol === "https:" && (host === site.hostname.replace(/^www\./, "") || u.hostname.endsWith(".vercel.app"))) return u.origin;
+    const bare = (h: string) => h.replace(/^www\./, "");
+    const ours = [site.hostname, process.env.VERCEL_URL, process.env.VERCEL_BRANCH_URL, process.env.VERCEL_PROJECT_PRODUCTION_URL].filter((h): h is string => Boolean(h)).map(bare);
+    if (u.protocol === "https:" && ours.includes(bare(u.hostname))) return u.origin;
   } catch {
     /* fall through */
   }

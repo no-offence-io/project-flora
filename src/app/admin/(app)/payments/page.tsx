@@ -1,11 +1,13 @@
 import { Card, Heading, Muted, Row, Subheading, Tag, TextLink } from "@/components/admin/ui";
 import { kr } from "@/lib/admin/sanity";
 import { getStripe } from "@/lib/stripe";
+import { requireAdmin } from "@/lib/admin/session";
 
 const mode = () => (process.env.STRIPE_SECRET_KEY?.startsWith("sk_live_") ? "live" : "test");
 
 /** Stripe without leaving the admin: balance, the latest payments, and a refund a tap away. */
 export default async function PaymentsPage() {
+  await requireAdmin();
   let error: string | null = null;
   let balance: { available: number; pending: number } | null = null;
   let payments: { id: string; amount: number; status: string; email: string; order: string; created: number; method: string; refunded: boolean }[] = [];

@@ -3,6 +3,7 @@ import { savePolicy } from "../../../actions";
 import { Bilingual, Button, Card, Heading, Muted, TextLink } from "@/components/admin/ui";
 import { getBlocksText, getText, type LocalizedBlocks, type LocalizedString } from "@/lib/admin/localized";
 import { adminClient } from "@/lib/admin/sanity";
+import { requireAdmin } from "@/lib/admin/session";
 
 const TITLES: Record<string, string> = { terms: "Terms", "refunds-and-exchange": "Refunds & exchange", privacy: "Privacy", shipping: "Shipping" };
 /** What Norwegian consumer law (angrerettloven, forbrukerkjøpsloven, ehandelsloven) and GDPR expect each page to cover. */
@@ -15,6 +16,7 @@ const MUST_HAVE: Record<string, string[]> = {
 type Policy = { title?: LocalizedString; intro?: LocalizedString; body?: LocalizedBlocks };
 
 export default async function PolicyEditor({ params, searchParams }: { params: Promise<{ page: string }>; searchParams: Promise<{ saved?: string }> }) {
+  await requireAdmin();
   const { page } = await params;
   const { saved } = await searchParams;
   if (!TITLES[page]) notFound();

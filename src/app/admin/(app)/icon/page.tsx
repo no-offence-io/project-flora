@@ -4,6 +4,7 @@ import { Button, Card, Heading, Muted, Subheading } from "@/components/admin/ui"
 import { adminClient } from "@/lib/admin/sanity";
 import { squarePng } from "@/lib/brand";
 import { FAVICON_LABEL, FAVICON_STYLES, faviconSvg, parseFaviconStyle } from "@/lib/favicon";
+import { requireAdmin } from "@/lib/admin/session";
 
 type Pic = { _ref: string; url: string } | null;
 type IconSettings = { favicon?: string; tabIcon?: Pic; homeIcon?: Pic; androidIcon?: Pic };
@@ -34,6 +35,7 @@ function Mock({ title, note, children }: { title: string; note: string; children
 const SF = { fontFamily: "-apple-system, 'Helvetica Neue', Arial, sans-serif" } as const;
 
 export default async function IconPage({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string }> }) {
+  await requireAdmin();
   const { saved, error } = await searchParams;
   const s = (await adminClient().fetch<IconSettings | null>(`*[_id == "siteSettings"][0]{ "favicon": brand.favicon, ${PIC("tabIcon")}, ${PIC("homeIcon")}, ${PIC("androidIcon")} }`)) ?? {};
   const style = parseFaviconStyle(s.favicon);

@@ -1,4 +1,5 @@
 import { Heading, Muted, Row } from "@/components/admin/ui";
+import { requireAdmin } from "@/lib/admin/session";
 
 const PAGES = [
   { href: "/admin/pages/front-page", title: "Front page", sub: "Top video, products title, the Values section" },
@@ -11,7 +12,8 @@ const PAGES = [
   { href: "/admin/pages/policies/shipping", title: "Shipping", sub: "Policy page" },
 ];
 
-export default function PagesIndex() {
+export default async function PagesIndex() {
+  await requireAdmin();
   return (
     <>
       <div className="flex flex-col gap-[12px]">

@@ -1,9 +1,11 @@
 import { Heading, Muted, Row, Tag } from "@/components/admin/ui";
 import { adminClient } from "@/lib/admin/sanity";
+import { requireAdmin } from "@/lib/admin/session";
 
 type Row_ = { _id: string; title?: string; subjectEn?: string; status?: string; sentAt?: string; sentCount?: number; _updatedAt?: string };
 
 export default async function NewslettersPage() {
+  await requireAdmin();
   const [rows, subscribers] = await Promise.all([
     adminClient().fetch<Row_[]>(`*[_type == "newsletter"] | order(coalesce(sentAt, _updatedAt) desc){ _id, title, subjectEn, status, sentAt, sentCount, _updatedAt }`),
     adminClient().fetch<number>(`count(*[_type == "subscriber" && !defined(unsubscribedAt)])`),

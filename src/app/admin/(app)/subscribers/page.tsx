@@ -2,12 +2,14 @@ import Link from "next/link";
 import { resubscribeSubscriber, unsubscribeSubscriber } from "./actions";
 import { Card, Heading, Muted, Row, Subheading, Tag, TextLink } from "@/components/admin/ui";
 import { adminClient } from "@/lib/admin/sanity";
+import { requireAdmin } from "@/lib/admin/session";
 
 type Sub = { _id: string; email?: string; language?: string; signedUpAt?: string; unsubscribedAt?: string };
 
 const ANALYTICS_URL = "https://vercel.com/no-offence/project-flora/analytics";
 
 export default async function SubscribersPage() {
+  await requireAdmin();
   const subs = await adminClient().fetch<Sub[]>(`*[_type == "subscriber"] | order(signedUpAt desc)[0...500]{ _id, email, language, signedUpAt, unsubscribedAt }`);
   const active = subs.filter((s) => !s.unsubscribedAt).length;
   return (

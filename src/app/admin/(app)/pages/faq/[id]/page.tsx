@@ -2,8 +2,10 @@ import { notFound } from "next/navigation";
 import FaqForm, { type FaqDoc } from "@/components/admin/faq-form";
 import { Heading, Muted, TextLink } from "@/components/admin/ui";
 import { adminClient } from "@/lib/admin/sanity";
+import { requireAdmin } from "@/lib/admin/session";
 
 export default async function FaqPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string }> }) {
+  await requireAdmin();
   const { id } = await params;
   const { saved } = await searchParams;
   const item = await adminClient().fetch<FaqDoc | null>(`*[_type == "faqItem" && _id == $id][0]{ ..., "image": select(defined(image.asset) => { "_ref": image.asset._ref, "url": image.asset->url, "alt": image.alt, "scale": image.scale, "x": image.x, "y": image.y }) }`, { id });

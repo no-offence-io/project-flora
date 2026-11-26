@@ -6,6 +6,7 @@ import { getText } from "@/lib/admin/localized";
 import { loadReportOrders } from "@/lib/admin/report-data";
 import { byDay, change, dayKey, inRange, presetRange, previousRange, summarise } from "@/lib/admin/reports";
 import { adminClient, kr } from "@/lib/admin/sanity";
+import { requireAdmin } from "@/lib/admin/session";
 
 type Stats = {
   toPack: number;
@@ -14,6 +15,7 @@ type Stats = {
 };
 
 export default async function AdminDashboard() {
+  await requireAdmin();
   const [s, { orders }, live] = await Promise.all([
     adminClient().fetch<Stats>(
       `{

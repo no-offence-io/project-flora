@@ -1,8 +1,10 @@
 import { Heading, Muted, Row } from "@/components/admin/ui";
 import { getText, type LocalizedString } from "@/lib/admin/localized";
 import { adminClient } from "@/lib/admin/sanity";
+import { requireAdmin } from "@/lib/admin/session";
 
 export default async function FaqList() {
+  await requireAdmin();
   const items = await adminClient().fetch<{ _id: string; question?: LocalizedString; order?: number }[]>(`*[_type == "faqItem"] | order(order asc){_id, question, order}`);
   return (
     <>

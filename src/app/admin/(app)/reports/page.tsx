@@ -4,6 +4,7 @@ import { Card, Heading, Muted, Subheading, TextLink } from "@/components/admin/u
 import { loadReportOrders } from "@/lib/admin/report-data";
 import { addMonths, byDay, byDiscountCode, byMonth, byPayment, byProduct, byYear, change, cumulativeByDay, dayKey, daysBetween, inRange, monthsOfYear, parseRange, previousRange, summarise, yearBefore, type Summary } from "@/lib/admin/reports";
 import { kr } from "@/lib/admin/sanity";
+import { requireAdmin } from "@/lib/admin/session";
 
 export const metadata = { title: "Reports – Flöra Admin" };
 
@@ -16,6 +17,7 @@ const monthName = (first: string) => new Date(`${first}T12:00:00Z`).toLocaleDate
  * the files for the accounts. Everything on the page comes from the paid orders; nothing is typed in.
  */
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ range?: string; from?: string; to?: string; sample?: string }> }) {
+  await requireAdmin();
   const params = await searchParams;
   const today = dayKey(new Date());
   const range = parseRange(params, today, "month");

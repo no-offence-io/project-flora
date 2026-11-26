@@ -3,12 +3,14 @@ import OrderPreview, { type PreviewOrder } from "@/components/admin/order-previe
 import { Heading, Muted, StatusPill, Tag } from "@/components/admin/ui";
 import { adminClient, kr } from "@/lib/admin/sanity";
 import { isStatus, ORDER_STATUSES, STATUS_LABEL } from "@/lib/order-status";
+import { requireAdmin } from "@/lib/admin/session";
 
 type OrderRow = PreviewOrder & { demo?: boolean };
 
 const ROW = `_id, demo, manual, orderNumber, status, totalOre, shippingOre, orderedAt, customer, paymentProvider, paymentCard, origin, items[]{_key, name, quantity, unitPriceOre, size, colour}`;
 
 export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ status?: string; q?: string }> }) {
+  await requireAdmin();
   const { status: rawStatus, q: rawQ } = await searchParams;
   const status = isStatus(rawStatus) ? rawStatus : null;
   const q = (rawQ ?? "").trim().slice(0, 80);

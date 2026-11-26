@@ -3,8 +3,10 @@ import { refundPayment } from "../actions";
 import { Button, Card, Checkbox, Heading, Muted, Subheading, Tag, TextLink } from "@/components/admin/ui";
 import { adminClient, kr } from "@/lib/admin/sanity";
 import { getStripe } from "@/lib/stripe";
+import { requireAdmin } from "@/lib/admin/session";
 
 export default async function PaymentPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ refunded?: string; error?: string }> }) {
+  await requireAdmin();
   const { id } = await params;
   const { refunded, error } = await searchParams;
   if (!/^pi_[A-Za-z0-9]+$/.test(id)) notFound();

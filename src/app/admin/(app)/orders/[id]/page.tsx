@@ -6,6 +6,7 @@ import { Button, Card, Heading, Input, Labelled, Muted, Row, Select, StatusPill,
 import { adminClient, kr } from "@/lib/admin/sanity";
 import { emailConfigured } from "@/lib/notify";
 import { COUNTS_AS_SALE, ORDER_STATUSES, paidWith, STATUS_LABEL } from "@/lib/order-status";
+import { requireAdmin } from "@/lib/admin/session";
 
 type Order = {
   _id: string;
@@ -38,6 +39,7 @@ const HINT: Record<string, string> = { paid: "to be made", shipped: "on its way"
 const when = (iso?: string) => (iso ? new Date(iso).toLocaleString("nb-NO", { dateStyle: "short", timeStyle: "short" }) : "");
 
 export default async function OrderPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; sent?: string; confirmed?: string; refunded?: string; error?: string }> }) {
+  await requireAdmin();
   const { id } = await params;
   const { saved, sent, confirmed, refunded, error } = await searchParams;
   const o = await adminClient().fetch<Order | null>(`*[_type == "order" && _id == $id][0]`, { id });

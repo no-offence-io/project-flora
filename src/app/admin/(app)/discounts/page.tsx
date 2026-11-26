@@ -1,5 +1,6 @@
 import { Heading, Muted, Row, Tag } from "@/components/admin/ui";
 import { adminClient, kr } from "@/lib/admin/sanity";
+import { requireAdmin } from "@/lib/admin/session";
 
 type Row_ = { _id: string; code?: string; description?: string; kind?: string; value?: number; freeShipping?: boolean; active?: boolean; uses?: number; maxUses?: number | null; expired?: boolean };
 
@@ -7,6 +8,7 @@ const describe = (d: Row_) =>
   d.kind === "percent" ? `${d.value ?? 0}% off` : d.kind === "amount" ? `${kr(d.value)} off` : "free shipping";
 
 export default async function DiscountsPage() {
+  await requireAdmin();
   const codes = await adminClient().fetch<Row_[]>(`*[_type == "discount"] | order(_createdAt desc){ _id, code, description, kind, value, freeShipping, active, uses, maxUses, "expired": defined(endsAt) && endsAt < now() }`);
   return (
     <>

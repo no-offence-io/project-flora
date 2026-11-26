@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Heading, Muted, Tag } from "@/components/admin/ui";
 import { adminClient, kr } from "@/lib/admin/sanity";
 import { COUNTS_AS_SALE } from "@/lib/order-status";
+import { requireAdmin } from "@/lib/admin/session";
 
 type O = { email?: string; name?: string; status?: string; totalOre?: number; orderedAt?: string; origin?: string; demo?: boolean };
 type Account = { email?: string };
@@ -11,6 +12,7 @@ type Account = { email?: string };
  * newest buyer first. Built from the orders themselves, so a customer exists here the moment they buy.
  */
 export default async function CustomersPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  await requireAdmin();
   const { q: rawQ } = await searchParams;
   const q = (rawQ ?? "").trim().toLowerCase().slice(0, 80);
   const [orders, accounts] = await Promise.all([
