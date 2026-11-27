@@ -96,11 +96,11 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
 
       {earlier && (
         <Card id="earlier" className="md:max-w-[640px]">
-          <Subheading>Sales from before this shop</Subheading>
+          <Subheading>Other sales in this Stripe account</Subheading>
           <div className="h-px w-full bg-black/25" />
           <Muted>
-            This Stripe account is older than the shop, so its earlier sales are in Stripe and nowhere else. Importing adds them to Orders, Customers and Reports as completed orders marked
-            “earlier shop”. Payments in other currencies come in at the kroner Stripe paid out for them. No emails are sent, no stock is counted, and nothing in Stripe is changed.
+            This Stripe account also takes payments that do not come through this shop: the earlier shop's sales, before and since. Importing adds them to Orders, Customers and Reports as
+            completed orders marked “from Stripe”, and then keeps them up to date by itself a few times a day. Payments in other currencies come in at the kroner Stripe paid out for them. No emails are sent, no stock is counted, and nothing in Stripe is changed.
           </Muted>
           {said.imported !== undefined && (
             <p className="m-0 font-gotham text-paragraph text-black" role="status">
@@ -114,7 +114,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             </p>
           )}
           <Muted>
-            {earlier.imported > 0 ? `${earlier.imported} earlier sales are in the dashboard.` : "Nothing imported yet."}
+            {earlier.imported > 0 ? `${earlier.imported} sales from Stripe are in the dashboard.` : "Nothing imported yet."}
             {earlier.lastRunAt ? ` Last run ${new Date(earlier.lastRunAt).toLocaleString("nb-NO", { dateStyle: "short", timeStyle: "short" })}.` : ""}
             {earlier.wanted && !earlier.done ? " The rest is being fetched in the background, a stretch every ten minutes; nothing more to press." : ""}
           </Muted>
@@ -124,7 +124,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             </p>
           )}
           <form action={importStripeHistory}>
-            <Button>{earlier.wanted && !earlier.done ? "Fetch the next stretch now" : earlier.imported > 0 ? "Look for more" : "Import earlier sales"}</Button>
+            <Button>{earlier.wanted && !earlier.done ? "Fetch the next stretch now" : earlier.imported > 0 ? "Look for new ones now" : "Import sales from Stripe"}</Button>
           </form>
           {earlier.imported > 0 && (
             <form action={removeStripeHistory} className="flex flex-col gap-[12px] border-t border-black/10 pt-[18px]">

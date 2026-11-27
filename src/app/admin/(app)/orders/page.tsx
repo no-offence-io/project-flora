@@ -76,7 +76,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                 {o.customer?.note && <span title="The customer left a note" className="shrink-0 border-[0.5px] border-black px-[4px] text-[11px]">note</span>}
                 {o.manual === "pr" && <Tag tone="muted">PR</Tag>}
                 {o.manual === "sale" && <Tag tone="muted">by hand</Tag>}
-                {o.manual === "import" && <Tag tone="muted">earlier shop</Tag>}
+                {o.manual === "import" && <Tag tone="muted">from Stripe</Tag>}
                 {o.demo && <Tag tone="muted">test</Tag>}
               </Link>
               <OrderPreview order={o} />

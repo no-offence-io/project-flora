@@ -80,7 +80,7 @@ address locks that person out at once.
   becomes a collapsible section on the page.
 - **Payments** shows the Stripe balance and the latest payments, refunds in full with confirmation,
   and can import the sales made in the same Stripe account before this shop existed
-  (`src/lib/admin/stripe-import.ts`). Imported sales become completed orders marked "earlier shop":
+  (`src/lib/admin/stripe-import.ts`). Imported sales become completed orders marked "from Stripe", kept up to date by the sweep:
   no email, no stock, one per charge so importing twice adds nothing, and removable again.
 - **Setup** lists every outside service as connected or to-do, with the exact steps.
 - **Notifications** (`src/lib/notices.ts`) combines live health checks with events the site writes

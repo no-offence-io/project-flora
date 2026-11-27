@@ -43,11 +43,19 @@ export async function importStatus(): Promise<ImportState & { imported: number }
   return { wanted: state?.wanted ?? false, cursor: state?.cursor, done: state?.done ?? false, lastRunAt: state?.lastRunAt, seen: state?.seen ?? 0, skipped: state?.skipped ?? {}, currencies: state?.currencies ?? {}, lastError: state?.lastError, imported };
 }
 
-/** For the sweep: carries on an import that was asked for and is not finished. Says what it did, or null when there was nothing to do. */
+/** How often a finished import looks again: the other shop may still be selling through the same Stripe account. */
+const LOOK_AGAIN_MS = 6 * 60 * 60 * 1000;
+
+/**
+ * For the sweep: carries on an import that was asked for and is not finished, and looks again every
+ * few hours once it is, so sales still being made elsewhere through the same account keep arriving.
+ * Says what it did, or null when there was nothing to do.
+ */
 export async function continueImport(): Promise<ImportRun | null> {
   const client = getWriteClient();
   const state = await client.getDocument<ImportState>(STATE_ID);
-  if (!state?.wanted || state.done) return null;
+  if (!state?.wanted) return null;
+  if (state.done && state.lastRunAt && Date.now() - new Date(state.lastRunAt).getTime() < LOOK_AGAIN_MS) return null;
   try {
     return await runImport(4);
   } catch (err) {

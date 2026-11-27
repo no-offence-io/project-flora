@@ -4,7 +4,8 @@ import { orderReference } from "@/lib/money";
 import { METADATA_SITE } from "@/lib/order-metadata";
 
 /*
- * One Stripe charge from before this shop, turned into an order the dashboard can show and count.
+ * One Stripe charge that did not come through this shop (the earlier shop, which shares the Stripe
+ * account), turned into an order the dashboard can show and count.
  * Pure, so the mapping is tested on its own; stripe-import.ts does the fetching and writing.
  *
  * An imported order is marked `imported` and `manual: "import"`: it sends no email, counts no stock
@@ -86,7 +87,7 @@ export function orderFromCharge(charge: Stripe.Charge, ours: ReadonlySet<string>
       currency: "nok",
       paymentProvider: method === "klarna" ? "klarna" : "stripe",
       ...(card?.last4 ? { paymentCard: { brand: card.brand ?? "", last4: card.last4 } } : {}),
-      origin: { label: "Earlier shop" },
+      origin: { label: "Other sales in Stripe" },
       stripeChargeId: charge.id,
       ...(intentId ? { stripePaymentIntentId: intentId } : {}),
       internalNote: notes.join(" "),
