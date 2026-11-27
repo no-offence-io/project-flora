@@ -5,6 +5,7 @@ import CategoryFilter, { type CategorySelection } from "./category-filter";
 import ProductCard from "./product-card";
 import { toSlideshowProduct, type Product } from "@/lib/catalog-types";
 import { useT } from "@/components/i18n-provider";
+import { search, type SearchField } from "@/lib/search";
 
 const INTRO =
   "Browse upcoming garments in the Permanent Collection and sign up for notifications on each product page to be the first to know when they’re available.";
@@ -18,12 +19,19 @@ export default function ShopCatalog({ products, title = "All items" }: { product
   const t = useT();
   const [query, setQuery] = useState("");
 
+  // What a search looks through: the name first, then colours and the category (in English and in
+  // the language shown), then the details and the description. See lib/search.ts for how words match.
   const visible = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return products.filter(
-      (product) => (category === "All" || product.category === category) && (q === "" || product.name.toLowerCase().includes(q)),
-    );
-  }, [products, category, query]);
+    const inCategory = category === "All" ? products : products.filter((product) => product.category === category);
+    const fieldsOf = (product: Product): SearchField[] => [
+      { text: product.name, weight: 3, forgiving: true },
+      { text: product.colors.map((c) => `${c.name} ${c.id ?? ""}`).join(" "), weight: 2, forgiving: true },
+      { text: `${product.category} ${t(`category.${product.category}` as const)}`, weight: 2, forgiving: true },
+      { text: product.specs.map((spec) => spec.value ?? "").join(" "), weight: 1 },
+      { text: product.description, weight: 0.5 },
+    ];
+    return search(inCategory, query, fieldsOf);
+  }, [products, category, query, t]);
 
   return (
     <div className="flex flex-col gap-[60px] md:gap-0">
