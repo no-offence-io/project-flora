@@ -100,11 +100,11 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
           <div className="h-px w-full bg-black/25" />
           <Muted>
             This Stripe account is older than the shop, so its earlier sales are in Stripe and nowhere else. Importing adds them to Orders, Customers and Reports as completed orders marked
-            “earlier shop”. No emails are sent, no stock is counted, and nothing in Stripe is changed.
+            “earlier shop”. Payments in other currencies come in at the kroner Stripe paid out for them. No emails are sent, no stock is counted, and nothing in Stripe is changed.
           </Muted>
           {said.imported !== undefined && (
             <p className="m-0 font-gotham text-paragraph text-black" role="status">
-              {Number(said.imported)} added from {Number(said.seen)} payments looked at{Number(said.left) > 0 ? `, ${Number(said.left)} left out (not paid, another currency, or this shop's own)` : ""}.{" "}
+              {Number(said.imported)} added from {Number(said.seen)} payments looked at{Number(said.left) > 0 ? `, ${Number(said.left)} left out (never paid, never converted to kroner, or this shop's own)` : ""}.{" "}
               {said.more === "1" ? "There is more; it carries on by itself in the background." : "That is all of it."}
             </p>
           )}

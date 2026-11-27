@@ -64,8 +64,31 @@ describe("orderFromCharge", () => {
     expect(orderFromCharge(charge({ amount_captured: 0 }), none, at)).toEqual({ skip: "notPaid" });
   });
 
-  it("leaves out other currencies, which the reports could not add up", () => {
+  it("imports a payment in another currency at the kroner Stripe paid out for it", () => {
+    // 89.00 EUR, which Stripe converted to 1 023.50 kr.
+    const o = docOf(charge({ currency: "eur", amount: 8900, amount_captured: 8900, balance_transaction: { id: "txn_1", currency: "nok", amount: 102_350 } }));
+    expect(o).toMatchObject({ status: "delivered", currency: "nok", totalOre: 102_350, subtotalOre: 102_350, vatIncludedOre: 20_470 });
+    expect(o.items[0].unitPriceOre).toBe(102_350);
+    expect(o.internalNote).toContain("Paid 89.00 EUR; Stripe counted it as 1023.5 kr.");
+  });
+
+  it("converts a part refund at the same rate", () => {
+    // Half of it went back.
+    const o = docOf(charge({ currency: "eur", amount: 8900, amount_captured: 8900, amount_refunded: 4450, balance_transaction: { id: "txn_1", currency: "nok", amount: 102_350 } }));
+    expect(o.totalOre).toBe(51_175);
+    expect(o.internalNote).toContain("511.75 kr of the original 1023.5 kr was refunded");
+  });
+
+  it("writes whole-unit currencies as they are", () => {
+    const o = docOf(charge({ currency: "jpy", amount: 15_000, amount_captured: 15_000, balance_transaction: { id: "txn_2", currency: "nok", amount: 108_000 } }));
+    expect(o.totalOre).toBe(108_000);
+    expect(o.internalNote).toContain("Paid 15000 JPY");
+  });
+
+  it("leaves out a foreign payment Stripe never converted to kroner, rather than guess a rate", () => {
     expect(orderFromCharge(charge({ currency: "eur" }), none, at)).toEqual({ skip: "otherCurrency" });
+    expect(orderFromCharge(charge({ currency: "eur", balance_transaction: "txn_not_expanded" }), none, at)).toEqual({ skip: "otherCurrency" });
+    expect(orderFromCharge(charge({ currency: "eur", balance_transaction: { id: "txn_3", currency: "eur", amount: 8900 } }), none, at)).toEqual({ skip: "otherCurrency" });
   });
 
   it("never imports this shop's own payments, with or without an order", () => {

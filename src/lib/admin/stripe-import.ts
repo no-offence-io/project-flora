@@ -28,6 +28,8 @@ export type ImportState = {
   /** Charges looked at so far in this pass. */
   seen?: number;
   skipped: Partial<Record<SkipReason, number>>;
+  /** How many charges were in each currency, for the page to say what was converted. */
+  currencies?: Record<string, number>;
   /** Why the last run stopped, when it did not finish cleanly. */
   lastError?: string;
 };
@@ -38,7 +40,7 @@ const countImported = () => getWriteClient().fetch<number>(`count(*[_type == "or
 export async function importStatus(): Promise<ImportState & { imported: number }> {
   const client = getWriteClient();
   const [state, imported] = await Promise.all([client.getDocument<ImportState>(STATE_ID), countImported()]);
-  return { wanted: state?.wanted ?? false, cursor: state?.cursor, done: state?.done ?? false, lastRunAt: state?.lastRunAt, seen: state?.seen ?? 0, skipped: state?.skipped ?? {}, lastError: state?.lastError, imported };
+  return { wanted: state?.wanted ?? false, cursor: state?.cursor, done: state?.done ?? false, lastRunAt: state?.lastRunAt, seen: state?.seen ?? 0, skipped: state?.skipped ?? {}, currencies: state?.currencies ?? {}, lastError: state?.lastError, imported };
 }
 
 /** For the sweep: carries on an import that was asked for and is not finished. Says what it did, or null when there was nothing to do. */
@@ -69,13 +71,15 @@ export async function runImport(pages = 8): Promise<ImportRun> {
   let seen = 0;
   let done = false;
   const seenBefore = resuming ? (state!.seen ?? 0) : 0;
+  const currencies: Record<string, number> = resuming ? { ...(state!.currencies ?? {}) } : {};
 
   for (let page = 0; page < pages; page++) {
-    const list = await stripe.charges.list({ limit: PAGE, ...(cursor ? { starting_after: cursor } : {}), expand: ["data.payment_intent"] });
+    const list = await stripe.charges.list({ limit: PAGE, ...(cursor ? { starting_after: cursor } : {}), expand: ["data.payment_intent", "data.balance_transaction"] });
     let tx = client.transaction();
     let writes = 0;
     for (const charge of list.data) {
       seen++;
+      if (charge.paid) currencies[charge.currency] = (currencies[charge.currency] ?? 0) + 1;
       const mapped = orderFromCharge(charge, ours, now);
       if ("skip" in mapped) skipped[mapped.skip] = (skipped[mapped.skip] ?? 0) + 1;
       else {
@@ -86,7 +90,7 @@ export async function runImport(pages = 8): Promise<ImportRun> {
     if (writes) await tx.commit({ autoGenerateArrayKeys: false });
     cursor = list.data.at(-1)?.id ?? cursor;
     // Saved after every page, so a run cut short picks up where it was.
-    await client.createOrReplace({ _id: STATE_ID, _type: "stripeImport", wanted: true, cursor, done: !list.has_more, lastRunAt: now, seen: seenBefore + seen, skipped });
+    await client.createOrReplace({ _id: STATE_ID, _type: "stripeImport", wanted: true, cursor, done: !list.has_more, lastRunAt: now, seen: seenBefore + seen, skipped, currencies });
     if (!list.has_more) {
       done = true;
       break;
