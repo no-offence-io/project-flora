@@ -8,16 +8,29 @@ import { getWriteClient } from "@/sanity/lib/write";
  * shop: what was sold there earlier is in Stripe and nowhere else. This reads those charges, newest
  * first, and writes each as an order (see stripe-import-map.ts for what one looks like).
  *
- * It runs in the dashboard, on the server, because that is where the Stripe key is. A run does a
- * bounded number of pages and remembers where it stopped, so a long history is fetched over a few
- * presses rather than one request that might time out. Every write is "create if it isn't there",
+ * It runs on the server, because that is where the Stripe key is. A run does a bounded number of
+ * pages and remembers where it stopped, so a long history is fetched in stretches rather than in one
+ * request that might time out. Once asked for (the button on the Payments page), the background
+ * sweep carries it on by itself every few minutes until the whole history is in; nobody has to keep
+ * pressing. Removing the imported sales also switches that off, so they do not come straight back. Every write is "create if it isn't there",
  * keyed by the charge, so pressing again, or starting over, never doubles anything. Nothing in
  * Stripe is changed.
  */
 const STATE_ID = "private.stripeImport";
 const PAGE = 100;
 
-export type ImportState = { cursor?: string; done: boolean; lastRunAt?: string; skipped: Partial<Record<SkipReason, number>> };
+export type ImportState = {
+  /** The import has been asked for and not taken back: the sweep carries it on until `done`. */
+  wanted?: boolean;
+  cursor?: string;
+  done: boolean;
+  lastRunAt?: string;
+  /** Charges looked at so far in this pass. */
+  seen?: number;
+  skipped: Partial<Record<SkipReason, number>>;
+  /** Why the last run stopped, when it did not finish cleanly. */
+  lastError?: string;
+};
 export type ImportRun = { added: number; seen: number; skipped: Partial<Record<SkipReason, number>>; done: boolean };
 
 const countImported = () => getWriteClient().fetch<number>(`count(*[_type == "order" && imported == true])`);
@@ -25,7 +38,21 @@ const countImported = () => getWriteClient().fetch<number>(`count(*[_type == "or
 export async function importStatus(): Promise<ImportState & { imported: number }> {
   const client = getWriteClient();
   const [state, imported] = await Promise.all([client.getDocument<ImportState>(STATE_ID), countImported()]);
-  return { cursor: state?.cursor, done: state?.done ?? false, lastRunAt: state?.lastRunAt, skipped: state?.skipped ?? {}, imported };
+  return { wanted: state?.wanted ?? false, cursor: state?.cursor, done: state?.done ?? false, lastRunAt: state?.lastRunAt, seen: state?.seen ?? 0, skipped: state?.skipped ?? {}, lastError: state?.lastError, imported };
+}
+
+/** For the sweep: carries on an import that was asked for and is not finished. Says what it did, or null when there was nothing to do. */
+export async function continueImport(): Promise<ImportRun | null> {
+  const client = getWriteClient();
+  const state = await client.getDocument<ImportState>(STATE_ID);
+  if (!state?.wanted || state.done) return null;
+  try {
+    return await runImport(4);
+  } catch (err) {
+    const message = err instanceof Error ? err.message.slice(0, 300) : String(err);
+    await client.createOrReplace({ ...state, _id: STATE_ID, _type: "stripeImport", lastError: message, lastRunAt: new Date().toISOString() });
+    throw err;
+  }
 }
 
 export async function runImport(pages = 8): Promise<ImportRun> {
@@ -41,6 +68,7 @@ export async function runImport(pages = 8): Promise<ImportRun> {
   const now = new Date().toISOString();
   let seen = 0;
   let done = false;
+  const seenBefore = resuming ? (state!.seen ?? 0) : 0;
 
   for (let page = 0; page < pages; page++) {
     const list = await stripe.charges.list({ limit: PAGE, ...(cursor ? { starting_after: cursor } : {}), expand: ["data.payment_intent"] });
@@ -58,7 +86,7 @@ export async function runImport(pages = 8): Promise<ImportRun> {
     if (writes) await tx.commit({ autoGenerateArrayKeys: false });
     cursor = list.data.at(-1)?.id ?? cursor;
     // Saved after every page, so a run cut short picks up where it was.
-    await client.createOrReplace({ _id: STATE_ID, _type: "stripeImport", cursor, done: !list.has_more, lastRunAt: now, skipped });
+    await client.createOrReplace({ _id: STATE_ID, _type: "stripeImport", wanted: true, cursor, done: !list.has_more, lastRunAt: now, seen: seenBefore + seen, skipped });
     if (!list.has_more) {
       done = true;
       break;
@@ -79,6 +107,7 @@ export async function removeImported(): Promise<number> {
     await tx.commit();
     removed += ids.length;
   }
-  await client.delete(STATE_ID).catch(() => {});
+  // Kept, switched off: otherwise the sweep would bring them straight back.
+  await client.createOrReplace({ _id: STATE_ID, _type: "stripeImport", wanted: false, done: false, skipped: {} });
   return removed;
 }

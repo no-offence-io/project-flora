@@ -1,6 +1,7 @@
 import "server-only";
 import { notice } from "./notices";
 import { settleVippsPayment } from "./vipps-checkout";
+import { continueImport } from "./admin/stripe-import";
 import { vippsEnv } from "./vipps";
 import { getWriteClient } from "@/sanity/lib/write";
 
@@ -16,16 +17,19 @@ import { getWriteClient } from "@/sanity/lib/write";
  *
  * Old counters. The per-visitor counts behind the rate limits (rate-limit.ts) are deleted once
  * nobody has touched them for two days.
+ *
+ * Earlier sales. An import from Stripe that has been asked for is carried on, a stretch at a time,
+ * until the whole history is in (admin/stripe-import.ts).
  */
 const MINUTE = 60_000;
 const DAY = 24 * 60 * MINUTE;
 
-export type SweepResult = { vipps: { looked: number; paid: number; closed: number; waiting: number; failed: number }; counters: number };
+export type SweepResult = { vipps: { looked: number; paid: number; closed: number; waiting: number; failed: number }; counters: number; imported: number | null };
 
 export async function sweep(): Promise<SweepResult> {
   const client = getWriteClient();
   const now = Date.now();
-  const result: SweepResult = { vipps: { looked: 0, paid: 0, closed: 0, waiting: 0, failed: 0 }, counters: 0 };
+  const result: SweepResult = { vipps: { looked: 0, paid: 0, closed: 0, waiting: 0, failed: 0 }, counters: 0, imported: null };
 
   // Two minutes' grace so the customer's own return gets there first; ten days back covers the longest a reservation lasts.
   const open = await client.fetch<string[]>(
@@ -53,6 +57,15 @@ export async function sweep(): Promise<SweepResult> {
     for (const id of stale) tx = tx.delete(id);
     await tx.commit();
     result.counters = stale.length;
+  }
+
+  // Last, and never in the way of the rest: a fault here is reported, not thrown.
+  try {
+    const run = await continueImport();
+    if (run) result.imported = run.added;
+  } catch (err) {
+    console.error("[sweep] the Stripe import stopped", err);
+    await notice({ kind: "error", source: "payments", title: "The import of earlier sales from Stripe stopped", detail: err instanceof Error ? err.message : String(err), href: "/admin/payments#earlier", dedupeKey: `stripe-import:${new Date().toISOString().slice(0, 10)}` });
   }
   return result;
 }
