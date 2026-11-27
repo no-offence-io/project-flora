@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, addMonths, byDay, byDiscountCode, byMonth, byPayment, byProduct, byYear, change, csvMoney, cumulativeByDay, dayKey, daysBetween, inRange, isDay, linesCsv, monthsOfYear, ordersCsv, parseRange, presetRange, previousRange, summarise, summaryCsv, toCsv, yearBefore, type ReportOrder } from "./reports";
+import { addDays, addMonths, byDay, byDiscountCode, byMonth, byPayment, byProduct, byYear, change, csvMoney, cumulativeByDay, dayKey, daysBetween, inRange, isDay, linesCsv, monthsOfYear, ordersCsv, parseRange, presetRange, previousRange, summarise, summaryCsv, toCsv, yearBefore, type ReportOrder, allTime, bySource, instantsOf, parseSource, rangeParams, sourceOf, startOfDay } from "./reports";
 
 const order = (o: Partial<ReportOrder> & { at: string; total?: number }): ReportOrder => ({
   _id: `o-${o.at}-${o.orderNumber ?? ""}`,
@@ -242,5 +242,49 @@ describe("exports", () => {
     const s = summarise(inRange(orders, range));
     expect(total.slice(1)).toEqual([String(s.orders), String(s.units), csvMoney(s.grossOre), csvMoney(s.refundsOre), csvMoney(s.netOre), csvMoney(s.vatOre), csvMoney(s.exVatOre), csvMoney(s.shippingOre), csvMoney(s.discountOre)]);
     expect(summaryCsv(orders, range, "month").slice(1).trimEnd().split("\r\n").map((l) => l.split(";")[0])).toEqual(["Month", "2026-11", "Total"]);
+  });
+});
+
+describe("all time, sources and instants", () => {
+  const today = "2026-11-27";
+
+  it("offers all time only where it is the starting point", () => {
+    expect(parseRange({}, today, "all")).toEqual(allTime(today));
+    expect(parseRange({ range: "all" }, today, "all").preset).toBe("all");
+    expect(parseRange({ range: "7d" }, today, "all").preset).toBe("7d");
+    expect(parseRange({ from: "2026-11-01", to: "2026-11-05" }, today, "all").preset).toBe("custom");
+    // A page with graphs does not take it.
+    expect(parseRange({ range: "all" }, today, "30d").preset).toBe("30d");
+  });
+
+  it("writes a period back into an address", () => {
+    expect(rangeParams(parseRange({ range: "month" }, today))).toEqual([["range", "month"]]);
+    expect(rangeParams(parseRange({ from: "2026-11-01", to: "2026-11-05" }, today))).toEqual([["from", "2026-11-01"], ["to", "2026-11-05"]]);
+    expect(rangeParams(allTime(today))).toEqual([["range", "all"]]);
+  });
+
+  it("tells the three kinds of order apart", () => {
+    expect(sourceOf({})).toBe("shop");
+    expect(sourceOf({ manual: null })).toBe("shop");
+    expect(sourceOf({ manual: "import" })).toBe("stripe");
+    expect(sourceOf({ manual: "sale" })).toBe("hand");
+    expect(sourceOf({ manual: "pr" })).toBe("hand");
+    const orders = [{ id: 1 }, { id: 2, manual: "import" }, { id: 3, manual: "sale" }];
+    expect(bySource(orders, "all")).toHaveLength(3);
+    expect(bySource(orders, "shop").map((o) => o.id)).toEqual([1]);
+    expect(bySource(orders, "stripe").map((o) => o.id)).toEqual([2]);
+    expect(bySource(orders, "hand").map((o) => o.id)).toEqual([3]);
+    expect(parseSource("stripe")).toBe("stripe");
+    expect(parseSource("nonsense")).toBe("all");
+    expect(parseSource(undefined)).toBe("all");
+  });
+
+  it("finds midnight in Oslo in winter and in summer", () => {
+    expect(startOfDay("2026-01-15").toISOString()).toBe("2026-01-14T23:00:00.000Z");
+    expect(startOfDay("2026-07-15").toISOString()).toBe("2026-07-14T22:00:00.000Z");
+    // The night the clocks go back the day is 25 hours long.
+    const { from, before } = instantsOf({ from: "2026-10-25", to: "2026-10-25" });
+    expect(from.toISOString()).toBe("2026-10-24T22:00:00.000Z");
+    expect(before.toISOString()).toBe("2026-10-25T23:00:00.000Z");
   });
 });

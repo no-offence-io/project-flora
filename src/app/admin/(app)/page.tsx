@@ -4,7 +4,8 @@ import { Card, Heading, Muted, Row, Subheading, Tag, TextLink } from "@/componen
 import { liveOrReason } from "@/lib/admin/analytics";
 import { getText } from "@/lib/admin/localized";
 import { loadReportOrders } from "@/lib/admin/report-data";
-import { byDay, change, dayKey, inRange, presetRange, previousRange, summarise } from "@/lib/admin/reports";
+import RangePicker, { type Filter } from "@/components/admin/range-picker";
+import { byDay, byMonth, bySource, change, dayKey, daysBetween, inRange, parseRange, parseSource, previousRange, rangeParams, SOURCES, summarise, yearBefore } from "@/lib/admin/reports";
 import { adminClient, kr } from "@/lib/admin/sanity";
 import { requireAdmin } from "@/lib/admin/session";
 
@@ -14,9 +15,10 @@ type Stats = {
   lowStock: { _id: string; name?: { _key: string; value?: string }[]; stock?: number }[];
 };
 
-export default async function AdminDashboard() {
+export default async function AdminDashboard({ searchParams }: { searchParams: Promise<{ range?: string; from?: string; to?: string; source?: string }> }) {
   await requireAdmin();
-  const [s, { orders }, live] = await Promise.all([
+  const params = await searchParams;
+  const [s, { orders: everyOrder }, live] = await Promise.all([
     adminClient().fetch<Stats>(
       `{
       "toPack": count(*[_type == "order" && status == "paid"]),
@@ -28,18 +30,23 @@ export default async function AdminDashboard() {
     liveOrReason(),
   ]);
 
-  // Sales figures from the same arithmetic as the Reports page (Oslo days, refunds taken off, gifts left out).
+  // Sales figures from the same arithmetic as the Reports page (Oslo days, refunds taken off, gifts left out),
+  // for the period and the sales chosen at the top. Thirty days of everything unless asked otherwise.
   const today = dayKey(new Date());
-  const figure = (preset: "today" | "7d" | "30d") => {
-    const range = presetRange(preset, today);
-    return { now: summarise(inRange(orders, range)), before: summarise(inRange(orders, previousRange(range))) };
-  };
-  const day = figure("today");
-  const week = figure("7d");
-  const month = figure("30d");
-  const last30 = presetRange("30d", today);
-  const daily = byDay(orders, last30);
-  const dailyBefore = byDay(orders, previousRange(last30));
+  const range = parseRange(params, today, "30d");
+  const source = parseSource(params.source);
+  const orders = bySource(everyOrder, source);
+  const before = previousRange(range);
+  const now = summarise(inRange(orders, range));
+  const prev = summarise(inRange(orders, before));
+  const days = daysBetween(range.from, range.to);
+  const against = days === 1 ? "the day before" : `the ${days} days before`;
+  // Day by day while that is readable, month by month beyond two months (as on Reports).
+  const daily = days <= 62;
+  const current = daily ? byDay(orders, range) : byMonth(orders, range);
+  const compare = daily ? byDay(orders, before) : byMonth(orders, yearBefore(range));
+  const filters: Filter[] = [{ name: "source", label: "Which sales", value: source, fallback: "all", options: SOURCES.map((x) => ({ value: x.key, label: x.label })) }];
+  const reportsHref = `/admin/reports?${new URLSearchParams([...rangeParams(range), ...(source !== "all" ? [["source", source]] : [])]).toString()}`;
 
   return (
     <>
@@ -48,31 +55,34 @@ export default async function AdminDashboard() {
         <Muted>{new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}</Muted>
       </div>
 
+      <RangePicker path="/admin" range={range} today={today} filters={filters} />
+
       <div className="grid gap-[12px] md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] md:gap-[24px]">
         <LiveVisitors initial={live} variant="compact" />
         <div className="grid grid-cols-2 gap-[12px] md:gap-[24px]">
-          <Stat label="Today" value={kr(day.now.netOre)} sub={orderCount(day.now.orders)} delta={<Delta pct={change(day.now.netOre, day.before.netOre)} against="yesterday" />} />
-          <Stat label="Last 7 days" value={kr(week.now.netOre)} sub={orderCount(week.now.orders)} delta={<Delta pct={change(week.now.netOre, week.before.netOre)} against="the 7 before" />} />
-          <Stat label="Last 30 days" value={kr(month.now.netOre)} sub={orderCount(month.now.orders)} delta={<Delta pct={change(month.now.netOre, month.before.netOre)} against="the 30 before" />} />
-          <Stat label="To be packed" value={String(s.toPack)} sub={s.toPack === 1 ? "order" : "orders"} />
+          <Stat label={`Net sales · ${range.label}`} value={kr(now.netOre)} sub={orderCount(now.orders)} delta={<Delta pct={change(now.netOre, prev.netOre)} against={against} />} />
+          <Stat label="Average order" value={kr(now.averageOre)} sub={`${now.units} ${now.units === 1 ? "piece" : "pieces"} sold`} delta={<Delta pct={change(now.averageOre, prev.averageOre)} against={against} />} />
+          <Stat label="Refunded" value={kr(now.refundsOre)} sub={orderCount(now.refundedOrders)} />
+          <Stat label="To be packed, right now" value={String(s.toPack)} sub={s.toPack === 1 ? "order" : "orders"} />
         </div>
       </div>
 
       <Card>
         <div className="flex flex-wrap items-baseline justify-between gap-[12px]">
-          <Subheading>Sales, last 30 days</Subheading>
-          <TextLink href="/admin/reports">All reports</TextLink>
+          <Subheading>{daily ? "Sales per day" : "Sales per month"} · {range.label}</Subheading>
+          <TextLink href={reportsHref}>Full report for this period</TextLink>
         </div>
         <div className="h-px w-full bg-black/25" />
         <Bars
-          label="Net sales per day, the last 30 days beside the 30 before"
+          label={`Net sales ${daily ? "per day" : "per month"}, ${range.label}`}
           unit="money"
           height={180}
-          labelRoom={6}
-          labels={daily.map((d) => d.label)}
+          labelRoom={daily ? 6 : 12}
+          labels={current.map((p) => p.label)}
+          details={current.map((p, i) => (daily ? `${p.label} (before: ${compare[i]?.label ?? "–"})` : p.label))}
           series={[
-            { name: "The 30 days before", tone: "ghost", values: dailyBefore.map((d) => d.netOre) },
-            { name: "Last 30 days", tone: "ink", values: daily.map((d) => d.netOre) },
+            { name: daily ? `The ${days === 1 ? "day" : `${days} days`} before` : "Same months a year earlier", short: daily ? "Before" : "A year earlier", tone: "ghost", values: current.map((_, i) => compare[i]?.netOre ?? 0) },
+            { name: "This period", tone: "ink", values: current.map((p) => p.netOre) },
           ]}
         />
       </Card>

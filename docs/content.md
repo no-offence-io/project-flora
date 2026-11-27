@@ -70,6 +70,13 @@ Auth.js, and only the addresses in `ADMIN_EMAILS` get in. Every page, every serv
 route handler checks the session itself, and re-checks the allowlist on each request, so removing an
 address locks that person out at once.
 
+- **Periods and filters are addresses.** Every page that counts or lists something (the dashboard
+  home, Reports, Visits, Orders, Customers, Payments, Subscribers) has the same picker
+  (`src/components/admin/range-picker.tsx`): a period, and the page's own choices under it, such as
+  which sales (this shop, the other sales in the Stripe account, added by hand) or which status. All
+  of it is plain links and GET forms, so a view can be bookmarked or shared, and choosing one thing
+  keeps the others. Long lists open with twenty rows and a "Show more" that adds twenty in place
+  (`show-more.tsx`).
 - **Media** lists every photo and video with a preview, its size and where it is used. Files can be
   uploaded there or straight from the field that needs them, and deleted only once nothing
   references them. `src/lib/admin/media.ts` turns form fields into Sanity asset references.

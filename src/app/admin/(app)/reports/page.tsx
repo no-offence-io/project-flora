@@ -1,8 +1,8 @@
 import { Bars, Delta, formatValue, Lines } from "@/components/admin/charts";
-import RangePicker from "@/components/admin/range-picker";
+import RangePicker, { type Filter } from "@/components/admin/range-picker";
 import { Card, Heading, Muted, Subheading, TextLink } from "@/components/admin/ui";
 import { loadReportOrders } from "@/lib/admin/report-data";
-import { addMonths, byDay, byDiscountCode, byMonth, byPayment, byProduct, byYear, change, cumulativeByDay, dayKey, daysBetween, inRange, monthsOfYear, parseRange, previousRange, summarise, yearBefore, type Summary } from "@/lib/admin/reports";
+import { addMonths, bySource, parseSource, SOURCES, byDay, byDiscountCode, byMonth, byPayment, byProduct, byYear, change, cumulativeByDay, dayKey, daysBetween, inRange, monthsOfYear, parseRange, previousRange, summarise, yearBefore, type Summary } from "@/lib/admin/reports";
 import { kr } from "@/lib/admin/sanity";
 import { requireAdmin } from "@/lib/admin/session";
 
@@ -16,12 +16,16 @@ const monthName = (first: string) => new Date(`${first}T12:00:00Z`).toLocaleDate
  * graphs (this period, month against month, year against year), what sold and how it was paid, and
  * the files for the accounts. Everything on the page comes from the paid orders; nothing is typed in.
  */
-export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ range?: string; from?: string; to?: string; sample?: string }> }) {
+export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ range?: string; from?: string; to?: string; sample?: string; source?: string }> }) {
   await requireAdmin();
   const params = await searchParams;
   const today = dayKey(new Date());
   const range = parseRange(params, today, "month");
-  const { orders, capped, demo, sample } = await loadReportOrders({ sample: params.sample === "1" });
+  const { orders: everyOrder, capped, demo, sample } = await loadReportOrders({ sample: params.sample === "1" });
+  // Which sales the whole page is about: everything, or one kind alone.
+  const source = parseSource(params.source);
+  const orders = bySource(everyOrder, source);
+  const filters: Filter[] = [{ name: "source", label: "Which sales", value: source, fallback: "all", options: SOURCES.map((x) => ({ value: x.key, label: x.label, count: inRange(bySource(everyOrder, x.key), range).length })) }];
   const keep = { sample: sample ? "1" : undefined };
 
   const before = previousRange(range);
@@ -56,6 +60,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
 
   const query = new URLSearchParams(range.preset === "custom" ? { from: range.from, to: range.to } : { range: range.preset });
   if (sample) query.set("sample", "1");
+  if (source !== "all") query.set("source", source);
   const exportHref = (type: string) => `/admin/reports/export?type=${type}&${query.toString()}`;
 
   return (
@@ -68,7 +73,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         {capped && <p className="m-0 font-gotham text-paragraph text-[#b00020]" role="alert">There are more orders than this page reads at once, so the oldest are missing from the totals. Tell Martin.</p>}
       </div>
 
-      <RangePicker path="/admin/reports" range={range} today={today} keep={keep} />
+      <RangePicker path="/admin/reports" range={range} today={today} keep={keep} filters={filters} />
 
       <dl className="m-0 grid grid-cols-2 gap-[12px] font-gotham text-paragraph text-black md:grid-cols-4 md:gap-[24px]">
         <Tile label="Net sales" value={kr(now.netOre)} now={now.netOre} prev={prev.netOre} year={year.netOre} />

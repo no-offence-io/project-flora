@@ -1,35 +1,53 @@
 import Link from "next/link";
 import OrderPreview, { type PreviewOrder } from "@/components/admin/order-preview";
+import RangePicker, { type Filter } from "@/components/admin/range-picker";
+import ShowMore, { parseShow } from "@/components/admin/show-more";
 import { Heading, Muted, StatusPill, Tag } from "@/components/admin/ui";
+import { bySource, dayKey, instantsOf, parseRange, parseSource, rangeParams, SOURCE_FILTER, SOURCES } from "@/lib/admin/reports";
 import { adminClient, kr } from "@/lib/admin/sanity";
-import { isStatus, ORDER_STATUSES, STATUS_LABEL } from "@/lib/order-status";
+import { COUNTS_AS_SALE, isStatus, ORDER_STATUSES, STATUS_LABEL } from "@/lib/order-status";
 import { requireAdmin } from "@/lib/admin/session";
 
 type OrderRow = PreviewOrder & { demo?: boolean };
 
 const ROW = `_id, demo, manual, orderNumber, status, totalOre, shippingOre, orderedAt, customer, paymentProvider, paymentCard, origin, items[]{_key, name, quantity, unitPriceOre, size, colour}`;
 
-export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ status?: string; q?: string }> }) {
+export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ status?: string; q?: string; range?: string; from?: string; to?: string; source?: string; show?: string }> }) {
   await requireAdmin();
-  const { status: rawStatus, q: rawQ } = await searchParams;
-  const status = isStatus(rawStatus) ? rawStatus : null;
-  const q = (rawQ ?? "").trim().slice(0, 80);
+  const params = await searchParams;
+  const status = isStatus(params.status) ? params.status : null;
+  const q = (params.q ?? "").trim().slice(0, 80);
+  const today = dayKey(new Date());
+  const range = parseRange(params, today, "all");
+  const source = parseSource(params.source);
+  const show = parseShow(params.show);
 
-  const filters = [`_type == "order"`];
-  if (status) filters.push(`coalesce(status, "paid") == $status`);
-  if (q) filters.push(`(orderNumber match $q || customer.name match $q || customer.email match $q)`);
-  const [orders, counts] = await Promise.all([
-    adminClient().fetch<OrderRow[]>(`*[${filters.join(" && ")}] | order(orderedAt desc)[0...300]{${ROW}}`, { status, q: q ? `*${q}*` : "" }),
-    adminClient().fetch<string[]>(`*[_type == "order"].status`),
+  // The period and the search narrow everything; the shop and the status are counted within that,
+  // so the numbers on the choices always describe the orders the list would show.
+  const within = [`_type == "order"`];
+  const vars: Record<string, string> = { q: q ? `*${q}*` : "", status: status ?? "" };
+  if (range.preset !== "all") {
+    const { from, before } = instantsOf(range);
+    within.push("dateTime(orderedAt) >= dateTime($from) && dateTime(orderedAt) < dateTime($before)");
+    vars.from = from.toISOString();
+    vars.before = before.toISOString();
+  }
+  if (q) within.push("(orderNumber match $q || customer.name match $q || customer.email match $q)");
+  const listed = [...within, ...(SOURCE_FILTER[source] ? [`(${SOURCE_FILTER[source]})`] : []), ...(status ? [`coalesce(status, "paid") == $status`] : [])].join(" && ");
+  const [orders, facts] = await Promise.all([
+    adminClient().fetch<OrderRow[]>(`*[${listed}] | order(orderedAt desc)[0...${show}]{${ROW}}`, vars),
+    adminClient().fetch<{ status: string; manual?: string | null; totalOre?: number | null }[]>(`*[${within.join(" && ")}]{ "status": coalesce(status, "paid"), manual, totalOre }`, vars),
   ]);
-  const count = (s: string) => counts.filter((c) => (c ?? "paid") === s).length;
-  const tabHref = (s: string | null) => {
-    const p = new URLSearchParams();
-    if (s) p.set("status", s);
-    if (q) p.set("q", q);
-    const str = p.toString();
-    return `/admin/orders${str ? `?${str}` : ""}`;
-  };
+  const ofSource = bySource(facts, source);
+  const matching = status ? ofSource.filter((o) => o.status === status) : ofSource;
+  const salesOre = matching.filter((o) => COUNTS_AS_SALE.includes(o.status as never) && o.manual !== "pr").reduce((t, o) => t + (o.totalOre ?? 0), 0);
+
+  const filters: Filter[] = [
+    { name: "source", label: "Which sales", value: source, fallback: "all", options: SOURCES.map((x) => ({ value: x.key, label: x.label, count: bySource(facts, x.key).length })) },
+    { name: "status", label: "Status", value: status ?? "any", fallback: "any", options: [{ value: "any", label: "All", count: ofSource.length }, ...ORDER_STATUSES.map((x) => ({ value: x, label: STATUS_LABEL[x], count: ofSource.filter((o) => o.status === x).length }))] },
+  ];
+  const address: [string, string][] = [...rangeParams(range), ...(source !== "all" ? [["source", source] as [string, string]] : []), ...(status ? [["status", status] as [string, string]] : []), ...(q ? [["q", q] as [string, string]] : [])];
+  const narrowed = Boolean(q || status || source !== "all" || range.preset !== "all");
 
   return (
     <>
@@ -38,26 +56,29 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
         <Muted>Newest first. Shop orders appear by themselves when a payment goes through; add one yourself for PR gifts or sales outside the shop.</Muted>
       </div>
 
-      <div className="flex flex-col gap-[24px]">
-        <nav aria-label="Filter by status" className="flex flex-wrap gap-x-[18px] gap-y-[8px] font-gotham text-paragraph">
-          <Link href={tabHref(null)} className={!status ? "text-black underline underline-offset-4" : "text-black/50 hover:text-black transition-colors"}>
-            All <span className="text-black/50">({counts.length})</span>
-          </Link>
-          {ORDER_STATUSES.map((s) => (
-            <Link key={s} href={tabHref(s)} className={status === s ? "text-black underline underline-offset-4" : "text-black/50 hover:text-black transition-colors"}>
-              {STATUS_LABEL[s]} <span className="text-black/50">({count(s)})</span>
-            </Link>
+      <RangePicker path="/admin/orders" range={range} today={today} all filters={filters} keep={{ q: q || undefined }} />
+
+      <div className="flex flex-col gap-[12px] md:flex-row md:items-center md:justify-between">
+        <form className="flex flex-1 gap-[12px]" role="search">
+          {address.filter(([k]) => k !== "q").map(([k, v]) => (
+            <input key={k} type="hidden" name={k} value={v} />
           ))}
-        </nav>
-        <form className="flex gap-[12px]" role="search">
-          {status && <input type="hidden" name="status" value={status} />}
           <input type="search" name="q" defaultValue={q} placeholder="Search name, email or order number" aria-label="Search orders" className="min-w-0 flex-1 border border-black/20 bg-transparent p-[12px] font-gotham text-paragraph text-black outline-none placeholder:text-black/50 focus:border-black/60 md:max-w-[420px]" />
           <button className="border border-black px-[18px] font-gotham text-paragraph text-black hover:bg-black hover:text-white transition-colors">Search</button>
         </form>
+        <p className="m-0 font-gotham text-paragraph text-black" role="status">
+          {matching.length} {matching.length === 1 ? "order" : "orders"} <span className="text-black/50">· {kr(salesOre)} in sales</span>
+          {narrowed && (
+            <>
+              {" "}
+              <Link href="/admin/orders" className="text-[11px] text-black/50 underline underline-offset-4 hover:text-black">clear</Link>
+            </>
+          )}
+        </p>
       </div>
 
       {orders.length === 0 ? (
-        <Muted>{q || status ? "No orders match." : "No orders yet."}</Muted>
+        <Muted>{narrowed ? "No orders match. Try a longer period, or clear the filters." : "No orders yet."}</Muted>
       ) : (
         <div className="flex flex-col">
           <div className="hidden gap-[12px] border-b border-black/25 px-[12px] pb-[8px] font-gotham text-[11px] text-black/50 md:flex">
@@ -88,6 +109,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
           ))}
         </div>
       )}
+      <ShowMore path="/admin/orders" params={address} shown={orders.length} total={matching.length} noun={["order", "orders"]} />
     </>
   );
 }

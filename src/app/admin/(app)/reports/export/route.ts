@@ -1,6 +1,6 @@
 import { auth, isAdminEmail } from "@/auth";
 import { loadReportOrders } from "@/lib/admin/report-data";
-import { dayKey, inRange, linesCsv, ordersCsv, parseRange, summaryCsv } from "@/lib/admin/reports";
+import { bySource, parseSource, dayKey, inRange, linesCsv, ordersCsv, parseRange, summaryCsv } from "@/lib/admin/reports";
 
 /*
  * The accounting exports, as CSV files Excel opens by double-click. Admins only; the period is the
@@ -24,9 +24,12 @@ export async function GET(request: Request) {
   if (!type) return new Response("Unknown export. Use type=orders, lines, days or months.", { status: 400 });
   const range = parseRange({ range: url.searchParams.get("range") ?? undefined, from: url.searchParams.get("from") ?? undefined, to: url.searchParams.get("to") ?? undefined }, dayKey(new Date()), "month");
 
-  const { orders } = await loadReportOrders({ sample: url.searchParams.get("sample") === "1" });
+  const loaded = await loadReportOrders({ sample: url.searchParams.get("sample") === "1" });
+  // The same choice of sales as the page the download was pressed on.
+  const source = parseSource(url.searchParams.get("source"));
+  const orders = bySource(loaded.orders, source);
   const inPeriod = inRange(orders, range);
   const csv = type === "orders" ? ordersCsv(inPeriod) : type === "lines" ? linesCsv(inPeriod) : summaryCsv(orders, range, type === "days" ? "day" : "month");
-  const name = `flora-${type}-${range.from}${range.to === range.from ? "" : `_${range.to}`}.csv`;
+  const name = `flora-${type}${source === "all" ? "" : `-${source}`}-${range.from}${range.to === range.from ? "" : `_${range.to}`}.csv`;
   return new Response(csv, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="${name}"`, "Cache-Control": "no-store, max-age=0" } });
 }

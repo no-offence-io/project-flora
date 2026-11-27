@@ -82,8 +82,13 @@ export const PRESETS = [
 ] as const;
 export type PresetKey = (typeof PRESETS)[number]["key"];
 
-/** A period of whole Oslo days, both ends included. `preset` is "custom" for hand-picked dates. */
-export type Range = { from: string; to: string; preset: PresetKey | "custom"; label: string };
+/** A period of whole Oslo days, both ends included. `preset` is "custom" for hand-picked dates, "all" for no limit. */
+export type Range = { from: string; to: string; preset: PresetKey | "custom" | "all"; label: string };
+
+/** "All time", for the lists: every order, customer or sign-up there is. Graphs don't offer it. */
+export const ALL_TIME = "all";
+const ALL_TIME_FROM = "2000-01-01";
+export const allTime = (today: string): Range => ({ from: ALL_TIME_FROM, to: today, preset: "all", label: "All time" });
 
 const MAX_DAYS = 366 * 6;
 const human = (day: string, withYear = true) => new Date(`${day}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", ...(withYear ? { year: "numeric" } : {}), timeZone: "UTC" });
@@ -125,7 +130,7 @@ export function presetRange(key: PresetKey, today: string): Range {
  * `from` is that one day). Anything unreadable falls back to `fallback`; dates given backwards are
  * swapped, the future is cut off at today, and the span is capped so a typo can't ask for a century.
  */
-export function parseRange(params: { range?: string; from?: string; to?: string }, today: string, fallback: PresetKey = "30d"): Range {
+export function parseRange(params: { range?: string; from?: string; to?: string }, today: string, fallback: PresetKey | "all" = "30d"): Range {
   if (isDay(params.from)) {
     let from = params.from;
     let to = isDay(params.to) ? params.to : params.from;
@@ -135,9 +140,31 @@ export function parseRange(params: { range?: string; from?: string; to?: string 
     if (daysBetween(from, to) > MAX_DAYS) from = addDays(to, -(MAX_DAYS - 1));
     return { from, to, preset: "custom", label: rangeLabel(from, to) };
   }
-  const preset = PRESETS.find((p) => p.key === params.range)?.key ?? fallback;
+  // "All time" only where the page offers it, which is where it is the starting point.
+  if (fallback === ALL_TIME && (params.range === ALL_TIME || !PRESETS.some((p) => p.key === params.range))) return allTime(today);
+  const preset = PRESETS.find((p) => p.key === params.range)?.key ?? (fallback === ALL_TIME ? "30d" : fallback);
   return presetRange(preset, today);
 }
+
+/** What goes in an address to ask for this period again. */
+export const rangeParams = (range: Range): [string, string][] => (range.preset === "custom" ? [["from", range.from], ["to", range.to]] : [["range", range.preset]]);
+
+/**
+ * The instant an Oslo day begins, for asking a service that thinks in instants (Stripe, a database)
+ * for "this day". Oslo is one or two hours ahead of UTC depending on the season; the right one is
+ * whichever makes the clock there read midnight.
+ */
+const clock = new Intl.DateTimeFormat("sv-SE", { timeZone: TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+export function startOfDay(day: string): Date {
+  const utcMidnight = Date.parse(`${day}T00:00:00Z`);
+  for (const hoursAhead of [1, 2]) {
+    const at = new Date(utcMidnight - hoursAhead * 3_600_000);
+    if (clock.format(at) === `${day} 00:00`) return at;
+  }
+  return new Date(utcMidnight - 3_600_000);
+}
+/** A period as two instants: from the start of its first day up to, not including, the start of the day after its last. */
+export const instantsOf = (range: { from: string; to: string }) => ({ from: startOfDay(range.from), before: startOfDay(addDays(range.to, 1)) });
 
 /** The same number of days immediately before the period: what "+12 % vs. before" compares with. */
 export function previousRange(range: Range): Range {
@@ -162,6 +189,28 @@ const statusOf = (o: ReportOrder) => o.status ?? "paid";
 /** Paid for at some point: everything except cancelled orders and PR gifts. */
 export const isSale = (o: ReportOrder) => o.manual !== "pr" && SALE_STATUSES.has(statusOf(o)) && Boolean(o.orderedAt);
 export const isRefunded = (o: ReportOrder) => statusOf(o) === "refunded";
+
+/* ---- where a sale came from ------------------------------------------------------------------ */
+
+/**
+ * The dashboard holds three kinds of order: the shop's own, the ones brought in from the same
+ * Stripe account (the earlier shop's), and the ones added by hand. They are added up together by
+ * default; this is the choice to look at one kind alone.
+ */
+export const SOURCES = [
+  { key: "all", label: "Everything" },
+  { key: "shop", label: "This shop" },
+  { key: "stripe", label: "Other Stripe sales" },
+  { key: "hand", label: "Added by hand" },
+] as const;
+export type SourceKey = (typeof SOURCES)[number]["key"];
+export const parseSource = (value: string | null | undefined): SourceKey => SOURCES.find((s) => s.key === value)?.key ?? "all";
+export const sourceOf = (o: { manual?: string | null }): Exclude<SourceKey, "all"> => (o.manual === "import" ? "stripe" : o.manual ? "hand" : "shop");
+export function bySource<T extends { manual?: string | null }>(orders: T[], source: SourceKey): T[] {
+  return source === "all" ? orders : orders.filter((o) => sourceOf(o) === source);
+}
+/** The same choice as a database filter. */
+export const SOURCE_FILTER: Record<SourceKey, string | null> = { all: null, shop: "!defined(manual)", stripe: `manual == "import"`, hand: `defined(manual) && manual != "import"` };
 
 export function inRange(orders: ReportOrder[], range: { from: string; to: string }): ReportOrder[] {
   return orders.filter((o) => {
