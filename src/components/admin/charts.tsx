@@ -1,16 +1,22 @@
 import type { ReactNode } from "react";
+import ChartTips from "./chart-tips";
 
 /*
- * The dashboard's graphs. Plain server-rendered HTML and SVG, no chart library and no client code:
- * bars are boxes sized in percent, so they are sharp at any width and follow night mode's inversion
- * like everything else. Each mark carries its exact figure as a tooltip (hover on a computer, press
- * and hold on a phone), and every graph on a page sits next to a table of the same numbers.
+ * The dashboard's graphs. Plain server-rendered HTML and SVG, no chart library: bars are boxes sized
+ * in percent, so they are sharp at any width and follow night mode's inversion like everything else.
+ * Each mark carries its exact figures, shown in a note that follows the pointer (hover on a computer,
+ * tap on a phone; chart-tips.tsx is the only client code here), and every graph on a page sits next
+ * to a table of the same numbers.
  *
  * Two inks only: black for the period being looked at, a light grey for what it is compared with.
  */
 
 export type Unit = "money" | "count";
-export type Series = { name: string; values: number[]; tone: "ink" | "ghost" };
+export type Series = { name: string; values: number[]; tone: "ink" | "ghost"; /** A shorter name for the note under the pointer, when `name` is a whole phrase. */ short?: string };
+
+/** What the note under the pointer says for one mark: a heading and a line per series. */
+export type Tip = { title: string; rows: { name?: string; value: string; tone: "ink" | "ghost" }[] };
+const tipOf = (tip: Tip) => ({ "data-tip": JSON.stringify(tip) });
 
 const whole = new Intl.NumberFormat("nb-NO", { maximumFractionDigits: 0 });
 const compact = new Intl.NumberFormat("nb-NO", { notation: "compact", maximumFractionDigits: 1 });
@@ -94,17 +100,21 @@ export function Bars({ labels, series, unit, height = 220, label, labelRoom = 12
     <figure className="m-0 flex flex-col gap-[10px]" role="group" aria-label={label}>
       {series.length > 1 && <Legend series={series} />}
       <Axis top={top} unit={unit} height={height}>
-        <div className={`absolute inset-0 flex items-end ${dense ? "gap-px" : "gap-[2px] md:gap-[6px]"}`}>
+        <ChartTips className={`absolute inset-0 flex items-end ${dense ? "gap-px" : "gap-[2px] md:gap-[6px]"}`}>
           {labels.map((l, i) => (
-            <div key={`${l}-${i}`} className="flex h-full min-w-0 flex-1 items-end justify-center gap-px" title={`${details?.[i] ?? l} — ${series.map((s) => `${series.length > 1 ? `${s.name}: ` : ""}${formatValue(s.values[i] ?? 0, unit)}`).join(" · ")}`}>
+            <div
+              key={`${l}-${i}`}
+              className="flex h-full min-w-0 flex-1 items-end justify-center gap-px transition-colors hover:bg-black/[0.05]"
+              {...tipOf({ title: details?.[i] ?? l, rows: series.map((s) => ({ ...(series.length > 1 ? { name: s.short ?? s.name } : {}), value: formatValue(s.values[i] ?? 0, unit), tone: s.tone })) })}
+            >
               {series.map((s) => {
                 const v = s.values[i] ?? 0;
                 return <span key={s.name} className={`block min-w-0 flex-1 ${TONE[s.tone]} ${series.length > 1 ? "max-w-[28px]" : "max-w-[56px]"}`} style={{ height: v > 0 ? `max(2px, ${(v / top) * 100}%)` : 0 }} />;
               })}
             </div>
           ))}
-        </div>
-        {empty && <span className="absolute inset-0 flex items-center justify-center text-[11px] text-black/50">{emptyText}</span>}
+        </ChartTips>
+        {empty && <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-[11px] text-black/50">{emptyText}</span>}
       </Axis>
       {[
         { shown: shownNarrow, only: "flex md:hidden" },
@@ -129,10 +139,12 @@ export function Bars({ labels, series, unit, height = 220, label, labelRoom = 12
  * Lines that climb through a period: running totals, one per series, over the same number of steps.
  * A series may stop early (this month so far); the other carries on to the end.
  */
-export function Lines({ steps, series, unit, height = 220, label, startLabel, endLabel }: { steps: number; series: Series[]; unit: Unit; height?: number; label: string; startLabel: string; endLabel: string }) {
+export function Lines({ steps, series, unit, height = 220, label, startLabel, endLabel, stepLabels }: { steps: number; series: Series[]; unit: Unit; height?: number; label: string; startLabel: string; endLabel: string; /** What each step is called in the note under the pointer; "Day 1", "Day 2" … when left out. */ stepLabels?: string[] }) {
   const top = niceMax(Math.max(0, ...series.flatMap((s) => s.values)), unit);
   const x = (i: number) => (steps <= 1 ? 50 : (i / (steps - 1)) * 100);
   const y = (v: number) => 100 - (v / top) * 100;
+  // One invisible column per step for the pointer, centred on its point: half a step wider than the plot on each side.
+  const half = steps > 1 ? 50 / (steps - 1) : 0;
   return (
     <figure className="m-0 flex flex-col gap-[10px]" role="group" aria-label={label}>
       <Legend series={series} />
@@ -146,9 +158,21 @@ export function Lines({ steps, series, unit, height = 220, label, startLabel, en
           const last = s.values.length - 1;
           if (last < 0) return null;
           return (
-            <span key={s.name} title={`${s.name}: ${formatValue(s.values[last], unit)}`} className={`absolute h-[7px] w-[7px] -translate-x-1/2 -translate-y-1/2 rounded-full ${s.tone === "ink" ? "bg-black" : "bg-[#c7c7c7]"}`} style={{ left: `${x(last)}%`, top: `${y(s.values[last])}%` }} />
+            <span key={s.name} className={`absolute h-[7px] w-[7px] -translate-x-1/2 -translate-y-1/2 rounded-full ${s.tone === "ink" ? "bg-black" : "bg-[#c7c7c7]"}`} style={{ left: `${x(last)}%`, top: `${y(s.values[last])}%` }} />
           );
         })}
+        <div className="absolute inset-y-0" style={{ left: `-${half}%`, right: `-${half}%` }}>
+          <ChartTips className="absolute inset-0 flex">
+            {Array.from({ length: steps }, (_, i) => {
+              const rows = series.filter((s) => i < s.values.length).map((s) => ({ name: s.short ?? s.name, value: formatValue(s.values[i], unit), tone: s.tone }));
+              return (
+                <div key={i} className="group relative h-full min-w-0 flex-1" {...(rows.length ? tipOf({ title: stepLabels?.[i] ?? `Day ${i + 1}`, rows }) : {})}>
+                  <span aria-hidden className="pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-black/25 opacity-0 group-hover:opacity-100" />
+                </div>
+              );
+            })}
+          </ChartTips>
+        </div>
       </Axis>
       <div aria-hidden className="flex gap-[8px] font-gotham text-[11px] leading-none text-black/50">
         <span className="w-[58px] shrink-0 md:w-[72px]" />

@@ -199,8 +199,8 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             startLabel="1st"
             endLabel="31st"
             series={[
-              { name: `${monthName(monthBeforeFirst)}: ${formatValue(runningBefore.at(-1) ?? 0, "money")}`, tone: "ghost", values: runningBefore },
-              { name: `${monthName(monthFirst)}: ${formatValue(running.at(-1) ?? 0, "money")}`, tone: "ink", values: running },
+              { name: `${monthName(monthBeforeFirst)}: ${formatValue(runningBefore.at(-1) ?? 0, "money")}`, short: monthName(monthBeforeFirst), tone: "ghost", values: runningBefore },
+              { name: `${monthName(monthFirst)}: ${formatValue(running.at(-1) ?? 0, "money")}`, short: monthName(monthFirst), tone: "ink", values: running },
             ]}
           />
           <Muted className="text-[11px]">Running total, day by day. Where the black line sits above the grey one, the month is ahead of the last.</Muted>
