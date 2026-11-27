@@ -78,6 +78,10 @@ address locks that person out at once.
   product's own photos.
 - **Policy pages** are plain paragraphs in the editor; a paragraph written as "Heading — text"
   becomes a collapsible section on the page.
+- **Payments** shows the Stripe balance and the latest payments, refunds in full with confirmation,
+  and can import the sales made in the same Stripe account before this shop existed
+  (`src/lib/admin/stripe-import.ts`). Imported sales become completed orders marked "earlier shop":
+  no email, no stock, one per charge so importing twice adds nothing, and removable again.
 - **Setup** lists every outside service as connected or to-do, with the exact steps.
 - **Notifications** (`src/lib/notices.ts`) combines live health checks with events the site writes
   itself (webhooks, emails, sends), and emails the owner about errors.

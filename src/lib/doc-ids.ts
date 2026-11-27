@@ -18,6 +18,8 @@ export const vippsOrderDocId = (reference: string) => `${ORDER_PREFIX}vipps-${re
 export const VIPPS_ORDER_DOC_ID = /^order\.vipps-fl-[a-f0-9]{24}$/;
 export const manualOrderDocId = (ref: string) => `${ORDER_PREFIX}manual-${ref}`;
 export const demoOrderDocId = (n: number) => `${ORDER_PREFIX}demo-${n}`;
+/** A sale from before this shop, brought in from Stripe: one per charge, so importing twice adds nothing. */
+export const importedOrderDocId = (chargeId: string) => `${ORDER_PREFIX}import-${chargeId}`;
 
 /** The quote kept while a customer is away at Vipps. */
 export const vippsPaymentDocId = (reference: string) => `vipps.${reference}`;

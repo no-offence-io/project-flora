@@ -84,16 +84,25 @@ export async function healthChecks(): Promise<HealthCheck[]> {
   try {
     const client = getWriteClient();
     const since = new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString();
-    const { waiting, low, lowSizes } = await client.fetch<{ waiting: number; low: { _id: string; name?: string; stock?: number }[]; lowSizes: { _id: string; name?: string; sizes?: { label?: string; stock?: number }[] }[] }>(
+    const { waiting, low, lowSizes } = await client.fetch<{ waiting: number; low: { _id: string; name?: string; stock?: number; vintage?: boolean }[]; lowSizes: { _id: string; name?: string; sizes?: { label?: string; stock?: number }[] }[] }>(
       `{
         "waiting": count(*[_type == "order" && status == "paid" && orderedAt < $since]),
-        "low": *[_type == "product" && visible != false && trackStock != false && sizing != "sizes" && stock <= 1]{ _id, "name": name[_key == "en"][0].value, stock },
+        "low": *[_type == "product" && visible != false && trackStock != false && sizing != "sizes" && stock <= 1]{ _id, "name": name[_key == "en"][0].value, stock, vintage },
         "lowSizes": *[_type == "product" && visible != false && trackStock != false && sizing == "sizes" && tailored != true && count(sizes[stock <= 1]) > 0]{ _id, "name": name[_key == "en"][0].value, "sizes": sizes[stock <= 1]{ label, stock } }
       }`,
       { since },
     );
-    if (waiting > 0) out.push({ kind: "warning", title: `${waiting} paid order${waiting === 1 ? "" : "s"} waiting more than 3 days`, detail: "They are still marked as paid, not shipped.", href: "/admin/orders" });
-    for (const p of low) out.push({ kind: p.stock === 0 ? "warning" : "info", title: `${p.name ?? "A product"} is ${p.stock === 0 ? "sold out" : "down to 1"}`, detail: "Add stock or hide it from the shop.", href: `/admin/products/${p._id}` });
+    if (waiting > 0) out.push({ kind: "warning", title: `${waiting} paid order${waiting === 1 ? "" : "s"} waiting more than 3 days`, detail: "Still marked as processing. Mark them shipped once they have gone out.", href: "/admin/orders?status=paid" });
+    // One line per kind of thing, not per product: a shop with twenty pieces would otherwise bury
+    // what matters. A one-of-a-kind piece is always "down to 1", so it is only mentioned once it has sold.
+    const named = (rows: { name?: string }[]) => rows.map((p) => p.name ?? "A product").join(", ");
+    const one = (rows: { _id: string }[]) => (rows.length === 1 ? `/admin/products/${rows[0]._id}` : "/admin/products");
+    const soldOut = low.filter((p) => !p.vintage && (p.stock ?? 0) <= 0);
+    const lastOne = low.filter((p) => !p.vintage && p.stock === 1);
+    const vintageSold = low.filter((p) => p.vintage && (p.stock ?? 0) <= 0);
+    if (soldOut.length) out.push({ kind: "warning", title: soldOut.length === 1 ? `${named(soldOut)} is sold out` : `${soldOut.length} products are sold out`, detail: `${soldOut.length === 1 ? "" : `${named(soldOut)}. `}Add stock, or hide ${soldOut.length === 1 ? "it" : "them"} from the shop.`, href: one(soldOut) });
+    if (lastOne.length) out.push({ kind: "info", title: lastOne.length === 1 ? `${named(lastOne)} is down to the last one` : `${lastOne.length} products are down to the last one`, detail: lastOne.length === 1 ? "Add stock if more are coming." : `${named(lastOne)}.`, href: one(lastOne) });
+    if (vintageSold.length) out.push({ kind: "info", title: vintageSold.length === 1 ? `${named(vintageSold)} has sold` : `${vintageSold.length} one-of-a-kind pieces have sold`, detail: `${vintageSold.length === 1 ? "" : `${named(vintageSold)}. `}Hide ${vintageSold.length === 1 ? "it" : "them"} when you no longer want ${vintageSold.length === 1 ? "it" : "them"} shown as sold.`, href: one(vintageSold) });
     for (const p of lowSizes) out.push({ kind: "info", title: `${p.name ?? "A product"}: ${(p.sizes ?? []).map((s) => `${s.label} (${s.stock})`).join(", ")} nearly gone`, detail: "Sizes at one or none.", href: `/admin/products/${p._id}` });
   } catch (err) {
     out.push({ kind: "error", title: "Could not read the content database", detail: err instanceof Error ? err.message : String(err) });

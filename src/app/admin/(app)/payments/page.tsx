@@ -1,13 +1,20 @@
-import { Card, Heading, Muted, Row, Subheading, Tag, TextLink } from "@/components/admin/ui";
+import { Button, Card, Checkbox, Heading, Muted, Row, Subheading, Tag, TextLink } from "@/components/admin/ui";
+import { importStatus } from "@/lib/admin/stripe-import";
+import { importStripeHistory, removeStripeHistory } from "./actions";
 import { kr } from "@/lib/admin/sanity";
 import { getStripe } from "@/lib/stripe";
 import { requireAdmin } from "@/lib/admin/session";
 
 const mode = () => (process.env.STRIPE_SECRET_KEY?.startsWith("sk_live_") ? "live" : "test");
 
+/** The import reads a long history page by page; give it room. */
+export const maxDuration = 60;
+
 /** Stripe without leaving the admin: balance, the latest payments, and a refund a tap away. */
-export default async function PaymentsPage() {
+export default async function PaymentsPage({ searchParams }: { searchParams: Promise<{ imported?: string; seen?: string; left?: string; more?: string; removed?: string; error?: string }> }) {
   await requireAdmin();
+  const said = await searchParams;
+  const earlier = await importStatus().catch(() => null);
   let error: string | null = null;
   let balance: { available: number; pending: number } | null = null;
   let payments: { id: string; amount: number; status: string; email: string; order: string; created: number; method: string; refunded: boolean }[] = [];
@@ -50,6 +57,11 @@ export default async function PaymentsPage() {
             {error}
           </p>
         )}
+        {said.error && (
+          <p className="m-0 font-gotham text-paragraph text-[#b00020]" role="alert">
+            {said.error}
+          </p>
+        )}
       </div>
 
       {balance && (
@@ -80,6 +92,42 @@ export default async function PaymentsPage() {
             </Row>
           ))}
         </div>
+      )}
+
+      {earlier && (
+        <Card id="earlier" className="md:max-w-[640px]">
+          <Subheading>Sales from before this shop</Subheading>
+          <div className="h-px w-full bg-black/25" />
+          <Muted>
+            This Stripe account is older than the shop, so its earlier sales are in Stripe and nowhere else. Importing adds them to Orders, Customers and Reports as completed orders marked
+            “earlier shop”. No emails are sent, no stock is counted, and nothing in Stripe is changed.
+          </Muted>
+          {said.imported !== undefined && (
+            <p className="m-0 font-gotham text-paragraph text-black" role="status">
+              {Number(said.imported)} added from {Number(said.seen)} payments looked at{Number(said.left) > 0 ? `, ${Number(said.left)} left out (not paid, another currency, or this shop's own)` : ""}.{" "}
+              {said.more === "1" ? "There is more: press again to carry on." : "That is all of it."}
+            </p>
+          )}
+          {said.removed !== undefined && (
+            <p className="m-0 font-gotham text-paragraph text-black" role="status">
+              {Number(said.removed)} imported sales removed.
+            </p>
+          )}
+          <Muted>
+            {earlier.imported > 0 ? `${earlier.imported} earlier sales are in the dashboard.` : "Nothing imported yet."}
+            {earlier.lastRunAt ? ` Last run ${new Date(earlier.lastRunAt).toLocaleString("nb-NO", { dateStyle: "short", timeStyle: "short" })}.` : ""}
+            {!earlier.done && earlier.cursor ? " Not finished: there are older payments still to fetch." : ""}
+          </Muted>
+          <form action={importStripeHistory}>
+            <Button>{!earlier.done && earlier.cursor ? "Carry on importing" : earlier.imported > 0 ? "Look for more" : "Import earlier sales"}</Button>
+          </form>
+          {earlier.imported > 0 && (
+            <form action={removeStripeHistory} className="flex flex-col gap-[12px] border-t border-black/10 pt-[18px]">
+              <Checkbox name="sure" label={`Yes, remove the ${earlier.imported} imported sales from the dashboard`} />
+              <Button className="self-start">Remove imported sales</Button>
+            </form>
+          )}
+        </Card>
       )}
     </>
   );

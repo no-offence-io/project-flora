@@ -6,6 +6,7 @@ import { adminClient } from "@/lib/admin/sanity";
 import { requireAdmin } from "@/lib/admin/session";
 import { getStripe } from "@/lib/stripe";
 import { orderDocId } from "@/lib/doc-ids";
+import { removeImported, runImport } from "@/lib/admin/stripe-import";
 
 /**
  * Full refund of one payment, from the confirmation page. Money moves here, so: the admin check,
@@ -27,4 +28,29 @@ export async function refundPayment(formData: FormData) {
   revalidatePath("/admin/payments");
   revalidatePath("/admin/orders");
   redirect(`/admin/payments/${id}?refunded=1`);
+}
+
+/** Brings earlier sales in from Stripe, a bounded stretch per press (see lib/admin/stripe-import.ts). Reads Stripe, changes nothing there. */
+export async function importStripeHistory() {
+  await requireAdmin();
+  let query: string;
+  try {
+    const run = await runImport();
+    const left = Object.values(run.skipped).reduce((a, b) => a + (b ?? 0), 0);
+    query = `imported=${run.added}&seen=${run.seen}&left=${left}&more=${run.done ? 0 : 1}`;
+  } catch (err) {
+    console.error("[stripe-import]", err);
+    query = `error=${encodeURIComponent(err instanceof Error ? err.message.slice(0, 200) : "The import could not run")}`;
+  }
+  revalidatePath("/admin", "layout");
+  redirect(`/admin/payments?${query}#earlier`);
+}
+
+/** Takes the imported sales out again. Needs the tick: reports and customer lists change with it. */
+export async function removeStripeHistory(formData: FormData) {
+  await requireAdmin();
+  if (formData.get("sure") !== "on") redirect(`/admin/payments?error=${encodeURIComponent("Tick the box to remove the imported sales.")}#earlier`);
+  const removed = await removeImported();
+  revalidatePath("/admin", "layout");
+  redirect(`/admin/payments?removed=${removed}#earlier`);
 }

@@ -61,6 +61,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
           <StatusPill status={o.status} />
           {o.manual === "pr" && <Tag tone="muted">PR / gift</Tag>}
           {o.manual === "sale" && <Tag tone="muted">added by hand</Tag>}
+          {o.manual === "import" && <Tag tone="muted">earlier shop, from Stripe</Tag>}
         </div>
         <Muted>
           {o.orderedAt ? new Date(o.orderedAt).toLocaleString("nb-NO", { dateStyle: "long", timeStyle: "short" }) : ""}

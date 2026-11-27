@@ -17,12 +17,19 @@ export default async function NotificationsPage() {
   const [checks, notices, mail] = await Promise.all([healthChecks(), listNotices(), getEmailSettings()]);
   const notifyTo = mail.notifyTo;
   const unread = notices.filter((n) => !n.readAt);
+  // What needs doing first, then what is only worth knowing.
+  const rank = { error: 0, warning: 1, info: 2 } as Record<string, number>;
+  checks.sort((a, b) => (rank[a.kind] ?? 3) - (rank[b.kind] ?? 3));
+  const attention = checks.filter((c) => c.kind !== "info").length;
+  const notes = checks.length - attention;
   return (
     <>
       <div className="flex flex-col gap-[12px]">
         <Heading>Notifications</Heading>
         <Muted>
-          {checks.length === 0 ? "Everything is connected and nothing is waiting." : `${checks.length} thing${checks.length === 1 ? "" : "s"} to look at right now`}
+          {checks.length === 0
+            ? "Everything is connected and nothing is waiting."
+            : [attention ? `${attention} thing${attention === 1 ? " needs" : "s need"} attention` : "Nothing needs attention", notes ? `${notes} note${notes === 1 ? "" : "s"} for information` : ""].filter(Boolean).join(" · ")}
           {unread.length ? ` · ${unread.length} unread event${unread.length === 1 ? "" : "s"}` : ""}.
         </Muted>
       </div>
@@ -36,7 +43,7 @@ export default async function NotificationsPage() {
           <div className="flex flex-col gap-[12px]">
             {checks.map((c) => (
               <Row key={c.title} href={c.href} className="items-start">
-                <span className={`mt-[2px] shrink-0 border-[0.5px] px-[4px] py-[1px] text-[11px] ${tone(c.kind)}`}>{c.kind}</span>
+                <span className={`mt-[2px] shrink-0 border-[0.5px] px-[4px] py-[1px] text-[11px] ${tone(c.kind)}`}>{c.kind === "info" ? "note" : c.kind === "warning" ? "to do" : c.kind}</span>
                 <span className="flex min-w-0 flex-1 flex-col gap-[5px]">
                   <span>{c.title}</span>
                   <span className="text-[11px] leading-normal text-black/50">{c.detail}</span>
