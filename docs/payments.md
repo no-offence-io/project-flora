@@ -6,6 +6,7 @@ How money moves through the shop, and the things that are easy to get wrong.
 - [The wallet buttons](#the-wallet-buttons)
 - [Vipps MobilePay](#vipps-mobilepay)
 - [Pricing, shipping and discounts](#pricing-shipping-and-discounts)
+- [Limits and the background sweep](#limits-and-the-background-sweep)
 - [The configuration guard](#the-configuration-guard)
 - [Local development](#local-development)
 - [Going live](#going-live)
@@ -73,7 +74,8 @@ next to Stripe rather than through it.
 1. `POST /api/checkout/vipps` quotes the cart the same way the card route does, stores the quote as
    a `vippsPayment` document, creates the payment at Vipps and sends the customer there.
 2. `settleVippsPayment` is called from wherever news arrives first: the customer landing back on the
-   site, Vipps' webhook (`/api/webhooks/vipps`, HMAC-verified), or a later poll. It does the same
+   site, Vipps' webhook (`/api/webhooks/vipps`, HMAC-verified), or the background sweep, which asks
+   Vipps about every payment still open after a couple of minutes. It does the same
    thing every time: read the live state from Vipps, check the authorised amount against the stored
    quote, capture, and write the order.
 3. Every step is idempotent. The capture carries an idempotency key and the order id is derived from
@@ -96,9 +98,29 @@ with 25% VAT included in the listed price.
 - **Discount codes** are documents: a percentage, an amount or free shipping, with dates, a minimum
   order and a usage cap. The browser sends only the code; `src/lib/discounts.ts` decides what it is
   worth, and recording the order counts the use.
+- **A usage cap holds under simultaneous checkouts.** A checkout quoted a capped code places a hold
+  on one use (`src/lib/discount-holds.ts`), written against the revision it read, so two checkouts
+  racing for the last use cannot both get it. The hold is renewed on every re-pricing, lapses after
+  45 minutes untouched, and turns into a counted use in the same transaction that records the order.
+- **Stock is checked for the cart as a whole.** Each line is checked on its own, then the lines are
+  added up per pool of stock, so the same piece on two lines (two colours, two sets of
+  measurements) cannot take more than there is.
 - **Sizing** rides on the cart line (`src/data/cart.ts`: one line per product, size and set of
   measurements), is validated on the server in `quoteCart`, and lands on the order. Sized products
   count down the chosen size's own stock. Tailored pieces are made to order and take no stock.
+
+## Limits and the background sweep
+
+Things that cost something are limited per visitor (`src/lib/rate-limit-rules.ts` has the numbers):
+payments started, Vipps payments started, discount codes that turned out not to exist, order
+look-ups that found nothing, newsletter sign-ups and sign-in links. Counts live in small private
+documents keyed by a hash of the visitor's address, so they hold across server instances and no
+address is stored. The limits fail open: if the count cannot be read, the customer is let through.
+
+`/api/webhooks/cron` runs every ten minutes (`vercel.json`). It settles Vipps payments left open
+and deletes counters nobody has touched for two days. Vercel proves itself with
+`Authorization: Bearer <CRON_SECRET>`; without `CRON_SECRET` the route refuses everyone, and the
+dashboard says the sweep is not running.
 
 ## The configuration guard
 

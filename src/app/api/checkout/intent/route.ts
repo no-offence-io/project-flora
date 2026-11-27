@@ -1,10 +1,13 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { intentRequestSchema, type IntentResponse } from "@/lib/checkout-schema";
 import { getCustomer } from "@/lib/customer";
 import { getLanguage } from "@/lib/language";
 import { getWriteClient } from "@/sanity/lib/write";
-import { METADATA_SITE, quoteCart } from "@/lib/orders";
+import { METADATA_SITE, quoteCart, type CartQuote } from "@/lib/orders";
+import { holdDiscount, NOT_VALID, releaseDiscount, TOO_MANY_CODES, USED_UP } from "@/lib/discounts";
+import { allow, count, overLimit } from "@/lib/rate-limit";
 import { checkoutMetadata } from "@/lib/checkout-metadata";
 import { assertStripeEnvironment, getStripe, StripeConfigError } from "@/lib/stripe";
 
@@ -36,21 +39,52 @@ export async function POST(req: Request) {
   const { items, customer, paymentIntentId, discountCode, visit } = parsed.data;
   const country = customer?.country ?? parsed.data.country;
 
-  const quote = await quoteCart(items, { country, discountCode });
-  if ("error" in quote) return NextResponse.json({ error: quote.error }, { status: 400 });
-  const { lines, totals } = quote;
+  // Guessing at discount codes: after too many that don't exist, codes from this visitor are not
+  // looked at for a while. Only wrong guesses are counted, so a customer with a real code never notices.
+  const guessing = discountCode ? await overLimit("discount", req.headers) : false;
+  const first = await quoteCart(items, { country, discountCode: guessing ? undefined : discountCode });
+  if ("error" in first) return NextResponse.json({ error: first.error }, { status: 400 });
+  let quote: CartQuote = guessing ? { ...first, discountError: TOO_MANY_CODES } : first;
+  if (!guessing && discountCode && quote.discountError === NOT_VALID) await count("discount", req.headers);
 
-  // Price as charged, sizes and measurements travel on the intent, so the order record never has
-  // to re-derive them later — and the customer's language, so their emails match the site they saw.
   // Who is paying comes from the signed session cookie, never from the request body.
   const account = await getCustomer();
-  const metadata = checkoutMetadata({ quote, lang: await getLanguage(), country, customer, visit, userAgent: req.headers.get("user-agent"), account });
 
   try {
     // Before anything is created: refuse outright if this deployment's Stripe environment is one
     // that can't complete a payment, or could take one without recording an order.
     assertStripeEnvironment();
     const stripe = getStripe();
+
+    // The payment being re-priced, if the browser has one of ours that can still change.
+    let existing: Stripe.PaymentIntent | null = null;
+    if (paymentIntentId) {
+      const found = await stripe.paymentIntents.retrieve(paymentIntentId).catch(() => null);
+      if (found && found.metadata.site === METADATA_SITE && UPDATABLE.includes(found.status)) existing = found;
+    }
+    // Starting a payment is what costs something; re-pricing one already started is not counted.
+    if (!existing && !(await allow("checkout", req.headers))) {
+      return NextResponse.json({ error: "Too many payments started from here. Please try again in a little while." }, { status: 429 });
+    }
+
+    // A code with a limited number of uses: this checkout holds one of them while it is alive, or
+    // goes on without the discount if the last one went to someone else (see discount-holds.ts).
+    const heldBefore = existing?.metadata.discount_hold;
+    if (quote.discount?.limited) {
+      const key = heldBefore || randomUUID();
+      if (await holdDiscount(quote.discount.docId, key)) quote.discount.holdKey = key;
+      else {
+        const without = await quoteCart(items, { country });
+        if ("error" in without) return NextResponse.json({ error: without.error }, { status: 400 });
+        quote = { ...without, discountError: USED_UP };
+      }
+    }
+    if (heldBefore && existing?.metadata.discount_doc && quote.discount?.holdKey !== heldBefore) await releaseDiscount(existing.metadata.discount_doc, heldBefore);
+    const { lines, totals } = quote;
+
+    // Price as charged, sizes and measurements travel on the intent, so the order record never has
+    // to re-derive them later — and the customer's language, so their emails match the site they saw.
+    const metadata = checkoutMetadata({ quote, lang: await getLanguage(), country, customer, visit, userAgent: req.headers.get("user-agent"), account });
     const receipt = customer ? { receipt_email: customer.email } : {};
 
     // A signed-in customer gets a Stripe customer record (made once, id kept on their account), so
@@ -70,17 +104,17 @@ export async function POST(req: Request) {
     const customerParam = stripeCustomer ? { customer: stripeCustomer } : {};
 
     let intent: Stripe.PaymentIntent | null = null;
-    if (paymentIntentId) {
-      const existing = await stripe.paymentIntents.retrieve(paymentIntentId).catch(() => null);
-      if (existing && existing.metadata.site === METADATA_SITE && UPDATABLE.includes(existing.status)) {
-        intent = await stripe.paymentIntents.update(existing.id, {
-          amount: totals.totalOre,
-          metadata,
-          ...receipt,
-          // An intent can gain a customer (signed in mid-checkout) but never change to another one.
-          ...(stripeCustomer && !existing.customer ? customerParam : {}),
-        });
-      }
+    if (existing) {
+      // Stripe merges metadata, so anything the cart no longer has (a discount taken off, the
+      // measurements of a line that is gone) is blanked here, or it would ride into the order.
+      const gone = Object.fromEntries(Object.keys(existing.metadata).filter((k) => !(k in metadata)).map((k) => [k, ""]));
+      intent = await stripe.paymentIntents.update(existing.id, {
+        amount: totals.totalOre,
+        metadata: { ...gone, ...metadata },
+        ...receipt,
+        // An intent can gain a customer (signed in mid-checkout) but never change to another one.
+        ...(stripeCustomer && !existing.customer ? customerParam : {}),
+      });
     }
     if (!intent) {
       intent = await stripe.paymentIntents.create({

@@ -36,6 +36,15 @@ export const discount = defineType({
     defineField({name: 'minSubtotalOre', title: 'Minimum order (øre)', type: 'number', validation: (rule) => rule.integer().min(0)}),
     defineField({name: 'maxUses', title: 'Maximum uses', description: 'Leave empty for unlimited.', type: 'number', validation: (rule) => rule.integer().min(1)}),
     defineField({name: 'uses', title: 'Times used', type: 'number', readOnly: true, initialValue: 0}),
+    // Places kept by checkouts in progress on a code with a maximum; written by the shop (src/lib/discount-holds.ts).
+    defineField({
+      name: 'holds',
+      title: 'Held by checkouts in progress',
+      type: 'array',
+      readOnly: true,
+      hidden: true,
+      of: [{type: 'object', fields: [{name: 'key', type: 'string'}, {name: 'at', type: 'datetime'}]}],
+    }),
   ],
   preview: {
     select: {code: 'code', kind: 'kind', value: 'value', active: 'active', uses: 'uses'},

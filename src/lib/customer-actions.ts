@@ -7,6 +7,7 @@ import { allowSignInEmail, customerIdFor, endSession, getCustomer, makeSignInTok
 import { getLanguage } from "./language";
 import { sendSignInLink } from "./notify";
 import { getWriteClient } from "@/sanity/lib/write";
+import { allow } from "./rate-limit";
 
 export type SignInState = { status: "idle" | "sent" | "invalid" | "failed"; email?: string };
 
@@ -22,8 +23,9 @@ export async function requestSignIn(_prev: SignInState, formData: FormData): Pro
   const parsed = z.email().safeParse(normalizeEmail(String(formData.get("email") ?? "")));
   if (!parsed.success) return { status: "invalid" };
   const next = safeNext(String(formData.get("next") ?? ""));
-  // Same answer whether or not we sent, so nobody learns anything by retrying.
-  if (!(await allowSignInEmail(parsed.data))) return { status: "sent", email: parsed.data };
+  // Same answer whether or not we sent, so nobody learns anything by retrying. Two limits: per
+  // visitor, so one script can't send to a thousand addresses, and per address, so nobody's inbox is flooded.
+  if (!(await allow("signin")) || !(await allowSignInEmail(parsed.data))) return { status: "sent", email: parsed.data };
   const url = `${base()}/account/verify?token=${encodeURIComponent(makeSignInToken(parsed.data))}&next=${encodeURIComponent(next)}`;
   try {
     await sendSignInLink(parsed.data, await getLanguage(), url);

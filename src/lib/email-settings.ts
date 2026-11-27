@@ -3,9 +3,13 @@ import { getWriteClient } from "@/sanity/lib/write";
 import { DEFAULT_NOTIFY_ON, isEmail, SCENARIO_KEYS, type NotifyScenario } from "./email-shared";
 
 /*
- * Who emails come from and who gets told what, from Settings & brand → Emails. Vercel's EMAIL_FROM
- * and EMAIL_NOTIFY still work as the starting values, so nothing breaks before Ida has saved
- * anything; the dashboard shows what is in use either way.
+ * Who emails come from and who gets told what, from Settings & brand → Emails. Kept in a private
+ * document of its own (the addresses are people's own), not on the public settings document.
+ *
+ * Until something has been saved there, the starting values apply: EMAIL_FROM for the sender, and
+ * for who is told about orders and errors EMAIL_NOTIFY or, failing that, everyone allowed into the
+ * dashboard (ADMIN_EMAILS). So a new order never goes unannounced just because nobody has opened
+ * Settings yet. Once saved, what was saved is used exactly, an empty list included.
  */
 export type EmailSettings = {
   fromName: string;
@@ -15,6 +19,8 @@ export type EmailSettings = {
   notifyTo: string[];
   notifyOn: NotifyScenario[];
 };
+
+export const EMAIL_SETTINGS_ID = "private.emailSettings";
 
 export const siteDomain = () => new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://www.prosjectflora.com").hostname.replace(/^www\./, "");
 
@@ -27,14 +33,15 @@ const list = (s: string) => s.split(/[,\s]+/).map((x) => x.trim().toLowerCase())
 export async function getEmailSettings(): Promise<EmailSettings> {
   let doc: Record<string, unknown> | null = null;
   try {
-    doc = await getWriteClient().fetch<Record<string, unknown> | null>(`*[_id == "siteSettings"][0].email`);
+    // The second place is where these settings lived before they had a document of their own.
+    doc = await getWriteClient().fetch<Record<string, unknown> | null>(`coalesce(*[_id == $id][0], *[_id == "siteSettings"][0].email)`, { id: EMAIL_SETTINGS_ID });
   } catch (err) {
     console.error("[email] settings unreadable, using the defaults", err);
   }
   const d = doc ?? {};
   const str = (k: string) => (typeof d[k] === "string" && (d[k] as string).trim() ? (d[k] as string).trim() : null);
   const env = parseFrom(process.env.EMAIL_FROM);
-  const notifyTo = list(str("notifyTo") ?? process.env.EMAIL_NOTIFY ?? "");
+  const notifyTo = list(doc ? (str("notifyTo") ?? "") : (process.env.EMAIL_NOTIFY || process.env.ADMIN_EMAILS || ""));
   const notifyOn = Array.isArray(d.notifyOn) ? (d.notifyOn as unknown[]).filter((k): k is NotifyScenario => SCENARIO_KEYS.includes(k as NotifyScenario)) : DEFAULT_NOTIFY_ON;
   return {
     fromName: str("fromName") ?? env.name ?? "Flöra",

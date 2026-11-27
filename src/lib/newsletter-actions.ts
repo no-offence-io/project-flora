@@ -6,6 +6,7 @@ import { getLanguage } from "./language";
 import { sendNewsletterWelcome } from "./notify";
 import { getWriteClient } from "@/sanity/lib/write";
 import { subscriberDocId } from "@/lib/doc-ids";
+import { allow } from "./rate-limit";
 
 export type SignUpState = { status: "idle" | "ok" | "invalid" | "failed" };
 
@@ -19,6 +20,8 @@ export async function subscribe(_prev: SignUpState, formData: FormData): Promise
   const parsed = z.email().safeParse(String(formData.get("email") ?? "").trim().toLowerCase());
   if (!parsed.success) return { status: "invalid" };
   const email = parsed.data;
+  // Each new sign-up sends an email, so one visitor gets only so many an hour.
+  if (!(await allow("newsletter"))) return { status: "failed" };
   const language = await getLanguage();
   const id = subscriberDocId(createHash("sha256").update(email).digest("hex").slice(0, 32));
 

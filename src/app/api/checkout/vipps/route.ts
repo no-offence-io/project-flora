@@ -7,6 +7,8 @@ import { notice } from "@/lib/notices";
 import { quoteCart } from "@/lib/orders";
 import { createVippsPayment, newVippsReference, vippsConfigured, vippsEnv, VippsError } from "@/lib/vipps";
 import { vippsDocId } from "@/lib/vipps-checkout";
+import { holdDiscount, USED_UP } from "@/lib/discounts";
+import { allow, overLimit } from "@/lib/rate-limit";
 import { getWriteClient } from "@/sanity/lib/write";
 
 /** Same as the card request, but the customer is required: Vipps is the last click, not a quote. */
@@ -57,16 +59,27 @@ export async function POST(req: Request) {
   // The live site must never start test payments: a "paid" test order is money that never arrived.
   if (process.env.VERCEL_ENV === "production" && vippsEnv() !== "production") return NextResponse.json({ error: "Vipps is in test mode on this server", code: "vipps" }, { status: 503 });
 
+  // Every start writes a document and calls Vipps, so one visitor gets only so many an hour.
+  if (!(await allow("vipps", req.headers))) return NextResponse.json({ error: "Too many payments started from here. Please try again in a little while.", code: "vipps" }, { status: 429 });
+
   const { items, customer, discountCode, visit } = parsed.data;
   const country = customer.country;
+  // A visitor shut out for guessing at codes (see the card route) gets no code looked at here either.
+  if (discountCode && (await overLimit("discount", req.headers))) return NextResponse.json({ error: "Too many codes tried from here. Please try again in an hour." }, { status: 429 });
   const quote = await quoteCart(items, { country, discountCode });
   if ("error" in quote) return NextResponse.json({ error: quote.error }, { status: 400 });
-  const account = await getCustomer();
-  const metadata = checkoutMetadata({ quote, lang: await getLanguage(), country, customer, visit, userAgent: req.headers.get("user-agent"), account });
   const amountOre = quote.totals.totalOre;
   if (amountOre < 100) return NextResponse.json({ error: "Vipps payments start at 1 kr", code: "vipps" }, { status: 400 });
 
   const reference = newVippsReference();
+  // A code with a limited number of uses: this payment holds one, or stops here. Vipps is the last
+  // click, so going on at the full price without saying so is not an option.
+  if (quote.discount?.limited) {
+    if (await holdDiscount(quote.discount.docId, reference)) quote.discount.holdKey = reference;
+    else return NextResponse.json({ error: USED_UP }, { status: 409 });
+  }
+  const account = await getCustomer();
+  const metadata = checkoutMetadata({ quote, lang: await getLanguage(), country, customer, visit, userAgent: req.headers.get("user-agent"), account });
   const client = getWriteClient();
   await client.create({
     _id: vippsDocId(reference),

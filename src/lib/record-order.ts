@@ -160,7 +160,9 @@ export async function recordPaidOrder(payment: PaidPayment): Promise<RecordedOrd
     if (l.s) tx = tx.patch(id, (p) => p.dec({ [`sizes[label=="${l.s!.replace(/"/g, "")}"].stock`]: l.qty }));
     else tx = tx.patch(id, (p) => p.setIfMissing({ stock: 0 }).dec({ stock: l.qty }));
   }
-  if (m.discount_doc) tx = tx.patch(m.discount_doc, (p) => p.setIfMissing({ uses: 0 }).inc({ uses: 1 }));
+  // The use is counted and this checkout's hold on it let go in the same breath (see discount-holds.ts).
+  const hold = /^[A-Za-z0-9-]{1,64}$/.test(m.discount_hold ?? "") ? m.discount_hold : null;
+  if (m.discount_doc) tx = tx.patch(m.discount_doc, (p) => (hold ? p.setIfMissing({ uses: 0 }).inc({ uses: 1 }).unset([`holds[key=="${hold}"]`]) : p.setIfMissing({ uses: 0 }).inc({ uses: 1 })));
 
   try {
     await tx.commit({ autoGenerateArrayKeys: false });

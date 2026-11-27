@@ -119,6 +119,8 @@ A few rules hold everywhere in the code, and most of the payment code exists to 
 | Nothing is recorded twice | The order's document id is derived from the payment, and the order is written in one transaction together with the stock change, so a repeated delivery changes nothing. |
 | Secrets stay on the server | No secret is ever exposed to the browser, and the modules that hold one are marked `server-only`, so importing them from client code fails the build. |
 | Misconfiguration is refused, not discovered later | The checkout will not create a payment with mismatched test and live keys, or with live keys and no webhook secret. |
+| Limits hold when several people check out at once | A discount code with a usage cap is held per checkout, so the last use cannot be given twice, and stock is checked for the cart as a whole. |
+| Abuse is bounded | Payments started, discount codes guessed, order look-ups and emails sent are limited per visitor. |
 
 The details, including the layout of the wallet buttons and a go-live checklist, are in
 [docs/payments.md](docs/payments.md).
@@ -165,7 +167,7 @@ Every variable is described in [`.env.example`](.env.example). In short:
 | Dashboard sign-in | `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `ADMIN_EMAILS` | `/admin` |
 | Email | `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_NOTIFY` | Order, shipping and newsletter emails. Without a key nothing is sent, and the dashboard says so. |
 | Vipps | `VIPPS_ENV`, `VIPPS_MSN`, `VIPPS_CLIENT_ID`, `VIPPS_CLIENT_SECRET`, `VIPPS_SUBSCRIPTION_KEY`, `VIPPS_WEBHOOK_SECRET` | The Vipps button. Leave empty to hide it. |
-| Site | `NEXT_PUBLIC_SITE_URL`, `COMING_SOON`, `PREVIEW_TOKEN`, `REVALIDATE_SECRET` | Links in emails, the coming-soon page, refreshing the site after an edit |
+| Site | `NEXT_PUBLIC_SITE_URL`, `COMING_SOON`, `PREVIEW_TOKEN`, `REVALIDATE_SECRET`, `CRON_SECRET` | Links in emails, the coming-soon page, refreshing the site after an edit, the background sweep |
 
 `.env.local` is ignored by git. Real keys belong there and in the host's environment settings, never
 in the repository.

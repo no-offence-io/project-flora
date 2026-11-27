@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { client } from "@/sanity/lib/client";
+import { count, overLimit } from "./rate-limit";
 
 export type OrderView = {
   orderNumber: string;
@@ -25,6 +26,8 @@ export async function lookupOrder(_prev: LookupState, formData: FormData): Promi
     .object({ number: z.string().trim().toUpperCase().regex(/^FL-[A-Z0-9]{6,10}$/), email: z.email() })
     .safeParse({ number: formData.get("number"), email: String(formData.get("email") ?? "").trim().toLowerCase() });
   if (!parsed.success) return { status: "notFound" };
+  // A number and an address can be guessed at together; after a run of misses the visitor waits.
+  if (await overLimit("lookup")) return { status: "notFound" };
   const { number, email } = parsed.data;
   const o = await client.withConfig({ useCdn: false }).fetch<Omit<OrderView, "trackingUrl"> | null>(
     `*[_type == "order" && orderNumber == $number && lower(customer.email) == $email][0]{
@@ -33,7 +36,10 @@ export async function lookupOrder(_prev: LookupState, formData: FormData): Promi
     }`,
     { number, email },
   );
-  if (!o) return { status: "notFound" };
+  if (!o) {
+    await count("lookup");
+    return { status: "notFound" };
+  }
   const { trackingUrlFor } = await import("./notify");
   return { status: "found", order: { ...o, items: o.items ?? [], trackingUrl: o.trackingNumber ? trackingUrlFor(o.trackingNumber) : undefined } };
 }

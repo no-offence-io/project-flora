@@ -53,3 +53,31 @@ export function quoteLine(product: LineProduct, item: LineRequest): { line: Quot
   if (counted && item.quantity > product.stock) return { error: tooMany(product.stock) };
   return { line: { ...base, unitPriceOre: product.priceOre, ...(product.sizing === "measurements" ? { measurements: item.measurements } : {}) } };
 }
+
+const shortOf = (name: string, available: number, size?: string) =>
+  available === 0 ? `${name}${size ? ` (${size})` : ""} is sold out` : `Only ${available} of ${name}${size ? ` (${size})` : ""} available`;
+
+/**
+ * The whole cart against the stock, after each line has passed on its own. The same piece can sit
+ * on several lines (two colours, two sets of measurements), and lines that each fit can together
+ * ask for more than there is. Lines are added up per pool of stock: a size's own number for a sized
+ * piece, the product's single number otherwise. Made to measure on a sized product, and products
+ * that don't count stock, take from no pool.
+ *
+ * Returns the customer-facing reason when the cart asks for too much, or null when it fits.
+ */
+export function cartOverStock(entries: { product: LineProduct; line: QuotedLine }[]): string | null {
+  const pools = new Map<string, { taken: number; available: number; name: string; size?: string }>();
+  for (const { product, line } of entries) {
+    if (product.trackStock === false || line.tailored) continue;
+    const sized = product.sizing === "sizes";
+    if (sized && !line.size) continue;
+    const key = sized ? `${line.id}\n${line.size}` : line.id;
+    const available = sized ? (product.sizes.find((s) => s.label === line.size)?.stock ?? 0) : product.stock;
+    const pool = pools.get(key) ?? { taken: 0, available, name: product.name, ...(sized ? { size: line.size } : {}) };
+    pool.taken += line.quantity;
+    pools.set(key, pool);
+  }
+  for (const pool of pools.values()) if (pool.taken > pool.available) return shortOf(pool.name, pool.available, pool.size);
+  return null;
+}

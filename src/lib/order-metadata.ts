@@ -10,7 +10,7 @@ export const METADATA_SITE = "flora";
 /** `t`: made to measure instead of a standard size, so no stock is counted down for it. */
 export type MetadataLine = { id: string; qty: number; p: number; s?: string; c?: string; t?: 1 };
 
-export function quoteToMetadata(quote: { lines: QuotedLine[]; totals: { discountOre: number }; discount: { code: string; docId: string } | null }, extra: { lang: string; country?: string }): Record<string, string> {
+export function quoteToMetadata(quote: { lines: QuotedLine[]; totals: { discountOre: number }; discount: { code: string; docId: string; holdKey?: string } | null }, extra: { lang: string; country?: string }): Record<string, string> {
   const metadata: Record<string, string> = {
     site: METADATA_SITE,
     lang: extra.lang,
@@ -24,6 +24,7 @@ export function quoteToMetadata(quote: { lines: QuotedLine[]; totals: { discount
     metadata.discount = quote.discount.code;
     metadata.discount_doc = quote.discount.docId;
     metadata.discount_ore = String(quote.totals.discountOre);
+    if (quote.discount.holdKey) metadata.discount_hold = quote.discount.holdKey;
   }
   return metadata;
 }

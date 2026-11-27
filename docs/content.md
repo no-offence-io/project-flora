@@ -19,10 +19,10 @@ Everything lives in one Sanity dataset. The schema is in `studio/schemaTypes/`.
 | --- | --- |
 | Catalogue | `product` |
 | Pages | `homePage`, `aboutPage`, `vintagePage`, `policyPage`, `faqItem`, `post` (the journal) |
-| Settings | `siteSettings`: shipping, sizing, brand, shop status, analytics |
+| Settings | `siteSettings`: shipping, sizing, brand, shop status, analytics. `emailSettings` (private): who emails come from and who is told about orders and errors |
 | Trade | `order`, `customer`, `discount`, `vippsPayment` |
 | Audience | `subscriber`, `newsletter` |
-| Housekeeping | `notification` |
+| Housekeeping | `notification`, `rateLimit` |
 
 - **Private documents have a dot in their id.** Sanity hands a document to an anonymous reader only
   when its id has no dot, so orders, customers, subscribers, discount codes, Vipps payments,

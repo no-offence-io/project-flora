@@ -10,7 +10,7 @@ import { requireAdmin } from "@/lib/admin/session";
 import { type ImageValue, readFit, readImageField, readVideoField, uploadImage, uploadVideo } from "@/lib/admin/media";
 import { FONT_CHOICES } from "@/lib/brand-shared";
 import { ORDER_STATUSES } from "@/lib/order-status";
-import { siteDomain } from "@/lib/email-settings";
+import { EMAIL_SETTINGS_ID, siteDomain } from "@/lib/email-settings";
 import { isEmail, SCENARIO_KEYS, type NotifyScenario } from "@/lib/email-shared";
 import { NOBODY_SUBSCRIBER_ID, ORDER_PREFIX, newPrivateDocId } from "@/lib/doc-ids";
 
@@ -346,7 +346,6 @@ export async function saveSettings(formData: FormData) {
           footerText: readLocalizedString(formData, "footerText", "text"),
           instagram: String(formData.get("instagram") ?? "").trim() || null,
           contactEmail: String(formData.get("contactEmail") ?? "").trim() || null,
-          email,
           shippingOre: shippingOre ?? 0,
           freeShippingFromOre: freeFrom ?? null,
           signUpImage,
@@ -360,6 +359,10 @@ export async function saveSettings(formData: FormData) {
         })
         .commit(),
     );
+  // Who is emailed about what holds people's own addresses, so it has a private document of its
+  // own; the copy the public settings document used to carry is taken off it.
+  await adminClient().createOrReplace({ _id: EMAIL_SETTINGS_ID, _type: "emailSettings", ...email });
+  await adminClient().patch("siteSettings").unset(["email"]).commit();
   forgetComingSoon();
   revalidatePath("/admin/settings");
   redirect("/admin/settings?saved=1");

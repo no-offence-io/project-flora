@@ -2,6 +2,7 @@ import { clearRead, markAllRead, markRead } from "./actions";
 import { Card, Heading, Muted, Row, Subheading, Tag, TextLink } from "@/components/admin/ui";
 import { healthChecks, listNotices } from "@/lib/notices";
 import { requireAdmin } from "@/lib/admin/session";
+import { getEmailSettings } from "@/lib/email-settings";
 
 const tone = (kind: string) => (kind === "error" ? "border-[#b00020] text-[#b00020]" : kind === "warning" ? "border-black text-black" : "border-black/50 text-black/50");
 const when = (iso: string) => new Date(iso).toLocaleString("nb-NO", { dateStyle: "short", timeStyle: "short" });
@@ -13,7 +14,8 @@ const when = (iso: string) => new Date(iso).toLocaleString("nb-NO", { dateStyle:
  */
 export default async function NotificationsPage() {
   await requireAdmin();
-  const [checks, notices] = await Promise.all([healthChecks(), listNotices()]);
+  const [checks, notices, mail] = await Promise.all([healthChecks(), listNotices(), getEmailSettings()]);
+  const notifyTo = mail.notifyTo;
   const unread = notices.filter((n) => !n.readAt);
   return (
     <>
@@ -95,7 +97,7 @@ export default async function NotificationsPage() {
 
       <Card className="md:max-w-[640px]">
         <Muted>
-          Errors are also emailed to {process.env.EMAIL_NOTIFY || "the address set as EMAIL_NOTIFY (not set yet)"} as they happen, so nothing waits for a login here.
+          {notifyTo.length ? <>What you chose to hear about is also emailed to {notifyTo.join(", ")} as it happens, so nothing waits for a login here.</> : <>Nothing is emailed: no address is set.</>} Change it under <TextLink href="/admin/settings">Settings</TextLink>.
         </Muted>
       </Card>
     </>
